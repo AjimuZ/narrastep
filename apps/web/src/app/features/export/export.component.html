@@ -1,0 +1,198 @@
+<section class="page export-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Portable local package</p>
+      <h1>Export {{ project()?.name || 'project' }}</h1>
+      <p class="muted">
+        Generate an immutable ZIP containing reviewed evidence and evidence-only LLM input.
+      </p>
+    </div>
+    <a class="button button--quiet" [routerLink]="['/projects', projectId(), 'review']">
+      Back to review
+    </a>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="notice notice--error export-notice" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="export-layout" aria-busy="true">
+      <span class="visually-hidden">Loading exports…</span>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  } @else {
+    <div class="export-layout">
+      <section class="panel export-options" aria-labelledby="options-heading">
+        <p class="eyebrow">New export</p>
+        <h2 id="options-heading">Narrastep ZIP</h2>
+        <p class="muted">
+          The package preserves reviewed transcript order, every distinct primary screenshot, source
+          metadata, and reusable prompts that prohibit unsupported invention.
+        </p>
+
+        <h3>Included files</h3>
+        <ul class="file-list">
+          @for (file of standardFiles; track file) {
+            <li>
+              <span aria-hidden="true">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              {{ file }}
+            </li>
+          }
+        </ul>
+
+        <p class="muted">
+          Long recordings are also organized into chronological ChatGPT batches. Each batch is ready
+          to attach in one message using the configured limit: one evidence file and up to 19 images
+          by default.
+        </p>
+
+        <label class="video-option">
+          <input
+            type="checkbox"
+            [checked]="includeOriginalVideo()"
+            (change)="setIncludeOriginalVideo($event)"
+          />
+          <span>
+            <strong>Include the original video</strong>
+            <small>
+              Off by default. Enabling it can make the ZIP much larger and duplicates the source
+              evidence.
+            </small>
+          </span>
+        </label>
+
+        @if (estimate(); as exportEstimate) {
+          <section class="export-estimate" aria-labelledby="estimate-heading" aria-live="polite">
+            <div class="estimate-heading">
+              <h3 id="estimate-heading">Export estimate</h3>
+              @if (exportEstimate.isApproximate) {
+                <span>Approximate</span>
+              }
+            </div>
+            <dl>
+              <div>
+                <dt>Canonical images</dt>
+                <dd>{{ exportEstimate.canonicalImageCount }}</dd>
+              </div>
+              <div>
+                <dt>ChatGPT batches</dt>
+                <dd>{{ exportEstimate.batchCount }}</dd>
+              </div>
+              <div>
+                <dt>Batch image copies</dt>
+                <dd>{{ exportEstimate.batchImageCopyCount }}</dd>
+              </div>
+              <div>
+                <dt>Estimated ZIP</dt>
+                <dd>{{ formatFileSize(exportEstimate.estimatedZipBytes) }}</dd>
+              </div>
+            </dl>
+            @if (exportEstimate.redundancyWarning) {
+              <p class="estimate-warning" role="status">
+                Reused evidence will be copied into several attachment batches. The canonical image
+                is stored once.
+              </p>
+            }
+          </section>
+        }
+
+        <button
+          class="button button--primary create-button"
+          type="button"
+          [disabled]="creating() || !!currentExport()"
+          (click)="createExport()"
+        >
+          {{ currentExport() || creating() ? 'Generating export…' : 'Generate ZIP export' }}
+        </button>
+      </section>
+
+      <section class="history" aria-labelledby="history-heading">
+        @if (currentExport(); as activeExport) {
+          <article class="panel current-export" aria-live="polite">
+            <div class="current-export__heading">
+              <div>
+                <p class="eyebrow">Current export</p>
+                <h2>{{ activeExport.currentStage || 'Preparing package' }}</h2>
+              </div>
+              <strong>{{ activeExport.progressPercent }}%</strong>
+            </div>
+            <progress max="100" [value]="activeExport.progressPercent">
+              {{ activeExport.progressPercent }}%
+            </progress>
+            <p class="muted">
+              ZIP generation is asynchronous. This view follows persisted state rather than
+              simulated time.
+            </p>
+          </article>
+        }
+
+        <div class="history-heading">
+          <h2 id="history-heading">Previous exports</h2>
+          <span class="muted">{{ completedExports().length }} records</span>
+        </div>
+
+        @for (item of completedExports(); track item.id) {
+          <article class="panel history-card">
+            <div>
+              <span class="status-badge" [attr.data-status]="item.status">{{ item.status }}</span>
+              <h3>Narrastep export</h3>
+              <p class="muted">
+                Created {{ item.createdAt | date: 'medium' }} · {{ formatFileSize(item.sizeBytes) }}
+              </p>
+              @if (item.includeOriginalVideo) {
+                <span class="video-included">Original video included</span>
+              }
+              @if (item.metrics) {
+                <dl class="actual-metrics" aria-label="Actual export metrics">
+                  <div>
+                    <dt>Canonical</dt>
+                    <dd>{{ exportMetric(item, 'exportCanonicalImageCount') ?? 0 }}</dd>
+                  </div>
+                  <div>
+                    <dt>Batches</dt>
+                    <dd>{{ exportMetric(item, 'batchCount') ?? 0 }}</dd>
+                  </div>
+                  <div>
+                    <dt>Copies</dt>
+                    <dd>{{ exportMetric(item, 'exportBatchCopyCount') ?? 0 }}</dd>
+                  </div>
+                </dl>
+              }
+            </div>
+            @if (item.status === 'completed') {
+              <a class="button button--secondary" [href]="downloadUrl(item.id)" download>
+                Download ZIP
+              </a>
+            } @else {
+              <div class="history-error" role="alert">
+                <strong>{{ item.errorCode || 'EXPORT_FAILED' }}</strong>
+                <span>{{ item.errorMessage || 'This export did not complete.' }}</span>
+              </div>
+            }
+          </article>
+        } @empty {
+          @if (!currentExport()) {
+            <div class="panel empty-history">
+              <h3>No exports yet</h3>
+              <p class="muted">Generate the first immutable package when the review is ready.</p>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</section>

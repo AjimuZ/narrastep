@@ -1,0 +1,306 @@
+<section class="page wizard-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">{{ isResuming() ? 'Resume local project' : 'New local project' }}</p>
+      <h1>{{ isResuming() ? 'Continue your Narrastep project' : 'Create a Narrastep project' }}</h1>
+      <p class="muted">
+        Add project context, upload one recording, then explicitly start processing.
+      </p>
+    </div>
+    <a class="button button--quiet" routerLink="/projects">Back to projects</a>
+  </header>
+
+  <ol class="steps" aria-label="Project creation progress">
+    <li
+      [class.active]="currentStep() === 1"
+      [class.complete]="currentStep() > 1"
+      [attr.aria-current]="currentStep() === 1 ? 'step' : null"
+    >
+      <span class="step-number">1</span><strong class="step-label">Project information</strong>
+    </li>
+    <li
+      [class.active]="currentStep() === 2"
+      [class.complete]="currentStep() > 2"
+      [attr.aria-current]="currentStep() === 2 ? 'step' : null"
+    >
+      <span class="step-number">2</span><strong class="step-label">Video upload</strong>
+    </li>
+    <li
+      [class.active]="currentStep() === 3"
+      [attr.aria-current]="currentStep() === 3 ? 'step' : null"
+    >
+      <span class="step-number">3</span><strong class="step-label">Start processing</strong>
+    </li>
+  </ol>
+
+  @if (requestError(); as message) {
+    <div class="notice notice--error" role="alert">{{ message }}</div>
+  }
+
+  @if (currentStep() === 1) {
+    <form class="panel wizard-panel" [formGroup]="projectForm" (ngSubmit)="createProject()">
+      @if (showValidationSummary()) {
+        <div class="notice notice--error" role="alert" tabindex="-1">
+          <strong>Review the highlighted project information.</strong>
+          <p>Provide a project name and a valid spoken-language code before continuing.</p>
+        </div>
+      }
+      <div class="form-grid">
+        <div class="field field--wide">
+          <label for="project-name">Project name</label>
+          <input
+            id="project-name"
+            type="text"
+            formControlName="name"
+            maxlength="120"
+            autocomplete="off"
+            aria-describedby="project-name-error"
+          />
+          @if (projectForm.controls.name.touched && projectForm.controls.name.invalid) {
+            <p id="project-name-error" class="field-error">
+              Enter a project name of up to 120 characters.
+            </p>
+          }
+        </div>
+
+        <div class="field field--wide">
+          <label for="project-description"
+            >Short description <span class="muted">(optional)</span></label
+          >
+          <textarea
+            id="project-description"
+            formControlName="description"
+            maxlength="500"
+            aria-describedby="description-help"
+          ></textarea>
+          <small id="description-help" class="muted">
+            Add context that will help reviewers understand the recording.
+          </small>
+        </div>
+
+        <div class="field">
+          <label for="source-language">Spoken language</label>
+          <input
+            id="source-language"
+            type="text"
+            formControlName="sourceLanguage"
+            list="source-language-options"
+            maxlength="4"
+            autocomplete="off"
+            [attr.aria-describedby]="
+              projectForm.controls.sourceLanguage.touched &&
+              projectForm.controls.sourceLanguage.invalid
+                ? 'source-language-help source-language-error'
+                : 'source-language-help'
+            "
+            [attr.aria-invalid]="
+              projectForm.controls.sourceLanguage.touched &&
+              projectForm.controls.sourceLanguage.invalid
+                ? 'true'
+                : null
+            "
+          />
+          <datalist id="source-language-options">
+            @for (language of languageSuggestions; track language.code) {
+              <option [value]="language.code">{{ language.label }}</option>
+            }
+          </datalist>
+          <small id="source-language-help" class="muted">
+            Use “auto” or a supported two- or three-letter Whisper language code.
+          </small>
+          @if (
+            projectForm.controls.sourceLanguage.touched &&
+            projectForm.controls.sourceLanguage.invalid
+          ) {
+            <p id="source-language-error" class="field-error">
+              Enter “auto” or a two- or three-letter language code.
+            </p>
+          }
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>Content mode</legend>
+        <div class="mode-grid">
+          @for (mode of modes; track mode.value) {
+            <label
+              class="mode-card"
+              [class.selected]="projectForm.controls.mode.value === mode.value"
+            >
+              <input type="radio" formControlName="mode" [value]="mode.value" />
+              <span>
+                <strong>{{ mode.label }}</strong>
+                <small>{{ mode.detail }}</small>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <footer>
+        <button class="button button--primary" type="submit" [disabled]="creating()">
+          {{ creating() ? 'Creating…' : 'Continue to video' }}
+        </button>
+      </footer>
+    </form>
+  }
+
+  @if (currentStep() === 2) {
+    <section class="panel wizard-panel" aria-labelledby="video-heading">
+      <h2 id="video-heading">Upload one screen recording</h2>
+      <p class="muted">
+        MP4, WebM, MOV, and MKV are supported. The local API will inspect the media with FFprobe.
+      </p>
+      <div class="notice">
+        <strong>Your recording stays on this Narrastep installation.</strong>
+        <p class="muted">Upload, validation, transcription, and screenshot review are local.</p>
+      </div>
+
+      <div
+        class="drop-zone"
+        [class.dragging]="isDragging()"
+        [class.drop-zone--disabled]="uploading()"
+        [attr.aria-busy]="uploading()"
+        (dragover)="allowDrop($event)"
+        (dragleave)="leaveDropZone($event)"
+        (drop)="onDrop($event)"
+      >
+        <input
+          #fileInput
+          id="video-file"
+          class="visually-hidden file-input"
+          type="file"
+          accept=".mp4,.webm,.mov,.mkv,video/mp4,video/webm,video/quicktime,video/x-matroska"
+          [disabled]="uploading()"
+          [attr.aria-invalid]="fileError() ? 'true' : null"
+          [attr.aria-describedby]="
+            fileError() ? 'video-file-help video-file-error' : 'video-file-help'
+          "
+          (change)="onFileInput($event)"
+        />
+        <span class="drop-zone__icon" aria-hidden="true">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </span>
+        <strong>Drop your video here</strong>
+        <span class="muted">or</span>
+        <label
+          class="button button--secondary file-picker-label"
+          [class.file-picker-label--disabled]="uploading()"
+          [attr.aria-disabled]="uploading()"
+          for="video-file"
+          >Choose a file</label
+        >
+        <small id="video-file-help" class="muted">
+          The local API enforces its configured upload limit while streaming the file.
+        </small>
+      </div>
+
+      @if (fileError(); as message) {
+        <p id="video-file-error" class="field-error" role="alert">{{ message }}</p>
+      }
+
+      @if (selectedFile(); as file) {
+        <div class="selected-file">
+          <span class="selected-file__icon" aria-hidden="true">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="6 3 20 12 6 21 6 3" />
+            </svg>
+          </span>
+          <div>
+            <strong>{{ file.name }}</strong>
+            <small class="muted">{{ formatFileSize(file.size) }}</small>
+          </div>
+        </div>
+      }
+
+      @if (uploading()) {
+        <div class="upload-progress" aria-live="polite">
+          <div>
+            <span>Uploading locally…</span><strong>{{ uploadPercent() }}%</strong>
+          </div>
+          <progress
+            max="100"
+            [value]="uploadPercent()"
+            [attr.aria-label]="'Local video upload: ' + uploadPercent() + ' percent'"
+          >
+            {{ uploadPercent() }}%
+          </progress>
+          <small class="muted"
+            >The backend validates the complete file before it becomes available.</small
+          >
+        </div>
+      }
+
+      <footer>
+        <button
+          class="button button--primary"
+          type="button"
+          [disabled]="!selectedFile() || !!fileError() || uploading()"
+          (click)="uploadVideo()"
+        >
+          {{ uploading() ? 'Uploading…' : 'Upload and validate' }}
+        </button>
+      </footer>
+    </section>
+  }
+
+  @if (currentStep() === 3 && project(); as currentProject) {
+    <section class="panel wizard-panel confirmation" aria-labelledby="confirmation-heading">
+      <span class="confirmation__mark" aria-hidden="true">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </span>
+      <h2 id="confirmation-heading">Ready to process “{{ currentProject.name }}”</h2>
+      <p>
+        Narrastep will locally transcribe the audio, extract stable screenshots, remove
+        near-duplicates, and associate evidence with transcript segments.
+      </p>
+      <div class="notice">
+        <strong>Processing can take several minutes on a CPU.</strong>
+        <p class="muted">
+          You can monitor real worker progress and request cancellation from the next screen.
+        </p>
+      </div>
+      <footer>
+        <a class="button button--quiet" routerLink="/projects">Process later</a>
+        <button
+          class="button button--primary"
+          type="button"
+          [disabled]="starting()"
+          (click)="startProcessing()"
+        >
+          {{ starting() ? 'Queuing…' : 'Start local processing' }}
+        </button>
+      </footer>
+    </section>
+  }
+</section>

@@ -1,0 +1,199 @@
+<section class="page processing-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Local processing</p>
+      <h1>{{ project()?.name || 'Loading project…' }}</h1>
+      <p class="muted">Real progress is persisted by the worker and survives browser refreshes.</p>
+    </div>
+    <a class="button button--quiet" routerLink="/projects">Back to projects</a>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="notice notice--error error-box" role="alert">
+      <p>{{ message }}</p>
+      <button class="button button--quiet button--small" type="button" (click)="loadProject()">
+        Reload project
+      </button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="panel processing-card" aria-busy="true">
+      <span class="visually-hidden">Loading processing state…</span>
+      <div class="skeleton"></div>
+    </div>
+  } @else if (project(); as currentProject) {
+    <article class="panel processing-card">
+      <div class="video-summary">
+        <span class="video-summary__icon" aria-hidden="true">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="6 3 20 12 6 21 6 3" />
+          </svg>
+        </span>
+        <div>
+          <span class="muted">Source video</span>
+          <strong>{{ videoFilename(currentProject) }}</strong>
+        </div>
+        <span class="status-badge" [attr.data-status]="currentProject.status">
+          {{ currentProject.status }}
+        </span>
+      </div>
+
+      @if (job(); as activeJob) {
+        <section class="job" aria-labelledby="job-stage">
+          <p class="visually-hidden" role="status" aria-atomic="true">
+            {{ stageLabel(activeJob.currentStage) }}. {{ activeJob.progressPercent }} percent.
+            {{ activeJob.message }}
+          </p>
+          <div class="stage-heading">
+            <div>
+              <p class="eyebrow">Current stage</p>
+              <h2 id="job-stage">{{ stageLabel(activeJob.currentStage) }}</h2>
+            </div>
+            <strong class="progress-number">{{ activeJob.progressPercent }}%</strong>
+          </div>
+
+          <progress
+            max="100"
+            [value]="activeJob.progressPercent"
+            [attr.aria-label]="'Processing progress: ' + activeJob.progressPercent + ' percent'"
+          >
+            {{ activeJob.progressPercent }}%
+          </progress>
+
+          <div class="job-meta">
+            <span>{{ activeJob.message }}</span>
+            <span>Elapsed: {{ elapsedLabel(activeJob) }}</span>
+          </div>
+
+          <div class="runtime-profile" aria-label="Active processing configuration">
+            <span>Strategy: {{ activeJob.selectionStrategy || 'legacy' }}</span>
+            <span>OCR: {{ activeJob.ocrMode || 'off' }}</span>
+            <span>Budget: {{ activeJob.imageBudgetProfile || 'balanced' }}</span>
+          </div>
+
+          <ol class="stage-timeline" aria-label="Processing stages">
+            @for (stage of timelineStages(); track stage) {
+              <li [attr.data-state]="stageState(stage)">
+                <span class="stage-marker" aria-hidden="true"></span>
+                <span>{{ stageLabel(stage) }}</span>
+              </li>
+            }
+          </ol>
+
+          @if (activeJob.metrics) {
+            <dl class="live-metrics" aria-label="Processing counters">
+              <div>
+                <dt>Candidate timestamps</dt>
+                <dd>{{ metricValue(activeJob, 'candidateTimestampCount') ?? 0 }}</dd>
+              </div>
+              <div>
+                <dt>Decoded frames</dt>
+                <dd>{{ metricValue(activeJob, 'decodedFrameCount') ?? 0 }}</dd>
+              </div>
+              <div>
+                <dt>OCR calls</dt>
+                <dd>{{ metricValue(activeJob, 'ocrTriggeredCount') ?? 0 }}</dd>
+              </div>
+              <div>
+                <dt>Review images</dt>
+                <dd>{{ metricValue(activeJob, 'persistedThumbnailCount') ?? 0 }}</dd>
+              </div>
+            </dl>
+          }
+
+          @if (activeJob.status === 'failed' || activeJob.status === 'interrupted') {
+            <div class="notice notice--error" role="alert">
+              <strong>{{ activeJob.errorCode || 'PROCESSING_FAILED' }}</strong>
+              <p>{{ activeJob.errorMessage || 'Local processing did not complete.' }}</p>
+            </div>
+          }
+
+          @if (activeJob.status === 'cancelled') {
+            <div class="notice">
+              Processing was cancelled. The original upload is still available for a clean retry.
+            </div>
+          }
+
+          <div class="actions">
+            @if (canCancel()) {
+              <button
+                class="button button--danger"
+                type="button"
+                [disabled]="actionPending() || activeJob.status === 'cancelling'"
+                (click)="cancelProcessing()"
+              >
+                {{ activeJob.status === 'cancelling' ? 'Cancelling…' : 'Cancel processing' }}
+              </button>
+            }
+            @if (
+              activeJob.status === 'failed' ||
+              activeJob.status === 'cancelled' ||
+              activeJob.status === 'interrupted'
+            ) {
+              <button
+                class="button button--primary"
+                type="button"
+                [disabled]="actionPending()"
+                (click)="startProcessing()"
+              >
+                Retry from source
+              </button>
+            }
+            @if (activeJob.status === 'completed') {
+              <a
+                class="button button--primary"
+                [routerLink]="['/projects', currentProject.id, 'review']"
+              >
+                Open review workspace
+              </a>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="start-state">
+          @if (currentProject.status === 'review' || currentProject.status === 'completed') {
+            <h2>This project is ready for review</h2>
+            <p class="muted">Open the transcript and screenshot workspace to continue.</p>
+            <a
+              class="button button--primary"
+              [routerLink]="['/projects', currentProject.id, 'review']"
+            >
+              Open review workspace
+            </a>
+          } @else {
+            <h2>Processing has not started</h2>
+            <p class="muted">
+              Start the CPU-compatible local pipeline when you are ready. Progress will reflect
+              completed work.
+            </p>
+            <button
+              class="button button--primary"
+              type="button"
+              [disabled]="actionPending() || currentProject.status === 'draft'"
+              (click)="startProcessing()"
+            >
+              {{ actionPending() ? 'Queuing…' : 'Start local processing' }}
+            </button>
+            @if (currentProject.status === 'draft') {
+              <p class="field-error">Upload a source video before processing.</p>
+            }
+          }
+        </section>
+      }
+
+      <footer>
+        <span class="muted">Project created {{ currentProject.createdAt | date: 'medium' }}</span>
+        <span class="privacy-note">No cloud upload or external AI service</span>
+      </footer>
+    </article>
+  }
+</section>

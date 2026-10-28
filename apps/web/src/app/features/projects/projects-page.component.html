@@ -1,0 +1,145 @@
+<section class="page">
+  <header class="page-header panel library-hero">
+    <div>
+      <p class="eyebrow">Local project library</p>
+      <h1>Turn recorded work into reusable knowledge.</h1>
+      <p class="muted">
+        Videos, transcripts, screenshots, and exports stay in your local Narrastep data directory.
+      </p>
+    </div>
+    <div class="library-hero__actions">
+      <span class="privacy-pill">Stored locally</span>
+      <a class="button button--primary" routerLink="/projects/new">Create project</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="notice notice--error error-row" role="alert">
+      <span>{{ message }}</span>
+      <button class="button button--quiet button--small" type="button" (click)="loadProjects()">
+        Try again
+      </button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="project-grid" aria-label="Loading projects" aria-busy="true">
+      <span class="visually-hidden">Loading projects…</span>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  } @else if (projects().length === 0) {
+    <div class="panel empty-state">
+      <div class="empty-state__mark" aria-hidden="true">
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polygon points="6 3 20 12 6 21 6 3" />
+        </svg>
+      </div>
+      <h2>Your project library is empty</h2>
+      <p class="muted">
+        Create a project, add one screen recording, and Narrastep will prepare it for review.
+      </p>
+      <a class="button button--primary" routerLink="/projects/new">Create your first project</a>
+    </div>
+  } @else {
+    <div class="list-heading">
+      <div>
+        <h2>Projects</h2>
+        <span class="muted">{{ visibleProjects().length }} shown · {{ total() }} total</span>
+      </div>
+      <div class="library-controls" aria-label="Project library controls">
+        <label class="search-field">
+          <span class="visually-hidden">Search projects</span>
+          <input
+            type="search"
+            placeholder="Search projects"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+          />
+        </label>
+        <label>
+          <span class="visually-hidden">Filter by status</span>
+          <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
+            <option value="all">All statuses</option>
+            <option value="draft">Draft</option>
+            <option value="uploaded">Uploaded</option>
+            <option value="queued">Queued</option>
+            <option value="processing">Processing</option>
+            <option value="review">Review</option>
+            <option value="exporting">Exporting</option>
+            <option value="completed">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </label>
+        <label>
+          <span class="visually-hidden">Sort projects</span>
+          <select [value]="sortOrder()" (change)="updateSortOrder($event)">
+            <option value="updated_desc">Recently updated</option>
+            <option value="created_desc">Recently created</option>
+            <option value="name_asc">Name A–Z</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    @if (visibleProjects().length === 0) {
+      <div class="panel filtered-empty" role="status">
+        <h3>No projects match these filters</h3>
+        <p class="muted">Change the search text or status to see more local projects.</p>
+      </div>
+    } @else {
+      <div class="project-list" aria-label="Projects">
+        <div class="project-list__header" aria-hidden="true">
+          <span>Project</span><span>Status</span><span>Mode</span><span>Duration</span
+          ><span>Segments</span><span>Screenshots</span><span>Updated</span><span>Actions</span>
+        </div>
+        @for (project of visibleProjects(); track project.id) {
+          <article class="panel project-row">
+            <div class="project-identity">
+              <h3>{{ project.name }}</h3>
+              <p class="muted">{{ project.description || 'No project description.' }}</p>
+            </div>
+            <div data-label="Status">
+              <span class="status-badge" [attr.data-status]="project.status">{{
+                project.status
+              }}</span>
+            </div>
+            <div class="mode" data-label="Mode">{{ modeLabel(project.mode) }}</div>
+            <div data-label="Duration">{{ durationLabel(project) }}</div>
+            <div data-label="Segments">{{ project.activeSegmentCount ?? 0 }}</div>
+            <div data-label="Screenshots">{{ project.screenshotCount ?? 0 }}</div>
+            <time [attr.datetime]="project.updatedAt" data-label="Updated">
+              {{ project.updatedAt | date: 'short' }}
+            </time>
+            <footer>
+              <button
+                class="button button--secondary button--small"
+                type="button"
+                (click)="openProject(project)"
+              >
+                Open project
+              </button>
+              <button
+                class="button button--danger button--small"
+                type="button"
+                [disabled]="deletingProjectId() === project.id"
+                (click)="confirmDelete(project)"
+              >
+                {{ deletingProjectId() === project.id ? 'Deleting…' : 'Delete' }}
+              </button>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  }
+</section>

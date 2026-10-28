@@ -1,0 +1,44 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+*.egg-info/
+
+# Angular and Node
+node_modules/
+dist/
+.angular/
+coverage/
+playwright-report/
+test-results/
+
+# Local application data and models
+/data/*
+!/data/.gitkeep
+/models/
+*.partial
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and generated exports
+*.log
+*.zip
+
+# Local agent tooling (personal development only, never published)
+.claude/
+skills-lock.json

@@ -1,0 +1,465 @@
+<section class="review-page">
+  <header class="review-header">
+    <div>
+      <a class="back-link" routerLink="/projects">← Projects</a>
+      <p class="eyebrow">Review workspace</p>
+      <h1>{{ project()?.name || 'Loading review…' }}</h1>
+    </div>
+    <div class="review-header__actions">
+      @if (dirtyCount() > 0) {
+        <span class="unsaved" role="status">{{ dirtyCount() }} unsaved</span>
+      }
+      <a class="button button--primary" [routerLink]="['/projects', projectId(), 'export']">
+        Export project
+      </a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="notice notice--error workspace-notice" role="alert">
+      <span>{{ message }}</span>
+      <button
+        class="button button--quiet button--small"
+        type="button"
+        (click)="errorMessage.set(null)"
+      >
+        Dismiss
+      </button>
+    </div>
+  }
+  <p class="visually-hidden" aria-live="polite">{{ statusMessage() }}</p>
+
+  @if (!loading()) {
+    <div class="workspace-switcher" role="radiogroup" aria-label="Review workspace view">
+      <label>
+        <input
+          id="review-view-video"
+          type="radio"
+          name="review-workspace-view"
+          aria-controls="review-video-panel"
+        />
+        <span>Video</span>
+      </label>
+      <label>
+        <input
+          id="review-view-transcript"
+          type="radio"
+          name="review-workspace-view"
+          aria-controls="review-transcript-panel"
+          checked
+        />
+        <span>Transcript</span>
+      </label>
+      <label>
+        <input
+          id="review-view-screenshot"
+          type="radio"
+          name="review-workspace-view"
+          aria-controls="review-screenshot-panel"
+        />
+        <span>Screenshot</span>
+      </label>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="review-grid loading-grid" aria-busy="true">
+      <span class="visually-hidden">Loading review workspace…</span>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  } @else {
+    <div class="review-grid" [style.--editor-pane-width]="editorPaneWidth()">
+      <aside
+        id="review-video-panel"
+        class="panel video-panel"
+        aria-labelledby="video-panel-heading"
+      >
+        <header class="panel-heading">
+          <div>
+            <p class="eyebrow">Source evidence</p>
+            <h2 id="video-panel-heading">Video</h2>
+          </div>
+        </header>
+        <video #videoPlayer controls preload="metadata" [src]="videoUrl()">
+          Your browser does not support the native video player.
+        </video>
+        <div class="video-controls">
+          <div class="field playback-field">
+            <label for="playback-rate">Playback speed</label>
+            <select id="playback-rate" (change)="setPlaybackRate($event)">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+            </select>
+          </div>
+          <button
+            class="button button--secondary button--small"
+            type="button"
+            [disabled]="!selectedSegment()"
+            (click)="jumpToSelectedSegment()"
+          >
+            Jump to selected segment
+          </button>
+          <button
+            class="button button--secondary button--small"
+            type="button"
+            [disabled]="!selectedSegment() || screenshotPending()"
+            title="Recover current frame (R)"
+            (click)="recoverCurrentFrame()"
+          >
+            Recover current frame
+          </button>
+        </div>
+        @if (selectedSegment(); as segment) {
+          <div class="selected-time">
+            <span class="muted">Selected range</span>
+            <strong
+              >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</strong
+            >
+          </div>
+        }
+      </aside>
+
+      <aside
+        id="review-structure-panel"
+        class="panel structure-panel"
+        aria-labelledby="structure-heading"
+      >
+        <header class="panel-heading">
+          <div>
+            <p class="eyebrow">Review structure</p>
+            <h2 id="structure-heading">Segments</h2>
+          </div>
+          <span class="muted">{{ segments().length }}</span>
+        </header>
+
+        <div class="review-filters" aria-label="Transcript and evidence filters">
+          <label>
+            <span class="visually-hidden">Search transcript</span>
+            <input
+              #segmentSearchInput
+              type="search"
+              placeholder="Search transcript (/ )"
+              [value]="segmentSearch()"
+              (input)="updateSegmentSearch($event)"
+            />
+          </label>
+          <label>
+            <span class="visually-hidden">Filter review problems</span>
+            <select [value]="evidenceFilter()" (change)="updateEvidenceFilter($event)">
+              <option value="all">All segments</option>
+              <option value="missing">Missing evidence</option>
+              <option value="duplicate">Duplicate cluster</option>
+              <option value="low_confidence">Low confidence</option>
+              <option value="manual">Manual selection</option>
+              <option value="problems">Problems</option>
+            </select>
+          </label>
+          <label class="pane-resizer">
+            <span>Editor width</span>
+            <input
+              type="range"
+              min="1"
+              max="2"
+              step="0.05"
+              [value]="editorPaneWidth().replace('fr', '')"
+              (input)="updateEditorPaneWidth($event)"
+            />
+          </label>
+        </div>
+
+        @if (selectedForMergeCount() > 0) {
+          <div class="merge-toolbar">
+            <span>{{ selectedForMergeCount() }} selected for merge</span>
+            <button
+              class="button button--secondary button--small"
+              type="button"
+              [disabled]="selectedForMergeCount() < 2 || structuralPending()"
+              (click)="mergeSelectedSegments()"
+            >
+              {{ structuralPending() ? 'Updating…' : 'Merge adjacent' }}
+            </button>
+          </div>
+        }
+
+        <nav class="segment-rail" aria-label="Transcript segment structure">
+          @for (segment of filteredSegments(); track segment.id) {
+            <div
+              class="segment-rail__item"
+              [id]="'segment-' + segment.id"
+              [class.selected]="selectedSegmentId() === segment.id"
+              [class.dirty]="isDirty(segment)"
+            >
+              <button
+                class="segment-select"
+                type="button"
+                [attr.aria-current]="selectedSegmentId() === segment.id ? 'true' : null"
+                (click)="selectSegment(segment)"
+              >
+                <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
+                <span
+                  >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
+                >
+              </button>
+              <label class="merge-check">
+                <input
+                  type="checkbox"
+                  [checked]="mergeSelection().has(segment.id)"
+                  [disabled]="structuralPending()"
+                  [attr.aria-label]="'Merge segment ' + (segment.segmentIndex + 1)"
+                  (change)="onMergeCheckbox(segment.id, $event)"
+                />
+                Merge
+              </label>
+            </div>
+          } @empty {
+            <div class="empty-panel">
+              @if (segments().length === 0) {
+                <h3>No transcript segments</h3>
+                <p class="muted">This project does not contain active review segments.</p>
+              } @else {
+                <h3>No segments match</h3>
+                <p class="muted">Change the transcript search or evidence filter.</p>
+              }
+            </div>
+          }
+        </nav>
+      </aside>
+
+      <section
+        id="review-transcript-panel"
+        class="panel transcript-panel"
+        aria-labelledby="transcript-heading"
+        [attr.aria-busy]="structuralPending()"
+      >
+        <header class="panel-heading transcript-heading">
+          <div>
+            <p class="eyebrow">Reviewed content</p>
+            <h2 id="transcript-heading">Transcript</h2>
+          </div>
+          <span class="muted">{{ segments().length }} segments</span>
+        </header>
+
+        <div class="segment-list">
+          @if (selectedSegment(); as segment) {
+            <article class="segment selected" [class.dirty]="isDirty(segment)">
+              <header>
+                <div class="segment-select">
+                  <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
+                  <span
+                    >{{ timeLabel(segment.startSeconds) }} –
+                    {{ timeLabel(segment.endSeconds) }}</span
+                  >
+                </div>
+              </header>
+
+              <div class="segment-meta">
+                <span>{{ confidenceLabel(segment.confidence) }}</span>
+                @if (segment.speakerLabel) {
+                  <span>{{ segment.speakerLabel }}</span>
+                }
+                @if (isDirty(segment)) {
+                  <span class="dirty-label">Unsaved edit</span>
+                }
+              </div>
+
+              <label class="visually-hidden" [for]="'reviewed-' + segment.id">
+                Reviewed text for segment {{ segment.segmentIndex + 1 }}
+              </label>
+              <textarea
+                [id]="'reviewed-' + segment.id"
+                [value]="reviewedText(segment)"
+                [disabled]="structuralPending()"
+                (input)="updateEditedText(segment.id, $event)"
+                (select)="captureCaret(segment.id, $event)"
+                (click)="captureCaret(segment.id, $event)"
+                (keyup)="captureCaret(segment.id, $event)"
+              ></textarea>
+
+              <details>
+                <summary>Original transcription</summary>
+                <p>{{ segment.rawText }}</p>
+              </details>
+
+              <footer>
+                <button
+                  class="button button--quiet button--small"
+                  type="button"
+                  [disabled]="structuralPending() || isDirty(segment)"
+                  (click)="splitSegment(segment)"
+                >
+                  Split at caret
+                </button>
+                <button
+                  class="button button--primary button--small"
+                  type="button"
+                  [disabled]="
+                    structuralPending() || !isDirty(segment) || savingSegmentIds().has(segment.id)
+                  "
+                  (click)="saveSegment(segment)"
+                >
+                  {{ savingSegmentIds().has(segment.id) ? 'Saving…' : 'Save text' }}
+                </button>
+              </footer>
+            </article>
+          } @else {
+            <div class="empty-panel">
+              <h3>No transcript segments</h3>
+              <p class="muted">This project does not contain active review segments.</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <aside
+        id="review-screenshot-panel"
+        class="panel screenshot-panel"
+        aria-labelledby="screenshot-heading"
+      >
+        <header class="panel-heading">
+          <div>
+            <p class="eyebrow">Visual evidence</p>
+            <h2 id="screenshot-heading">Screenshot</h2>
+          </div>
+        </header>
+
+        @if (!selectedSegment()) {
+          <div class="empty-panel">
+            <h3>Select a transcript segment</h3>
+            <p class="muted">Its primary screenshot and alternatives will appear here.</p>
+          </div>
+        } @else if (screenshotLoading()) {
+          <div class="screenshot-loading" aria-busy="true">
+            <span class="visually-hidden">Loading screenshot choices…</span>
+            <div class="skeleton"></div>
+          </div>
+        } @else {
+          @if (primaryScreenshot(); as primary) {
+            <figure class="primary-shot">
+              <button
+                type="button"
+                (click)="previewScreenshot(primary)"
+                aria-label="Open full-size primary screenshot"
+              >
+                <img
+                  [src]="screenshotUrl(primary.id)"
+                  [alt]="'Primary screenshot at ' + timeLabel(primary.timestampSeconds)"
+                />
+              </button>
+              <figcaption>
+                <div>
+                  <span class="status-badge">Primary</span>
+                  @if (primary.isUserSelected) {
+                    <span class="user-choice">User selected</span>
+                  }
+                </div>
+                <strong>{{ timeLabel(primary.timestampSeconds) }}</strong>
+              </figcaption>
+            </figure>
+            <dl class="evidence-metadata">
+              <div>
+                <dt>Selection</dt>
+                <dd>{{ primary.selectionReason || 'Legacy' }}</dd>
+              </div>
+              <div>
+                <dt>Visual change</dt>
+                <dd>{{ primary.visualChangeScore ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>Text change</dt>
+                <dd>{{ primary.textChangeScore ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>Coverage</dt>
+                <dd>{{ primary.confidence ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>Shared segments</dt>
+                <dd>{{ primary.sharedSegmentCount ?? 1 }}</dd>
+              </div>
+              <div>
+                <dt>Materialization</dt>
+                <dd>{{ primary.materializationState || 'png_ready' }}</dd>
+              </div>
+            </dl>
+            <div class="screenshot-actions">
+              <button
+                class="button button--quiet button--small"
+                type="button"
+                (click)="previewScreenshot(primary)"
+              >
+                Full-size preview
+              </button>
+              <button
+                class="button button--danger button--small"
+                type="button"
+                [disabled]="screenshotPending()"
+                (click)="removePrimaryScreenshot()"
+              >
+                Remove primary
+              </button>
+            </div>
+          } @else {
+            <div class="empty-panel no-primary">
+              <h3>No primary screenshot</h3>
+              <p class="muted">
+                The segment remains exportable. Choose a candidate below if one is useful.
+              </p>
+            </div>
+          }
+
+          @if (alternativeScreenshots().length > 0) {
+            <section class="candidates" aria-labelledby="candidates-heading">
+              <h3 id="candidates-heading">Alternatives</h3>
+              <div class="candidate-grid">
+                @for (screenshot of alternativeScreenshots(); track screenshot.id) {
+                  <article class="candidate">
+                    <button
+                      class="candidate__preview"
+                      type="button"
+                      (click)="previewScreenshot(screenshot)"
+                      [attr.aria-label]="
+                        'Preview candidate at ' + timeLabel(screenshot.timestampSeconds)
+                      "
+                    >
+                      <img
+                        [src]="screenshotUrl(screenshot.id)"
+                        [alt]="'Screenshot candidate at ' + timeLabel(screenshot.timestampSeconds)"
+                      />
+                    </button>
+                    <div>
+                      <span>
+                        {{ timeLabel(screenshot.timestampSeconds) }} ·
+                        {{ screenshot.selectionReason || 'candidate' }}
+                      </span>
+                      <button
+                        class="button button--secondary button--small"
+                        type="button"
+                        [disabled]="screenshotPending()"
+                        [attr.aria-label]="
+                          'Use as primary: screenshot at ' + timeLabel(screenshot.timestampSeconds)
+                        "
+                        (click)="selectPrimaryScreenshot(screenshot)"
+                      >
+                        Use as primary
+                      </button>
+                    </div>
+                  </article>
+                }
+              </div>
+            </section>
+          } @else if (!primaryScreenshot()) {
+            <p class="muted candidate-empty">
+              No screenshot candidates are available for this segment.
+            </p>
+          }
+        }
+      </aside>
+    </div>
+  }
+</section>

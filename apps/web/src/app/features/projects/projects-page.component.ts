@@ -1,0 +1,188 @@
+import { DatePipe } from '@angular/common';
+import { Dialog, DialogModule } from '@angular/cdk/dialog';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, RouterLink } from '@angular/router';
+import { EMPTY, catchError, filter, finalize, switchMap } from 'rxjs';
+
+import { Project, ProjectMode, ProjectStatus } from '../../core/api.models';
+import { ApiService } from '../../core/services/api.service';
+import { NarrastepApiError } from '../../core/services/api-error.interceptor';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../shared/dialogs/confirm-dialog.component';
+
+@Component({
+  selector: 'ns-projects-page',
+  imports: [DatePipe, DialogModule, RouterLink],
+  templateUrl: './projects-page.component.html',
+  styleUrl: './projects-page.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class ProjectsPageComponent {
+  readonly projects = signal<Project[]>([]);
+  readonly total = signal(0);
+  readonly loading = signal(true);
+  readonly errorMessage = signal<string | null>(null);
+  readonly deletingProjectId = signal<string | null>(null);
+  readonly searchQuery = signal('');
+  readonly statusFilter = signal<'all' | ProjectStatus>('all');
+  readonly sortOrder = signal<'updated_desc' | 'created_desc' | 'name_asc'>('updated_desc');
+  readonly visibleProjects = computed(() => {
+    const query = this.searchQuery().trim().toLocaleLowerCase();
+    const status = this.statusFilter();
+    const projects = this.projects().filter((project) => {
+      const matchesQuery =
+        query.length === 0 ||
+        project.name.toLocaleLowerCase().includes(query) ||
+        (project.description ?? '').toLocaleLowerCase().includes(query);
+      return matchesQuery && (status === 'all' || project.status === status);
+    });
+
+    return projects.sort((left, right) => {
+      if (this.sortOrder() === 'name_asc') {
+        return left.name.localeCompare(right.name);
+      }
+      const field = this.sortOrder() === 'created_desc' ? 'createdAt' : 'updatedAt';
+      return Date.parse(right[field]) - Date.parse(left[field]);
+    });
+  });
+
+  private readonly api = inject(ApiService);
+  private readonly dialog = inject(Dialog);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+
+  /** Loads persisted local projects when the dashboard route is entered. */
+  constructor() {
+    this.loadProjects();
+  }
+
+  /** Reloads the collection and exposes a recoverable error state to the user. */
+  loadProjects(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.api
+      .listProjects()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false)),
+        catchError((error: unknown) => {
+          this.errorMessage.set(this.errorText(error));
+          return EMPTY;
+        }),
+      )
+      .subscribe((response) => {
+        this.projects.set(response.items);
+        this.total.set(response.total);
+      });
+  }
+
+  /** Opens the route that matches the project's current business lifecycle state. */
+  openProject(project: Project): void {
+    if (project.status === 'draft' || project.status === 'uploaded') {
+      void this.router.navigate(['/projects/new'], { queryParams: { projectId: project.id } });
+      return;
+    }
+    if (project.status === 'review' || project.status === 'completed') {
+      void this.router.navigate(['/projects', project.id, 'review']);
+      return;
+    }
+    if (project.status === 'exporting') {
+      void this.router.navigate(['/projects', project.id, 'export']);
+      return;
+    }
+    void this.router.navigate(['/projects', project.id]);
+  }
+
+  /** Requires an accessible destructive confirmation before deleting local evidence. */
+  confirmDelete(project: Project): void {
+    const data: ConfirmDialogData = {
+      title: `Delete “${project.name}”?`,
+      message:
+        'This permanently removes the project metadata, uploaded video, transcript, screenshots, and exports from local storage.',
+      confirmLabel: 'Delete project',
+      danger: true,
+    };
+
+    this.dialog
+      .open<boolean>(ConfirmDialogComponent, {
+        data,
+        ariaLabel: `Confirm deletion of ${project.name}`,
+        disableClose: true,
+      })
+      .closed.pipe(
+        filter((confirmed): confirmed is true => confirmed === true),
+        switchMap(() => {
+          this.deletingProjectId.set(project.id);
+          this.errorMessage.set(null);
+          return this.api.deleteProject(project.id).pipe(
+            finalize(() => this.deletingProjectId.set(null)),
+            catchError((error: unknown) => {
+              this.errorMessage.set(this.errorText(error));
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.projects.update((projects) => projects.filter((item) => item.id !== project.id));
+        this.total.update((total) => Math.max(0, total - 1));
+      });
+  }
+
+  /** Presents project modes as product language instead of API enum syntax. */
+  modeLabel(mode: ProjectMode): string {
+    const labels: Record<ProjectMode, string> = {
+      tutorial: 'Tutorial',
+      meeting: 'Meeting',
+      technical_walkthrough: 'Technical walkthrough',
+      general: 'General',
+    };
+    return labels[mode];
+  }
+
+  /** Applies a local project-library search without issuing network requests. */
+  updateSearch(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Limits the current local list to one project lifecycle status. */
+  updateStatusFilter(event: Event): void {
+    this.statusFilter.set((event.target as HTMLSelectElement).value as 'all' | ProjectStatus);
+  }
+
+  /** Reorders the current local list using the selected stable business field. */
+  updateSortOrder(event: Event): void {
+    this.sortOrder.set(
+      (event.target as HTMLSelectElement).value as 'updated_desc' | 'created_desc' | 'name_asc',
+    );
+  }
+
+  /** Formats an uploaded video duration for the compact dashboard row. */
+  durationLabel(project: Project): string {
+    const durationSeconds = project.videoAsset?.durationSeconds;
+    if (durationSeconds === null || durationSeconds === undefined) {
+      return 'Not available';
+    }
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = Math.floor(durationSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  /** Uses the stable API message when available and hides unknown implementation details. */
+  private errorText(error: unknown): string {
+    return error instanceof NarrastepApiError
+      ? error.message
+      : 'Narrastep could not load the local project collection.';
+  }
+}

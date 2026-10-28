@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Narrastep">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#383b50"/>
+      <stop offset="1" stop-color="#2d2f42"/>
+    </linearGradient>
+    <linearGradient id="n" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9cab"/>
+      <stop offset="0.55" stop-color="#f6798c"/>
+      <stop offset="1" stop-color="#a84e5f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#f6798c" stroke-opacity="0.28"/>
+  <path d="M17 47V17h8l14 18V17h8v30h-8L25 29v18z" fill="url(#n)"/>
+</svg>

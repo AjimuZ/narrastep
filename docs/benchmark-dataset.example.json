@@ -1,0 +1,28 @@
+{
+  "machineRamBudgetMb": 4096,
+  "cases": [
+    {
+      "id": "replace-with-local-case-id",
+      "videoPath": "C:/replace/with/local/annotated-video.mp4",
+      "durationSeconds": 30.0,
+      "mode": "tutorial",
+      "detectedLanguage": "en",
+      "criticalToleranceSeconds": 0.75,
+      "criticalStates": [
+        { "timestampSeconds": 5.0 },
+        { "timestampSeconds": 18.5 }
+      ],
+      "segments": [
+        {
+          "startSeconds": 0.0,
+          "endSeconds": 30.0,
+          "text": "Local benchmark transcript evidence.",
+          "words": [
+            { "text": "Local", "startSeconds": 0.0, "endSeconds": 0.5 },
+            { "text": "evidence", "startSeconds": 1.8, "endSeconds": 2.4 }
+          ]
+        }
+      ]
+    }
+  ]
+}

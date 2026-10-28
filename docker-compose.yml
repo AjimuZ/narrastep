@@ -1,0 +1,114 @@
+x-backend-image: &backend-image
+  image: narrastep-backend:0.2.0
+  build:
+    context: ./backend
+    args:
+      NARRASTEP_WHISPER_MODEL: ${NARRASTEP_WHISPER_MODEL:-small}
+
+x-backend-environment: &backend-environment
+  NARRASTEP_ENV: ${NARRASTEP_ENV:-development}
+  NARRASTEP_DATA_DIR: /data
+  NARRASTEP_DATABASE_URL: sqlite:////data/narrastep.db
+  NARRASTEP_REDIS_URL: redis://redis:6379/0
+  NARRASTEP_CELERY_BROKER_URL: redis://redis:6379/0
+  NARRASTEP_CELERY_RESULT_BACKEND: redis://redis:6379/1
+  NARRASTEP_JOB_VISIBILITY_TIMEOUT_SECONDS: ${NARRASTEP_JOB_VISIBILITY_TIMEOUT_SECONDS:-86400}
+  NARRASTEP_JOB_STALE_AFTER_SECONDS: ${NARRASTEP_JOB_STALE_AFTER_SECONDS:-300}
+  NARRASTEP_MAX_UPLOAD_SIZE_MB: ${NARRASTEP_MAX_UPLOAD_SIZE_MB:-4096}
+  NARRASTEP_UPLOAD_CHUNK_BYTES: ${NARRASTEP_UPLOAD_CHUNK_BYTES:-1048576}
+  NARRASTEP_MIN_FREE_DISK_MB: ${NARRASTEP_MIN_FREE_DISK_MB:-1024}
+  NARRASTEP_ALLOWED_VIDEO_EXTENSIONS: ${NARRASTEP_ALLOWED_VIDEO_EXTENSIONS:-mp4,webm,mov,mkv}
+  NARRASTEP_MEDIA_COMMAND_TIMEOUT_SECONDS: ${NARRASTEP_MEDIA_COMMAND_TIMEOUT_SECONDS:-120}
+  NARRASTEP_WHISPER_MODEL: ${NARRASTEP_WHISPER_MODEL:-small}
+  NARRASTEP_WHISPER_MODEL_PATH: /opt/models/${NARRASTEP_WHISPER_MODEL:-small}
+  NARRASTEP_WHISPER_DEVICE: ${NARRASTEP_WHISPER_DEVICE:-cpu}
+  NARRASTEP_WHISPER_COMPUTE_TYPE: ${NARRASTEP_WHISPER_COMPUTE_TYPE:-int8}
+  NARRASTEP_WHISPER_LOCAL_FILES_ONLY: "true"
+  HF_HUB_OFFLINE: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  DO_NOT_TRACK: "1"
+  NARRASTEP_FRAME_INTERVAL_SECONDS: ${NARRASTEP_FRAME_INTERVAL_SECONDS:-3}
+  NARRASTEP_FRAME_DUPLICATE_THRESHOLD: ${NARRASTEP_FRAME_DUPLICATE_THRESHOLD:-0.92}
+  NARRASTEP_SCREENSHOT_ALTERNATIVES_PER_SEGMENT: ${NARRASTEP_SCREENSHOT_ALTERNATIVES_PER_SEGMENT:-2}
+  NARRASTEP_SCREENSHOT_SELECTION_STRATEGY: ${NARRASTEP_SCREENSHOT_SELECTION_STRATEGY:-legacy}
+  NARRASTEP_OCR_MODE: ${NARRASTEP_OCR_MODE:-selective}
+  NARRASTEP_IMAGE_BUDGET_PROFILE: ${NARRASTEP_IMAGE_BUDGET_PROFILE:-balanced}
+  NARRASTEP_TESSERACT_PATH: ${NARRASTEP_TESSERACT_PATH:-tesseract}
+  NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH: ${NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH:-20}
+  NARRASTEP_STABILITY_SAMPLE_OFFSET_SECONDS: ${NARRASTEP_STABILITY_SAMPLE_OFFSET_SECONDS:-0.2}
+  NARRASTEP_SSE_HEARTBEAT_SECONDS: ${NARRASTEP_SSE_HEARTBEAT_SECONDS:-15}
+  NARRASTEP_SSE_POLL_SECONDS: ${NARRASTEP_SSE_POLL_SECONDS:-0.5}
+  NARRASTEP_ENABLE_MOCK_PROCESSING: "${NARRASTEP_ENABLE_MOCK_PROCESSING:-false}"
+  NARRASTEP_LOG_LEVEL: ${NARRASTEP_LOG_LEVEL:-INFO}
+  NARRASTEP_CORS_ORIGINS: ${NARRASTEP_CORS_ORIGINS:-http://127.0.0.1:4200,http://localhost:4200}
+
+services:
+  redis:
+    image: redis:7.2.14-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - narrastep-redis:/data
+    networks:
+      - processing
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    <<: *backend-image
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    environment:
+      <<: *backend-environment
+    volumes:
+      - narrastep-data:/data
+    ports:
+      - "127.0.0.1:${NARRASTEP_API_PORT:-8002}:8000"
+    networks:
+      - local
+      - processing
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 20
+
+  worker:
+    <<: *backend-image
+    command: ["celery", "-A", "app.tasks.celery_app:celery_app", "worker", "--loglevel=${NARRASTEP_LOG_LEVEL:-INFO}", "--pool=prefork", "--concurrency=1", "--prefetch-multiplier=1"]
+    environment:
+      <<: *backend-environment
+    volumes:
+      - narrastep-data:/data
+    networks:
+      - processing
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  web:
+    image: narrastep-web:0.2.0
+    build:
+      context: ./apps/web
+    ports:
+      - "127.0.0.1:${NARRASTEP_WEB_PORT:-4200}:80"
+    networks:
+      - local
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  narrastep-data:
+  narrastep-redis:
+
+networks:
+  local:
+  processing:
+    internal: true

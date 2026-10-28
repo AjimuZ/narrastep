@@ -1,0 +1,2095 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorDetail": {
+        "description": "Describe one stable and non-sensitive API error.",
+        "properties": {
+          "code": {
+            "title": "Code"
+          },
+          "details": {
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorEnvelope": {
+        "description": "Wrap API failures in one predictable top-level property.",
+        "properties": {
+          "error": {}
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "ExportCreate": {
+        "description": "Configure one immutable export without including source video by default.",
+        "properties": {
+          "includeOriginalVideo": {
+            "default": false,
+            "title": "Includeoriginalvideo",
+            "type": "boolean"
+          }
+        },
+        "title": "ExportCreate",
+        "type": "object"
+      },
+      "ExportEstimateResponse": {
+        "description": "Expose a local conservative estimate produced by the real export selector.",
+        "properties": {
+          "batchCount": {
+            "title": "Batchcount"
+          },
+          "batchImageCopyCount": {
+            "title": "Batchimagecopycount"
+          },
+          "canonicalImageCount": {
+            "title": "Canonicalimagecount"
+          },
+          "estimatedZipBytes": {
+            "title": "Estimatedzipbytes"
+          },
+          "isApproximate": {
+            "title": "Isapproximate"
+          },
+          "redundancyWarning": {
+            "title": "Redundancywarning"
+          }
+        },
+        "required": [
+          "canonicalImageCount",
+          "batchCount",
+          "batchImageCopyCount",
+          "estimatedZipBytes",
+          "redundancyWarning"
+        ],
+        "title": "ExportEstimateResponse",
+        "type": "object"
+      },
+      "ExportListResponse": {
+        "description": "Return immutable export history newest first.",
+        "properties": {
+          "items": {
+            "title": "Items"
+          },
+          "total": {
+            "title": "Total"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ExportListResponse",
+        "type": "object"
+      },
+      "ExportResponse": {
+        "description": "Expose export progress and a download URL only after successful completion.",
+        "properties": {
+          "completedAt": {
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "currentStage": {
+            "title": "Currentstage"
+          },
+          "errorCode": {
+            "title": "Errorcode"
+          },
+          "errorMessage": {
+            "title": "Errormessage"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "includeOriginalVideo": {
+            "title": "Includeoriginalvideo"
+          },
+          "metrics": {
+            "title": "Metrics"
+          },
+          "progressPercent": {
+            "title": "Progresspercent"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          },
+          "status": {}
+        },
+        "required": [
+          "id",
+          "projectId",
+          "status",
+          "progressPercent",
+          "currentStage",
+          "includeOriginalVideo",
+          "errorCode",
+          "errorMessage",
+          "createdAt",
+          "completedAt",
+          "sizeBytes"
+        ],
+        "title": "ExportResponse",
+        "type": "object"
+      },
+      "ExportStatus": {
+        "description": "Represent the durable state of an immutable export artifact.",
+        "enum": [
+          "queued",
+          "processing",
+          "completed",
+          "failed"
+        ],
+        "title": "ExportStatus",
+        "type": "string"
+      },
+      "HealthResponse": {
+        "description": "Report process health without leaking configuration or filesystem paths.",
+        "properties": {
+          "database": {
+            "title": "Database"
+          },
+          "redis": {
+            "title": "Redis"
+          },
+          "status": {
+            "title": "Status"
+          },
+          "version": {
+            "title": "Version"
+          },
+          "worker": {
+            "title": "Worker"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "database",
+          "redis",
+          "worker"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "JobResponse": {
+        "description": "Expose persisted processing progress for stream and polling clients.",
+        "properties": {
+          "completedAt": {
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "currentStage": {
+            "title": "Currentstage"
+          },
+          "errorCode": {
+            "title": "Errorcode"
+          },
+          "errorMessage": {
+            "title": "Errormessage"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "imageBudgetProfile": {
+            "title": "Imagebudgetprofile"
+          },
+          "message": {
+            "title": "Message"
+          },
+          "metrics": {
+            "title": "Metrics"
+          },
+          "ocrMode": {
+            "title": "Ocrmode"
+          },
+          "progressPercent": {
+            "title": "Progresspercent"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "selectionStrategy": {
+            "title": "Selectionstrategy"
+          },
+          "startedAt": {
+            "title": "Startedat"
+          },
+          "status": {},
+          "version": {
+            "title": "Version"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "status",
+          "currentStage",
+          "progressPercent",
+          "message",
+          "errorCode",
+          "errorMessage",
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "version"
+        ],
+        "title": "JobResponse",
+        "type": "object"
+      },
+      "JobStatus": {
+        "description": "Represent the durable state of background processing work.",
+        "enum": [
+          "queued",
+          "processing",
+          "cancelling",
+          "completed",
+          "failed",
+          "cancelled",
+          "interrupted"
+        ],
+        "title": "JobStatus",
+        "type": "string"
+      },
+      "MediaAssetResponse": {
+        "description": "Expose safe source-video metadata without exposing its local absolute path.",
+        "properties": {
+          "assetType": {
+            "title": "Assettype"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "durationSeconds": {
+            "title": "Durationseconds"
+          },
+          "height": {
+            "title": "Height"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "mimeType": {
+            "title": "Mimetype"
+          },
+          "originalFilename": {
+            "title": "Originalfilename"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          },
+          "width": {
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "originalFilename",
+          "mimeType",
+          "sizeBytes",
+          "durationSeconds",
+          "width",
+          "height",
+          "createdAt"
+        ],
+        "title": "MediaAssetResponse",
+        "type": "object"
+      },
+      "OutputMode": {
+        "description": "Describe the intended downstream document style for the export prompt.",
+        "enum": [
+          "tutorial",
+          "meeting",
+          "technical_walkthrough",
+          "general"
+        ],
+        "title": "OutputMode",
+        "type": "string"
+      },
+      "ProjectCreate": {
+        "description": "Validate metadata required to create a project workspace.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/OutputMode",
+            "default": "tutorial"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "default": "auto",
+            "maxLength": 16,
+            "title": "Sourcelanguage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate",
+        "type": "object"
+      },
+      "ProjectListResponse": {
+        "description": "Return a stable pageless collection shape for the local project list.",
+        "properties": {
+          "items": {
+            "title": "Items"
+          },
+          "total": {
+            "title": "Total"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ProjectListResponse",
+        "type": "object"
+      },
+      "ProjectResponse": {
+        "description": "Expose project metadata, state, and optional validated source information.",
+        "properties": {
+          "activeJobId": {
+            "title": "Activejobid"
+          },
+          "activeSegmentCount": {
+            "title": "Activesegmentcount"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "description": {
+            "title": "Description"
+          },
+          "detectedLanguage": {
+            "title": "Detectedlanguage"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "mode": {},
+          "name": {
+            "title": "Name"
+          },
+          "screenshotCount": {
+            "title": "Screenshotcount"
+          },
+          "sourceLanguage": {
+            "title": "Sourcelanguage"
+          },
+          "status": {},
+          "updatedAt": {
+            "title": "Updatedat"
+          },
+          "videoAsset": {},
+          "videoAssetId": {
+            "title": "Videoassetid"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "sourceLanguage",
+          "mode",
+          "detectedLanguage",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "videoAssetId",
+          "activeJobId"
+        ],
+        "title": "ProjectResponse",
+        "type": "object"
+      },
+      "ProjectState": {
+        "description": "Represent the user-visible project lifecycle.",
+        "enum": [
+          "draft",
+          "uploaded",
+          "queued",
+          "processing",
+          "review",
+          "exporting",
+          "completed",
+          "failed"
+        ],
+        "title": "ProjectState",
+        "type": "string"
+      },
+      "ProjectUpdate": {
+        "description": "Validate editable project metadata without changing evidence or state.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutputMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sourceLanguage": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcelanguage"
+          }
+        },
+        "title": "ProjectUpdate",
+        "type": "object"
+      },
+      "ScreenshotAssociationResponse": {
+        "description": "Expose one segment-to-screenshot role with embedded screenshot metadata.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence"
+          },
+          "coverageScore": {
+            "title": "Coveragescore"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "isUserSelected": {
+            "title": "Isuserselected"
+          },
+          "role": {
+            "title": "Role"
+          },
+          "roleRankReason": {
+            "title": "Rolerankreason"
+          },
+          "screenshot": {},
+          "screenshotId": {
+            "title": "Screenshotid"
+          },
+          "segmentId": {
+            "title": "Segmentid"
+          }
+        },
+        "required": [
+          "id",
+          "segmentId",
+          "screenshotId",
+          "role",
+          "confidence",
+          "isUserSelected",
+          "screenshot",
+          "createdAt"
+        ],
+        "title": "ScreenshotAssociationResponse",
+        "type": "object"
+      },
+      "ScreenshotFromVideoRequest": {
+        "description": "Request one exact source-video frame for the active review segment.",
+        "properties": {
+          "timestampSeconds": {
+            "minimum": 0.0,
+            "title": "Timestampseconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "timestampSeconds"
+        ],
+        "title": "ScreenshotFromVideoRequest",
+        "type": "object"
+      },
+      "ScreenshotResponse": {
+        "description": "Expose one generated screenshot without revealing its local path.",
+        "properties": {
+          "clusterId": {
+            "title": "Clusterid"
+          },
+          "confidence": {
+            "title": "Confidence"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "height": {
+            "title": "Height"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "isCandidate": {
+            "title": "Iscandidate"
+          },
+          "isMandatory": {
+            "title": "Ismandatory"
+          },
+          "isUserSelected": {
+            "title": "Isuserselected"
+          },
+          "materializationState": {
+            "title": "Materializationstate"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "qualityScore": {
+            "title": "Qualityscore"
+          },
+          "role": {
+            "title": "Role"
+          },
+          "selectionReason": {
+            "title": "Selectionreason"
+          },
+          "sharedSegmentCount": {
+            "title": "Sharedsegmentcount"
+          },
+          "textChangeScore": {
+            "title": "Textchangescore"
+          },
+          "timestampSeconds": {
+            "title": "Timestampseconds"
+          },
+          "visualChangeScore": {
+            "title": "Visualchangescore"
+          },
+          "width": {
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "timestampSeconds",
+          "width",
+          "height",
+          "qualityScore",
+          "createdAt"
+        ],
+        "title": "ScreenshotResponse",
+        "type": "object"
+      },
+      "SegmentMergeRequest": {
+        "description": "Identify two or more ordered, active, contiguous segments to merge.",
+        "properties": {
+          "segmentIds": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Segmentids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "segmentIds"
+        ],
+        "title": "SegmentMergeRequest",
+        "type": "object"
+      },
+      "SegmentResponse": {
+        "description": "Expose one active reviewed segment and its available visual evidence.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "endSeconds": {
+            "title": "Endseconds"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "rawText": {
+            "title": "Rawtext"
+          },
+          "reviewedText": {
+            "title": "Reviewedtext"
+          },
+          "segmentIndex": {
+            "title": "Segmentindex"
+          },
+          "speakerLabel": {
+            "title": "Speakerlabel"
+          },
+          "startSeconds": {
+            "title": "Startseconds"
+          },
+          "updatedAt": {
+            "title": "Updatedat"
+          },
+          "words": {
+            "title": "Words"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "segmentIndex",
+          "startSeconds",
+          "endSeconds",
+          "rawText",
+          "reviewedText",
+          "words",
+          "speakerLabel",
+          "confidence",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "SegmentResponse",
+        "type": "object"
+      },
+      "SegmentSplitRequest": {
+        "description": "Carry the exact reviewed text portions and chosen timeline split point.",
+        "properties": {
+          "leftReviewedText": {
+            "maxLength": 100000,
+            "title": "Leftreviewedtext",
+            "type": "string"
+          },
+          "rightReviewedText": {
+            "maxLength": 100000,
+            "title": "Rightreviewedtext",
+            "type": "string"
+          },
+          "splitSeconds": {
+            "minimum": 0.0,
+            "title": "Splitseconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "leftReviewedText",
+          "rightReviewedText",
+          "splitSeconds"
+        ],
+        "title": "SegmentSplitRequest",
+        "type": "object"
+      },
+      "SegmentUpdate": {
+        "description": "Validate an explicit reviewed-text save, including an intentional empty value.",
+        "properties": {
+          "reviewedText": {
+            "maxLength": 100000,
+            "title": "Reviewedtext",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reviewedText"
+        ],
+        "title": "SegmentUpdate",
+        "type": "object"
+      },
+      "WordResponse": {
+        "description": "Expose immutable word-level evidence used by split operations.",
+        "properties": {
+          "endSeconds": {
+            "title": "Endseconds"
+          },
+          "probability": {
+            "title": "Probability"
+          },
+          "startSeconds": {
+            "title": "Startseconds"
+          },
+          "text": {
+            "title": "Text"
+          }
+        },
+        "required": [
+          "text",
+          "startSeconds",
+          "endSeconds"
+        ],
+        "title": "WordResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Local-first video transcription, evidence review, and export API.",
+    "title": "Narrastep API",
+    "version": "0.2.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/exports/{export_id}": {
+      "get": {
+        "description": "Return one export progress record for direct polling clients.",
+        "operationId": "get_export_api_v1_exports__export_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Export"
+      }
+    },
+    "/api/v1/exports/{export_id}/download": {
+      "get": {
+        "description": "Download a completed immutable ZIP while rejecting partial or missing artifacts.",
+        "operationId": "download_export_api_v1_exports__export_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Immutable export archive"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Download Export"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Verify that the API process and authoritative SQLite store are available.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "description": "Return the latest authoritative processing snapshot for polling clients.",
+        "operationId": "get_job_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Job"
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Persist cooperative cancellation and revoke work that has not started yet.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Cancel Job"
+      }
+    },
+    "/api/v1/jobs/{job_id}/events": {
+      "get": {
+        "description": "Stream database-resynchronized progress with event IDs and bounded heartbeats.",
+        "operationId": "stream_job_events_api_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Versioned progress event stream"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Stream Job Events"
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "description": "List all projects newest first for the local dashboard.",
+        "operationId": "list_projects_api_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Projects"
+      },
+      "post": {
+        "description": "Create project metadata and its isolated workspace as one recoverable operation.",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Create Project"
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "delete": {
+        "description": "Stage project files before database deletion so failures remain recoverable.",
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Delete Project"
+      },
+      "get": {
+        "description": "Load one persisted project so feature routes recover correctly after refresh.",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Project"
+      },
+      "patch": {
+        "description": "Apply only supplied editable metadata while preserving source evidence.",
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Update Project"
+      }
+    },
+    "/api/v1/projects/{project_id}/export-estimate": {
+      "get": {
+        "description": "Estimate immutable export size and image reuse through the real selector.",
+        "operationId": "export_estimate_api_v1_projects__project_id__export_estimate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeOriginalVideo",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Includeoriginalvideo",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportEstimateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Export Estimate"
+      }
+    },
+    "/api/v1/projects/{project_id}/exports": {
+      "get": {
+        "description": "Return immutable export history newest first for progress and download UI.",
+        "operationId": "list_exports_api_v1_projects__project_id__exports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Exports"
+      },
+      "post": {
+        "description": "Persist an immutable export request before queueing local ZIP generation.",
+        "operationId": "create_export_api_v1_projects__project_id__exports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Create Export"
+      }
+    },
+    "/api/v1/projects/{project_id}/process": {
+      "post": {
+        "description": "Persist a queued processing job before handing it to the local Celery worker.",
+        "operationId": "start_processing_api_v1_projects__project_id__process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Start Processing"
+      }
+    },
+    "/api/v1/projects/{project_id}/screenshots": {
+      "get": {
+        "description": "Return all generated project screenshots for review diagnostics.",
+        "operationId": "list_screenshots_api_v1_projects__project_id__screenshots_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScreenshotResponse"
+                  },
+                  "title": "Response List Screenshots Api V1 Projects  Project Id  Screenshots Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Screenshots"
+      }
+    },
+    "/api/v1/projects/{project_id}/segments": {
+      "get": {
+        "description": "Return active transcript segments in stable review order.",
+        "operationId": "list_segments_api_v1_projects__project_id__segments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SegmentResponse"
+                  },
+                  "title": "Response List Segments Api V1 Projects  Project Id  Segments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Segments"
+      }
+    },
+    "/api/v1/projects/{project_id}/video": {
+      "get": {
+        "description": "Serve the validated source with single-byte-range support for native seeking.",
+        "operationId": "stream_video_api_v1_projects__project_id__video_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "video/mp4": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "video/quicktime": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "video/x-matroska": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Complete source video",
+            "headers": {
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "206": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Single byte range",
+            "headers": {
+              "Accept-Ranges": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Length": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "416": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unsatisfiable byte range",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Stream Video"
+      },
+      "post": {
+        "description": "Stream multipart bytes directly to project storage and promote one valid video.",
+        "operationId": "upload_video_api_v1_projects__project_id__video_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaAssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Upload Video"
+      }
+    },
+    "/api/v1/screenshots/{screenshot_id}/content": {
+      "get": {
+        "description": "Serve one project-owned screenshot from safe local storage.",
+        "operationId": "screenshot_content_api_v1_screenshots__screenshot_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "screenshot_id",
+            "required": true,
+            "schema": {
+              "title": "Screenshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Inline PNG screenshot"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Screenshot Content"
+      }
+    },
+    "/api/v1/screenshots/{screenshot_id}/thumbnail": {
+      "get": {
+        "description": "Serve or lazily create one lightweight project-owned review thumbnail.",
+        "operationId": "screenshot_thumbnail_api_v1_screenshots__screenshot_id__thumbnail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "screenshot_id",
+            "required": true,
+            "schema": {
+              "title": "Screenshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Inline WebP screenshot thumbnail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Screenshot Thumbnail"
+      }
+    },
+    "/api/v1/segments/merge": {
+      "post": {
+        "description": "Merge an ordered contiguous selection and retain source lineage.",
+        "operationId": "merge_review_segments_api_v1_segments_merge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Merge Review Segments"
+      }
+    },
+    "/api/v1/segments/{segment_id}": {
+      "get": {
+        "description": "Load one transcript segment for direct review links and API clients.",
+        "operationId": "get_segment_api_v1_segments__segment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Segment"
+      },
+      "patch": {
+        "description": "Save reviewed text explicitly while never modifying raw transcript evidence.",
+        "operationId": "update_segment_api_v1_segments__segment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Update Segment"
+      }
+    },
+    "/api/v1/segments/{segment_id}/primary-screenshot": {
+      "delete": {
+        "description": "Clear the primary role while retaining generated candidates for later selection.",
+        "operationId": "remove_primary_screenshot_api_v1_segments__segment_id__primary_screenshot_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Remove Primary Screenshot"
+      }
+    },
+    "/api/v1/segments/{segment_id}/primary-screenshot/{screenshot_id}": {
+      "put": {
+        "description": "Select one same-project candidate as the segment's explicit primary evidence.",
+        "operationId": "set_primary_screenshot_api_v1_segments__segment_id__primary_screenshot__screenshot_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "screenshot_id",
+            "required": true,
+            "schema": {
+              "title": "Screenshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenshotAssociationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Set Primary Screenshot"
+      }
+    },
+    "/api/v1/segments/{segment_id}/screenshot-from-video": {
+      "post": {
+        "description": "Create and select one exact project-owned source frame for a review segment.",
+        "operationId": "create_screenshot_from_video_api_v1_segments__segment_id__screenshot_from_video_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotFromVideoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenshotAssociationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Create Screenshot From Video"
+      }
+    },
+    "/api/v1/segments/{segment_id}/screenshots": {
+      "get": {
+        "description": "Return ranked screenshot associations for one active review segment.",
+        "operationId": "list_segment_screenshots_api_v1_segments__segment_id__screenshots_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScreenshotAssociationResponse"
+                  },
+                  "title": "Response List Segment Screenshots Api V1 Segments  Segment Id  Screenshots Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Segment Screenshots"
+      }
+    },
+    "/api/v1/segments/{segment_id}/split": {
+      "post": {
+        "description": "Apply an exact reviewed-text and timestamp split in one transaction.",
+        "operationId": "split_review_segment_api_v1_segments__segment_id__split_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentSplitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SegmentResponse"
+                  },
+                  "title": "Response Split Review Segment Api V1 Segments  Segment Id  Split Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Split Review Segment"
+      }
+    }
+  }
+}
