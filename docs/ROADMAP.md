@@ -29,7 +29,7 @@ Decision: [ADR 0009](decisions/0009-project-types.md).
 - [x] P02.1 Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate
   `technical_walkthrough` to `task_briefing`.
 - [x] P02.2 Type-specific screenshot profile, export guide and evidence prompt.
-- [ ] P02.3 New-project form: four type cards, optional name with a default, "More options".
+- [x] P02.3 New-project form: four type cards, optional name with a default, "More options".
 
 Exit: migration upgrade test on a Version 0.2 database; backend and frontend suites pass;
 OpenAPI regenerated.
@@ -52,6 +52,17 @@ legacy and unknown modes fall back without failing, and that the ZIP contains th
 `npm run test` (35), `npm run lint`, `npm run build` and `npx prettier --check .` in `apps/web`
 passed; `scripts/export_openapi.py --check` and `scripts/check_docs.py` passed. No API schema,
 manifest or archive layout change. Not run: a local generation model (P06) or a real ChatGPT upload.
+
+P02.3 evidence (2026-10-29): the new-project form (`apps/web/src/app/features/new-project`) shows the
+four type cards first, then an optional name whose placeholder and help text show the default
+`{Type} {YYYY-MM-DD}` (local date), and a native "More options" disclosure that holds the spoken
+language and the description. An empty or blank name is replaced by the default when the project is
+created; an invalid language or description opens the disclosure. No API or schema change.
+`npm run test` in `apps/web` (Node 22.23.1): 38 passed (4 new or rewritten component tests);
+`npm run lint`, `npm run build`, `npm run typecheck:e2e` and `npx prettier --check .` passed;
+`git diff --check HEAD` passed. Not run: the Playwright journeys (`npm run e2e`,
+`e2e:fullstack`), because no Chromium is installed on this worker; both specs were updated to
+open "More options" before filling the language and description and were only type-checked.
 
 ## P03 — Descriptive export names
 

@@ -120,7 +120,7 @@ steps, and `prefers-reduced-motion` removes it.
 | Screen | Route | Content and primary action |
 | --- | --- | --- |
 | Projects | `/projects` | Search, type and status filters, sort; one row per project with type, status pill (including **Not processed** and **Recording interrupted**), duration, last change. A Not processed row offers Process. Actions: Record, New project |
-| New project | `/projects/new` | Upload path: four type cards (Task briefing, Meeting, Tutorial, Generic) with one-line help; optional name (default `{Type} {date}`); "More options" holds language and description; then the video. Action: Create |
+| New project | `/projects/new` | Upload path: four type cards (Task briefing, Meeting, Tutorial, Generic) with one-line help; optional name (default `{Type} {YYYY-MM-DD}` with the local date, shown as placeholder and help text); "More options" (collapsed `<details>`, opened automatically when it holds an error) holds language and description; then the video. Action: Create |
 | Recorder | `/record` | Opens directly from the menu. Source checks (screen, system audio, microphone level gauge), consent reminder, timer, pause, stop. On stop: optional name, Save or Discard; nothing is processed. Action: Start recording. See [Recording](RECORDING.md) |
 | Process | dialog on a Not processed project | Project type cards (required), language under "More options". Action: Start processing |
 | Processing | `/projects/:id` | Stage list with segmented gauges and real percentages; cancel and retry. Action: Open review |

@@ -82,7 +82,7 @@
 }
 
 fieldset {
-  margin: var(--dk-space-6) 0 0;
+  margin: 0 0 var(--dk-space-6);
   padding: 0;
   border: 0;
 }
@@ -91,6 +91,23 @@ legend {
   margin-bottom: var(--dk-space-3);
   color: var(--dk-text-strong);
   font-weight: 700;
+}
+
+.more-options {
+  margin: var(--dk-space-6) 0 0;
+  padding: var(--dk-space-3) var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius);
+}
+
+.more-options summary {
+  color: var(--dk-text-strong);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.more-options[open] summary {
+  margin-bottom: var(--dk-space-4);
 }
 
 .mode-grid {
@@ -137,6 +154,10 @@ legend {
 .mode-card small {
   margin-top: var(--dk-space-2);
   color: var(--dk-muted);
+}
+
+.more-options + footer {
+  margin-top: var(--dk-space-6);
 }
 
 footer {

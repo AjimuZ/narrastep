@@ -18,6 +18,9 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- The new-project form now starts with the four project-type cards. The project name is optional
+  and defaults to the type and the local date (for example "Meeting 2026-10-29"); the spoken
+  language and the description moved under "More options".
 - The export package now follows the project type: `llm/generation-prompt.md`, the ChatGPT batch
   guide and each `batch-input.md` name the type's document sections (for example Decisions and
   Action items for a meeting, numbered steps for a tutorial) and give type-specific screenshot

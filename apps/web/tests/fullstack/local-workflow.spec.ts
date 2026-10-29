@@ -15,6 +15,7 @@ test('processes generated media through the real local API and exports reviewed 
   await assertStackIsMockEnabled(page);
   await assertProductionStylesAreActive(page);
   await page.getByLabel('Project name').fill('Full-stack evidence workflow');
+  await page.getByText('More options', { exact: true }).click();
   await page
     .getByLabel('Short description (optional)')
     .fill('Deterministic local processing and export verification.');

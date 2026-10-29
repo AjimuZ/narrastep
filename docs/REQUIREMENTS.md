@@ -23,7 +23,7 @@ Status: **Implemented** in Version 0.2, **Partial** when only the named package 
 | ID | Requirement | Status |
 | --- | --- | --- |
 | R01 | Create, list, search, edit and delete local projects | Implemented |
-| R02 | Choose one of four project types (task briefing, meeting, tutorial, generic) at creation or, at the latest, when processing starts | Partial: four types at creation (P02.1); type cards (P02.3) and choice at processing (P05.4) planned |
+| R02 | Choose one of four project types (task briefing, meeting, tutorial, generic) at creation or, at the latest, when processing starts | Partial: four types chosen with cards at creation (P02.1, P02.3); choice at processing (P05.4) planned |
 | R03 | Upload one MP4, WebM, MOV or MKV video per project, validated with FFprobe | Implemented |
 | R04 | Record screen, system audio and microphone in the browser; saving stores the project with an optional name and never starts processing | Planned (P05) |
 | R04a | Label transcript segments of in-app recordings as You or Others, editable in review | Planned (P05.5) |

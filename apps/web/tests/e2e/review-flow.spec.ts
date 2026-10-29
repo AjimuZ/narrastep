@@ -353,6 +353,7 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
   await page.getByRole('link', { name: 'Create your first project' }).click();
   await expectNoHorizontalOverflow(page);
   await page.getByLabel('Project name').fill(projectName);
+  await page.getByText('More options', { exact: true }).click();
   await page.getByLabel('Short description (optional)').fill('Search workflow');
   await page.getByRole('button', { name: 'Continue to video' }).click();
   await page.getByLabel('Choose a file').setInputFiles({

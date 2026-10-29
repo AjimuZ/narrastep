@@ -37,9 +37,11 @@ export class NewProjectComponent implements OnInit {
   readonly isDragging = signal(false);
   readonly isResuming = signal(false);
   readonly showValidationSummary = signal(false);
+  /** Whether the "More options" disclosure (language and description) is expanded. */
+  readonly moreOptionsOpen = signal(false);
 
   readonly projectForm = inject(FormBuilder).nonNullable.group({
-    name: ['', [Validators.required, Validators.maxLength(120)]],
+    name: ['', [Validators.maxLength(120)]],
     description: ['', [Validators.maxLength(500)]],
     sourceLanguage: ['auto', [Validators.required, Validators.pattern(/^(auto|[a-z]{2,3})$/i)]],
     mode: ['tutorial' as ProjectMode, [Validators.required]],
@@ -133,11 +135,28 @@ export class NewProjectComponent implements OnInit {
       });
   }
 
+  /**
+   * Returns the name a project gets when the field is left empty: `{Type label} {YYYY-MM-DD}`,
+   * using the selected type and the local calendar date. Never fails; an unknown type falls back
+   * to the generic label.
+   */
+  defaultName(now: Date = new Date()): string {
+    const type = this.modes.find((mode) => mode.value === this.projectForm.controls.mode.value);
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${type?.label ?? 'Generic'} ${now.getFullYear()}-${month}-${day}`;
+  }
+
   /** Persists valid project metadata before accepting a potentially large video. */
   createProject(): void {
     if (this.projectForm.invalid || this.creating()) {
       this.projectForm.markAllAsTouched();
       this.showValidationSummary.set(this.projectForm.invalid);
+      // An error inside the collapsed disclosure would otherwise be invisible.
+      const { description, sourceLanguage } = this.projectForm.controls;
+      if (description.invalid || sourceLanguage.invalid) {
+        this.moreOptionsOpen.set(true);
+      }
       return;
     }
 
@@ -147,7 +166,7 @@ export class NewProjectComponent implements OnInit {
     this.requestError.set(null);
     this.api
       .createProject({
-        name: value.name.trim(),
+        name: value.name.trim() || this.defaultName(),
         description: value.description.trim() || null,
         sourceLanguage: value.sourceLanguage.trim().toLowerCase(),
         mode: value.mode,
@@ -164,6 +183,11 @@ export class NewProjectComponent implements OnInit {
         this.project.set(project);
         this.currentStep.set(2);
       });
+  }
+
+  /** Keeps the disclosure state in sync with the native `<details>` element. */
+  onMoreOptionsToggle(event: Event): void {
+    this.moreOptionsOpen.set((event.target as HTMLDetailsElement).open);
   }
 
   /** Validates the first file selected through the native picker. */

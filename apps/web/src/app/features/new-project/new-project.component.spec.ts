@@ -43,14 +43,79 @@ describe('NewProjectComponent', () => {
     return { fixture, component: fixture.componentInstance, createProject, uploadVideo };
   }
 
-  it('keeps the user on project information when the required name is missing', async () => {
-    const { component, createProject } = await setup();
+  it('keeps the user on project information when an optional field is invalid', async () => {
+    const { fixture, component, createProject } = await setup();
+    const details = (fixture.nativeElement as HTMLElement).querySelector('details.more-options');
+    component.projectForm.controls.sourceLanguage.setValue('not a code');
 
     component.createProject();
+    fixture.detectChanges();
 
     expect(createProject).not.toHaveBeenCalled();
     expect(component.currentStep()).toBe(1);
-    expect(component.projectForm.controls.name.touched).toBe(true);
+    expect(component.projectForm.controls.sourceLanguage.touched).toBe(true);
+    expect(component.showValidationSummary()).toBe(true);
+    // The error lives inside "More options", so the disclosure opens to show it.
+    expect((details as HTMLDetailsElement).open).toBe(true);
+  });
+
+  it('shows the type cards before the name and keeps language and description under More options', async () => {
+    const { fixture } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    const details = host.querySelector<HTMLDetailsElement>('details.more-options');
+    const cards = host.querySelector('.mode-grid') as HTMLElement;
+    const name = host.querySelector('#project-name') as HTMLElement;
+
+    expect(cards.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(details?.querySelector('summary')?.textContent?.trim()).toBe('More options');
+    expect(details?.open).toBe(false);
+    expect(details?.contains(host.querySelector('#source-language'))).toBe(true);
+    expect(details?.contains(host.querySelector('#project-description'))).toBe(true);
+    expect(details?.contains(name)).toBe(false);
+    expect(host.querySelector('label[for="project-name"]')?.textContent).toContain('optional');
+  });
+
+  it('creates the project with a type-and-date default name when the name is empty', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 5, 12, 0, 0));
+    try {
+      const { fixture, component, createProject } = await setup();
+      const host = fixture.nativeElement as HTMLElement;
+      const radios = host.querySelectorAll<HTMLInputElement>('.mode-card input[type="radio"]');
+      const nameInput = host.querySelector('#project-name') as HTMLInputElement;
+
+      expect(nameInput.placeholder).toBe('Tutorial 2026-10-05');
+      radios[1]?.click();
+      fixture.detectChanges();
+      expect(nameInput.placeholder).toBe('Meeting 2026-10-05');
+
+      component.projectForm.controls.name.setValue('   ');
+      component.createProject();
+
+      expect(createProject).toHaveBeenCalledWith({
+        name: 'Meeting 2026-10-05',
+        description: null,
+        sourceLanguage: 'auto',
+        mode: 'meeting',
+      });
+      expect(component.currentStep()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('opens and closes More options from the native disclosure', async () => {
+    const { fixture, component } = await setup();
+    const details = (fixture.nativeElement as HTMLElement).querySelector(
+      'details.more-options',
+    ) as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    expect(component.moreOptionsOpen()).toBe(true);
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+    expect(component.moreOptionsOpen()).toBe(false);
   });
 
   it('persists valid metadata before moving to video selection', async () => {

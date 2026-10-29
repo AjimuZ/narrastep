@@ -42,84 +42,11 @@
       @if (showValidationSummary()) {
         <div class="notice notice--error" role="alert" tabindex="-1">
           <strong>Review the highlighted project information.</strong>
-          <p>Provide a project name and a valid spoken-language code before continuing.</p>
+          <p>Check the project name, the description and the spoken-language code.</p>
         </div>
       }
-      <div class="form-grid">
-        <div class="field field--wide">
-          <label for="project-name">Project name</label>
-          <input
-            id="project-name"
-            type="text"
-            formControlName="name"
-            maxlength="120"
-            autocomplete="off"
-            aria-describedby="project-name-error"
-          />
-          @if (projectForm.controls.name.touched && projectForm.controls.name.invalid) {
-            <p id="project-name-error" class="field-error">
-              Enter a project name of up to 120 characters.
-            </p>
-          }
-        </div>
 
-        <div class="field field--wide">
-          <label for="project-description"
-            >Short description <span class="muted">(optional)</span></label
-          >
-          <textarea
-            id="project-description"
-            formControlName="description"
-            maxlength="500"
-            aria-describedby="description-help"
-          ></textarea>
-          <small id="description-help" class="muted">
-            Add context that will help reviewers understand the recording.
-          </small>
-        </div>
-
-        <div class="field">
-          <label for="source-language">Spoken language</label>
-          <input
-            id="source-language"
-            type="text"
-            formControlName="sourceLanguage"
-            list="source-language-options"
-            maxlength="4"
-            autocomplete="off"
-            [attr.aria-describedby]="
-              projectForm.controls.sourceLanguage.touched &&
-              projectForm.controls.sourceLanguage.invalid
-                ? 'source-language-help source-language-error'
-                : 'source-language-help'
-            "
-            [attr.aria-invalid]="
-              projectForm.controls.sourceLanguage.touched &&
-              projectForm.controls.sourceLanguage.invalid
-                ? 'true'
-                : null
-            "
-          />
-          <datalist id="source-language-options">
-            @for (language of languageSuggestions; track language.code) {
-              <option [value]="language.code">{{ language.label }}</option>
-            }
-          </datalist>
-          <small id="source-language-help" class="muted">
-            Use “auto” or a supported two- or three-letter Whisper language code.
-          </small>
-          @if (
-            projectForm.controls.sourceLanguage.touched &&
-            projectForm.controls.sourceLanguage.invalid
-          ) {
-            <p id="source-language-error" class="field-error">
-              Enter “auto” or a two- or three-letter language code.
-            </p>
-          }
-        </div>
-      </div>
-
-      <fieldset>
+      <fieldset class="type-fieldset">
         <legend>Project type</legend>
         <div class="mode-grid">
           @for (mode of modes; track mode.value) {
@@ -136,6 +63,93 @@
           }
         </div>
       </fieldset>
+
+      <div class="form-grid">
+        <div class="field field--wide">
+          <label for="project-name">Project name <span class="muted">(optional)</span></label>
+          <input
+            id="project-name"
+            type="text"
+            formControlName="name"
+            maxlength="120"
+            autocomplete="off"
+            [placeholder]="defaultName()"
+            aria-describedby="project-name-help project-name-error"
+          />
+          <small id="project-name-help" class="muted">
+            Leave it empty to use “{{ defaultName() }}”.
+          </small>
+          @if (projectForm.controls.name.touched && projectForm.controls.name.invalid) {
+            <p id="project-name-error" class="field-error">
+              Enter a project name of up to 120 characters.
+            </p>
+          }
+        </div>
+      </div>
+
+      <details
+        class="more-options"
+        [open]="moreOptionsOpen()"
+        (toggle)="onMoreOptionsToggle($event)"
+      >
+        <summary>More options</summary>
+        <div class="form-grid">
+          <div class="field field--wide">
+            <label for="project-description"
+              >Short description <span class="muted">(optional)</span></label
+            >
+            <textarea
+              id="project-description"
+              formControlName="description"
+              maxlength="500"
+              aria-describedby="description-help"
+            ></textarea>
+            <small id="description-help" class="muted">
+              Add context that will help reviewers understand the recording.
+            </small>
+          </div>
+
+          <div class="field">
+            <label for="source-language">Spoken language</label>
+            <input
+              id="source-language"
+              type="text"
+              formControlName="sourceLanguage"
+              list="source-language-options"
+              maxlength="4"
+              autocomplete="off"
+              [attr.aria-describedby]="
+                projectForm.controls.sourceLanguage.touched &&
+                projectForm.controls.sourceLanguage.invalid
+                  ? 'source-language-help source-language-error'
+                  : 'source-language-help'
+              "
+              [attr.aria-invalid]="
+                projectForm.controls.sourceLanguage.touched &&
+                projectForm.controls.sourceLanguage.invalid
+                  ? 'true'
+                  : null
+              "
+            />
+            <datalist id="source-language-options">
+              @for (language of languageSuggestions; track language.code) {
+                <option [value]="language.code">{{ language.label }}</option>
+              }
+            </datalist>
+            <small id="source-language-help" class="muted">
+              Use “auto” or a supported two- or three-letter Whisper language code.
+            </small>
+            @if (
+              projectForm.controls.sourceLanguage.touched &&
+              projectForm.controls.sourceLanguage.invalid
+            ) {
+              <p id="source-language-error" class="field-error">
+                Enter “auto” or a two- or three-letter language code.
+              </p>
+            }
+          </div>
+        </div>
+      </details>
 
       <footer>
         <button class="button button--primary" type="submit" [disabled]="creating()">
