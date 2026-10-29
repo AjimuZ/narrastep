@@ -23,7 +23,8 @@ flowchart LR
 - `api` validates requests and configuration, coordinates transactions, streams local assets, and exposes durable state. Route handlers delegate business behavior to services.
 - `worker` performs media and export work. It is the only service that loads the transcription model and runs with concurrency one. FFmpeg is its only media decoder: Whisper receives the samples of the extracted WAV, never a media path (P08.1), and the image build fails when FFmpeg and the Whisper packages cannot transcribe generated clips (`scripts/check_transcription_stack.py`).
 - `api` and `worker` share one backend image on Python 3.14 that installs only the hashed packages of `backend/requirements.lock`, direct and transitive (P08.2, [Backend package lock](DEVELOPMENT.md#backend-package-lock)), so the same sources build the same package set.
-- `redis` provides Celery queues, short-lived results, and best-effort progress notifications. It is not persistent business storage and is not published to the host.
+- `redis` provides Celery queues, short-lived results, and best-effort progress notifications. It is not persistent business storage and is not published to the host. Since P08.3 the server is Valkey (BSD-3-Clause, [ADR 0017](decisions/0017-valkey-broker.md)), which speaks the same protocol; the service keeps the protocol name.
+- Every image the stack builds from or pulls has an exact version tag and an index digest, listed in [Licenses](LICENSES.md#container-images) (P08.3).
 
 The API joins the local web network and the internal processing network. The worker and Redis join only the internal network, which prevents the processing runtime from reaching the Internet.
 

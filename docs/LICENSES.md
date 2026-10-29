@@ -7,19 +7,21 @@ licenses, paid services and paid certificates are not used.
 
 Licenses below are those declared by each upstream project, checked on 2026-10-28; the backend
 Python packages and their licenses were checked again on 2026-10-29 against the installed package
-metadata of the lock (P08.2). An automated inventory inside the containers is roadmap item I-15.
+metadata of the lock (P08.2), and the container images, their digests and the Debian package
+versions on 2026-10-29 against the registries and the Debian 13 package index (P08.3). An automated
+inventory inside the containers is roadmap item I-15.
 
 ## Runtime components (built locally, not redistributed as images)
 
 | Component | Version | License | Note |
 | --- | --- | --- | --- |
-| Python | 3.14.10 | PSF-2.0 | Base image `python:3.14.10-slim-trixie` (Debian 13); see [why not 3.15](#kept-behind-their-newest-release) |
+| Python | 3.14.10 | PSF-2.0 | Base image `python:3.14.10-slim-trixie` (Debian 13.7), pinned by [digest](#container-images); see [why not 3.15](#kept-behind-their-newest-release) |
 | FastAPI, Pydantic, pydantic-settings | 0.162.0, 2.14.2, 2.16.2 | MIT | FastAPI's OpenTelemetry instrumentation is [switched off](#fastapi-and-opentelemetry) |
 | Uvicorn | 0.54.0 | BSD-3-Clause | |
 | SQLAlchemy, Alembic | 2.1.6, 1.20.1 | MIT | |
 | Celery | 5.6.3 | BSD-3-Clause | |
 | redis-py | 6.4.0 | MIT | [Kept behind](#kept-behind-their-newest-release) 8.1.0 |
-| Redis server | 7.2.14 | BSD-3-Clause | Redis 7.4 and later are not under a BSD license; upgrade to Valkey (BSD-3-Clause) instead |
+| Valkey server | 9.1.3 | BSD-3-Clause | Redis-protocol broker since P08.3 ([ADR 0017](decisions/0017-valkey-broker.md)); replaced Redis 7.2.14, because Redis 7.4 and later are not under a free license |
 | SQLite | bundled with Python | Public domain | |
 | faster-whisper, CTranslate2 | 1.2.1, 4.8.4 | MIT | |
 | Whisper model weights | `small` | MIT | Downloaded at image build |
@@ -28,16 +30,47 @@ metadata of the lock (P08.2). An automated inventory inside the containers is ro
 | Pillow | 13.0.0 | MIT-CMU | |
 | python-multipart | 0.0.32 | Apache-2.0 | |
 | swagger-ui-bundle | 1.1.0 | Apache-2.0 | Serves API docs locally, no CDN |
-| FFmpeg (Debian package) | distribution version | GPL-2.0-or-later build | Built locally; if images are ever published, GPL source obligations apply. The image-build transcription check (P08.1) speaks its test sentence with FFmpeg's `flite` source; `libflite1` (BSD-style Flite license) is already installed as an FFmpeg dependency, so nothing is added |
-| Tesseract and language data | distribution version | Apache-2.0 | |
+| FFmpeg (Debian package) | 7.1.5-0+deb13u1 (Debian 13) | GPL-2.0-or-later build | Built locally; if images are ever published, GPL source obligations apply. The image-build transcription check (P08.1) speaks its test sentence with FFmpeg's `flite` source; `libflite1` (BSD-style Flite license) is already installed as an FFmpeg dependency, so nothing is added |
+| Tesseract and language data | 5.5.0-1+b1, data 4.1.0-2 (Debian 13) | Apache-2.0 | |
 | `llama.cpp` server (CPU) | v0.5.0, build b11146 | MIT | Copied into `/opt/llama.cpp` from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` pinned by digest (P06.1); license text in `backend/third_party/llama.cpp/LICENSE`, copied beside the binaries |
-| OpenMP runtime `libgomp1` (Debian package) | distribution version | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |
-| Nginx | 1.28.0 | BSD-2-Clause | |
-| Node.js (build only) | 22.23.1 | MIT | |
+| OpenMP runtime `libgomp1` (Debian package) | 14.2.0-19 (Debian 13) | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |
+| Nginx | 1.30.6 | BSD-2-Clause | Newest stable line |
+| Node.js (build only) | 22.23.1 | MIT | [Kept behind](#container-images) 26.13.0 until P08.4 |
 | Angular, Angular CDK | 22.0.x | MIT | |
 | `@angular/localize` | 22.0.6 | MIT | Runtime `$localize` and `loadTranslations`; its Babel tooling (`@babel/core`, MIT) is a build-time dependency of the Angular tools and is not shipped in the web image |
 | RxJS | 7.8.2 | Apache-2.0 | |
 | zone.js, tslib | 0.16.2, 2.8.1 | MIT, 0BSD | |
+
+The Debian package versions are those the backend image build resolved against the Debian 13
+(`trixie`, `trixie-updates`, `trixie-security`) index on 2026-10-29. The Dockerfile does not pin
+them: Debian removes superseded versions from its archive, so an exact pin would stop later builds.
+A security update can therefore change them between builds; the image build's transcription and
+`llama.cpp` checks fail when an update breaks either.
+
+## Container images
+
+Every image the stack builds from or pulls has an exact version tag and the digest of its
+multi-platform index (amd64 and arm64 included), checked against the registry on 2026-10-29
+(P08.3). `backend/tests/test_container_images.py` fails when this table and the Dockerfiles or
+`docker-compose.yml` differ, or when an image has a floating tag or no digest.
+
+| Image | Tag | Index digest | Used for | License |
+| --- | --- | --- | --- | --- |
+| `ghcr.io/ggml-org/llama.cpp` | `server-v0.5.0` | `sha256:a94b642b3e2620749bf2ff5672df922c23a6202710e54a8f7667e58df70aba5a` | `llama-server` and its libraries, copied into the backend image | MIT |
+| `python` | `3.14.10-slim-trixie` | `sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999` | Backend runtime base (Debian 13.7) | PSF-2.0; Debian packages under their own licenses |
+| `node` | `22.23.1-alpine` | `sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2` | Web build stage only | MIT |
+| `nginx` | `1.30.6-alpine` | `sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949` | Web server | BSD-2-Clause |
+| `valkey/valkey` | `9.1.3-alpine` | `sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b` | Redis-protocol broker (`redis` service) | BSD-3-Clause |
+
+Kept behind or unchanged, with the reason:
+
+| Component | Pinned | Newest | Reason |
+| --- | --- | --- | --- |
+| Node.js | 22.23.1 | 26.13.0 (current LTS); 22.23.4 in the 22 line | `apps/web/package.json` requires exactly `.nvmrc`'s version and `.npmrc` sets `engine-strict`, so the image, `.nvmrc`, `engines.node`, the lock and CI move together in P08.4 |
+| `llama.cpp` server | `server-v0.5.0` (build b11146) | `server-v0.5.0`; rolling builds up to `server-b11977` | Newest versioned release; the `server-b*` tags are per-commit builds without a release, which [Local generation](LOCAL_GENERATION.md#server-in-the-backend-image) does not adopt |
+| Python | 3.14.10 | 3.15.2 | No ONNX Runtime wheels for 3.15 ([below](#kept-behind-their-newest-release)) |
+| FFmpeg, Tesseract, `libgomp1` | Debian 13 versions above | FFmpeg 9.0.2, Tesseract 5.5.0-1.1, `libgomp1` 16.2.0-3 in Debian testing (`forky`) | The base stays on the Debian stable release; no Python image is published for Debian testing and `trixie-backports` carries none of them |
+| Redis server | — | 8.x | Not used: Redis 7.4 and later are under RSALv2 or SSPLv1 (and, since 8.0, AGPLv3); the [rules](#rules-for-new-dependencies) forbid the first two and allow the GPL family only for programs called as subprocesses, while the broker is a network service. Valkey replaces it ([ADR 0017](decisions/0017-valkey-broker.md)) |
 
 ## Backend Python packages
 

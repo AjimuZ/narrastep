@@ -1,5 +1,7 @@
 # Optional local generation (ADR 0011, P06.1): the CPU llama.cpp server from the official image,
 # pinned by the digest of its amd64/arm64 index (release v0.5.0, build b11146, commit 7fe450e19).
+# v0.5.0 is still the newest `server-v*` release (checked 2026-10-29, P08.3); the `server-b*` tags
+# are untagged rolling builds and are not adopted (docs/LOCAL_GENERATION.md).
 # Only the server and the shared libraries it loads are kept; the other tools are left behind.
 # `cp -P` keeps the library symlinks, so each library is stored once. Nothing runs until a model
 # is installed; no model is part of the image.
@@ -12,8 +14,11 @@ RUN mkdir /opt/llama.cpp \
 
 # Python 3.14 is the newest release with wheels for every locked package; ONNX Runtime has none for
 # 3.15 yet (P08.2, docs/LICENSES.md). The tag names the Debian 13 base whose FFmpeg the
-# transcription check below exercises; the digest pin belongs to P08.3.
-FROM python:3.14.10-slim-trixie AS runtime
+# transcription check below exercises, and the digest of its multi-platform index fixes the exact
+# base (Debian 13.7, published 2026-10-28; P08.3). The apt packages below come from Debian 13 and
+# its security updates at build time: Debian removes superseded versions, so exact apt pins would
+# break later builds, and the two build checks below fail on an incompatible update instead.
+FROM python:3.14.10-slim-trixie@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

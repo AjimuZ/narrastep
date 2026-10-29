@@ -23,7 +23,7 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | K6 | The `llama.cpp` binaries copied into the backend image are incompatible with its base system | Build or runtime failure | Pinned by digest; the image build runs `llama-server --version` and fails when a library is missing or incompatible (P06.1); the binaries need glibc 2.38, so the base must stay on Debian 13 or newer; fall back to building from source in a build stage |
 | K7 | A meeting is recorded without the participants' consent | Legal exposure for the user | Consent notice before every recording; Narrastep never uploads recordings |
 | K8 | `adaptive_v1` benchmark gates never pass | Legacy strategy remains | Already handled: `legacy` stays default ([ADR 0008](decisions/0008-adaptive-screenshot-selection-and-late-materialization.md)) |
-| K9 | A dependency upgrade moves to a non-free license (Redis 7.4 and later did) | Public repository can no longer depend on it | Pin versions; check [Licenses](LICENSES.md) on every upgrade; Valkey replaces Redis if needed |
+| K9 | A dependency upgrade moves to a non-free license (Redis 7.4 and later did) | Public repository can no longer depend on it | Pin versions; every container image has an exact tag and digest recorded in [Licenses](LICENSES.md#container-images), checked by `backend/tests/test_container_images.py` (P08.3); check licenses on every upgrade; Valkey (BSD-3-Clause) replaced Redis in P08.3 ([ADR 0017](decisions/0017-valkey-broker.md)) |
 | K10 | The npm registry or the Electron download is blocked on first launch | No desktop window | The launcher says so; `./start.sh --headless` keeps Narrastep usable in a browser |
 | K12 | Loopback system audio records every application, including notification sounds | Unwanted audio in the recording | Recorder notice; the user can mute notifications while recording |
 | K11 | Italian strings are longer and break layouts | Truncated labels | 320 px and 200% zoom checks run in both languages (P04.5) |
@@ -40,7 +40,6 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | Q2 | Which remaining improvement candidates to schedule? | P02 |
 | Q5 | When `huggingface.co` is blocked, allow importing the same verified model files from disk? | P06.2 |
 | Q6 | Default model: E2B (lighter) or E4B (better)? Decide after the P06.5 benchmark | P06.5 |
-| Q10 | Redis 7.2.14 is the last BSD release: keep it, or move to Valkey (BSD-3-Clause) when the dependency refresh reaches it (K9)? | P08.3 |
 
 ## Resolved
 
@@ -52,6 +51,7 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | Q7 | Desktop app: PWA or Electron? | Electron shell launched by `start.sh`, as in Symphony ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
 | Q8 | Which licenses are acceptable? | Free licenses only; public, non-commercial repository ([Licenses](LICENSES.md)) |
 | Q9 | Does the newest Python release that `ctranslate2` and `onnxruntime` publish wheels for pass the suite? | Python 3.14.10: the backend suite, the transcription stack check and a full job pass on it. Python 3.15 cannot be used yet because ONNX Runtime 1.31.1 publishes no 3.15 wheels; move when it does (2026-10-29, P08.2, [Licenses](LICENSES.md#kept-behind-their-newest-release)) |
+| Q10 | Keep Redis 7.2 (the last BSD release) or move to Valkey (BSD-3-Clause) when the dependency refresh reaches it (K9)? | Valkey 9.1.3, keeping the `redis` service name, URLs and volume (2026-10-29, P08.3, [ADR 0017](decisions/0017-valkey-broker.md)); the image build and stack health on a real engine are not yet run |
 | Q11 | Run Narrastep with Podman, and generate a missing `.env` from the computer? | Yes, with a dedicated `start-podman.sh` and a generator that never overwrites an existing `.env` (2026-10-29, [ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)) |
 
 ## Blockers

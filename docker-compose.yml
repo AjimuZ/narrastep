@@ -48,15 +48,19 @@ x-backend-environment: &backend-environment
   NARRASTEP_CORS_ORIGINS: ${NARRASTEP_CORS_ORIGINS:-http://127.0.0.1:4200,http://localhost:4200}
 
 services:
+  # The Redis-protocol broker runs Valkey (BSD-3-Clause), because Redis 7.4 and later are not
+  # under a free license (ADR 0017, risk K9). The service, URLs, volume and health key keep the
+  # protocol name `redis`; Valkey reads the files Redis 7.2 left in the volume and runs as the
+  # same uid 999.
   redis:
-    image: redis:7.2.14-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+    command: ["valkey-server", "--appendonly", "yes"]
     volumes:
       - narrastep-redis:/data
     networks:
       - processing
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20

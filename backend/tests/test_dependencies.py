@@ -130,7 +130,11 @@ def test_python_version_agrees_across_project_image_ci_and_locks() -> None:
     assert tools["ruff"]["target-version"] == "py314"
     assert tools["mypy"]["python_version"] == "3.14"
     dockerfile = (BACKEND / "Dockerfile").read_text(encoding="utf-8")
-    image = re.search(r"^FROM python:(\d+\.\d+)\.(\d+)-slim-trixie AS runtime$", dockerfile, re.M)
+    image = re.search(
+        r"^FROM python:(\d+\.\d+)\.(\d+)-slim-trixie@sha256:[0-9a-f]{64} AS runtime$",
+        dockerfile,
+        re.M,
+    )
     assert image and image[1] == "3.14", "the runtime image must use Python 3.14"
     workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert set(re.findall(r"python-version: (\S+)", workflow)) == {f"3.14.{image[2]}"}
