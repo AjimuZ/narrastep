@@ -28,7 +28,7 @@ Decision: [ADR 0009](decisions/0009-project-types.md).
 
 - [x] P02.1 Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate
   `technical_walkthrough` to `task_briefing`.
-- [ ] P02.2 Type-specific screenshot profile, export guide and evidence prompt.
+- [x] P02.2 Type-specific screenshot profile, export guide and evidence prompt.
 - [ ] P02.3 New-project form: four type cards, optional name with a default, "More options".
 
 Exit: migration upgrade test on a Version 0.2 database; backend and frontend suites pass;
@@ -41,6 +41,17 @@ constraint and maps `technical_walkthrough` to `task_briefing`.
 `alembic check` and the downgrade. `python -B -m pytest` in `backend`: 90 passed, 1 skipped;
 `npm run test` in `apps/web`: 35 passed; `npm run lint` and `npm run build` passed;
 `python scripts/export_openapi.py --check` reports the regenerated document current.
+
+P02.2 evidence (2026-10-29): `backend/app/services/export_guides.py` renders
+`llm/generation-prompt.md`, `chatgpt-batches/README.md` and the task block of every `batch-input.md`
+from the project type (sections, screenshot guidance, shared and type rules). The per-type
+screenshot profile existed since P02.1; `tests/test_export_guides.py` now checks that scan profile
+and export budget agree for all four types, that each prompt lists its own sections in order, that
+legacy and unknown modes fall back without failing, and that the ZIP contains the type's files.
+`python -B -m pytest` in `backend`: 100 passed, 1 skipped; ruff format/check and mypy passed;
+`npm run test` (35), `npm run lint`, `npm run build` and `npx prettier --check .` in `apps/web`
+passed; `scripts/export_openapi.py --check` and `scripts/check_docs.py` passed. No API schema,
+manifest or archive layout change. Not run: a local generation model (P06) or a real ChatGPT upload.
 
 ## P03 — Descriptive export names
 

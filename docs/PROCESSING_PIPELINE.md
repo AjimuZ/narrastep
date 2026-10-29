@@ -149,6 +149,22 @@ consuming an image slot, and an export with no images still receives one Markdow
 Canonical screenshots and the existing complete LLM inputs remain unchanged. Existing immutable
 export archives are never rewritten.
 
+The project type also selects the wording of three package files
+(`backend/app/services/export_guides.py`, [ADR 0009](decisions/0009-project-types.md)):
+
+| File | Type-specific content |
+| --- | --- |
+| `llm/generation-prompt.md` | Type label, purpose, the document sections in order, screenshot guidance, the shared evidence-only rules and the type's own rules |
+| `chatgpt-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
+| `chatgpt-batches/batch-NNN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
+
+The sections are those of the "Output per project type" table in
+[Local generation](LOCAL_GENERATION.md). `llm/llm-input.md`, screenshots, the manifest and its
+schema version do not change. A legacy `technical_walkthrough` value read from a job snapshot is
+treated as `task_briefing`; an unknown value falls back to `general` without failing the export.
+The scan rate and the image budgets above are the type-specific screenshot profile; a unit test
+checks that the analysis profile and the export budget use the same rates for every type.
+
 The estimate endpoint and immutable generator call the same selector. An unmaterialized PNG is
 estimated conservatively as `max(thumbnailBytes, width * height * 0.75)` and the response marks the
 byte total approximate. Export materializes thumbnail-only representatives inside its temporary
@@ -195,8 +211,6 @@ failure.
 
 ## Planned
 
-- Type-specific screenshot profile, export guide and evidence prompt (P02.2,
-  [ADR 0009](decisions/0009-project-types.md)).
 - Optional local generation runs after review as a separate job
   ([Local generation](LOCAL_GENERATION.md)).
 - Persisted OCR indexing, speaker labelling, sensitive-data masking, screenshot annotation and

@@ -18,6 +18,10 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- The export package now follows the project type: `llm/generation-prompt.md`, the ChatGPT batch
+  guide and each `batch-input.md` name the type's document sections (for example Decisions and
+  Action items for a meeting, numbered steps for a tutorial) and give type-specific screenshot
+  guidance. Screenshot density per type is unchanged and now covered by a consistency test.
 - Projects now have one of four types: Task briefing, Meeting, Tutorial or Generic. Existing
   Technical walkthrough projects become Task briefings when the database is upgraded and keep their
   screenshot density and image budget; the API no longer accepts `technical_walkthrough`.
