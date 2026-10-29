@@ -159,6 +159,34 @@ transcript text, OCR text, filenames, absolute paths, window titles, and image c
 - Missing filesystem assets are reported explicitly rather than replaced with fabricated data.
 - Redis or worker unavailability prevents new work from being accepted but does not erase persistent project state.
 
+## Desktop shell
+
+`desktop/` holds the Electron shell of [ADR 0014](decisions/0014-desktop-app-shell.md) (P07.1). It
+runs on the host, outside Docker, and is a client of the `web` container like a browser tab:
+
+```mermaid
+flowchart LR
+    Shell[Electron main process] -->|guards, one window| Page[Sandboxed page]
+    Page -->|http://127.0.0.1:NARRASTEP_WEB_PORT only| Web[web container]
+```
+
+- **One origin.** `src/policy.cjs` derives `http://127.0.0.1:{NARRASTEP_WEB_PORT}` (4200 by
+  default) and rejects any other port value. The session cancels every request outside that
+  origin (inline `data:` excepted), and every frame navigation, redirect, popup and webview outside
+  it is refused (`src/guards.cjs`), so the page reaches neither the Internet nor another local
+  service.
+- **No host bridge.** The page runs with context isolation, the renderer sandbox and no Node.js,
+  without preload script or IPC. Only `fullscreen` is granted; the microphone, screen capture,
+  notifications, devices and external protocol links are denied until P07.3 and P07.4 add the
+  picker, the microphone and "Save as" in the main process.
+- **Lifecycle.** `src/shell.cjs` takes Electron's single-instance lock: a second launch exits and
+  brings the window to the front, reloading the app when the window shows the fallback page.
+  Closing the window quits the shell; the shell never starts, stops or calls Docker, so containers
+  and running jobs continue. `src/window.cjs` shows a local English or Italian page when the app
+  does not answer and a native confirmation when the page's `beforeunload` asks to stay.
+- **Not yet wired.** `start.sh` does not open the window until P07.2; it is started with
+  `npm --prefix desktop start` ([Development](DEVELOPMENT.md#desktop-window)).
+
 ## Planned boundaries
 
 These boundaries are **planned** and not implemented. They are proposed in ADRs 0010 and 0011.
@@ -187,7 +215,9 @@ flowchart LR
 - **Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)).** A host Electron shell,
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It
-  has no other host bridge, and closing it never stops the containers.
+  has no other host bridge, and closing it never stops the containers. The shell with its
+  loopback-only loading, isolation and single instance exists since P07.1 ("Desktop shell"
+  above); the launcher, picker, microphone and downloads are still planned (P07.2–P07.4).
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it

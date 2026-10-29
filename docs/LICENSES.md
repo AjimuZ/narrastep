@@ -38,6 +38,20 @@ inventory inside the containers is roadmap item I-15.
 | RxJS | 7.8.2 | Apache-2.0 | |
 | zone.js, tslib | 0.16.2, 2.8.1 | MIT, 0BSD | |
 
+## Desktop window (host, downloaded into `desktop/node_modules`)
+
+Installed by `npm ci` in `desktop/` from `desktop/package-lock.json` (P07.1), never committed and
+not redistributed.
+
+| Component | Version | License | Note |
+| --- | --- | --- | --- |
+| Electron | 45.1.0 | MIT | [ADR 0014](decisions/0014-desktop-app-shell.md); its binary download contains Chromium, Node.js and their third-party licenses (`LICENSES.chromium.html`); unsigned |
+| `@electron/get`, `@electron-internal/extract-zip` | 5.1.0, 1.0.8 | MIT | Download and unpack the Electron binary |
+| `sumchecker` | 3.0.1 | Apache-2.0 | Checks the binary's SHA-256 sum |
+| `undici`, `undici-types`, `debug`, `ms`, `env-paths`, `progress` | 7.30.1, 7.24.6, 4.4.3, 2.1.3, 3.0.0, 2.0.3 | MIT | Dependencies of `@electron/get` |
+| `graceful-fs`, `semver` | 4.2.11, 7.8.5 | ISC | Dependencies of `@electron/get` |
+| `@types/node` | 24.19.2 | MIT | Type declarations required by the `electron` package |
+
 ## Bundled files
 
 Files copied into the repository and shipped unmodified are recorded in
@@ -54,7 +68,6 @@ Files copied into the repository and shipped unmodified are recorded in
 | --- | --- | --- | --- |
 | Gemma 4 E2B and E4B weights | Apache-2.0 | P06 | Downloaded by the user; license shown before download and stored with the files |
 | `@angular/localize` | MIT | P04 | English and Italian interface |
-| Electron | MIT | P07 | Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)); downloaded into `desktop/node_modules`; unsigned |
 | `@electron/packager` | BSD-2-Clause | P07 | Optional local portable build |
 
 ## Development tools

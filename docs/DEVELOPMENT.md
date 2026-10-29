@@ -68,6 +68,69 @@ cd backend
 python -m celery -A app.tasks.celery_app:celery_app worker --loglevel=INFO --concurrency=1 --prefetch-multiplier=1
 ```
 
+## Desktop window
+
+`desktop/` is the Electron shell of [ADR 0014](decisions/0014-desktop-app-shell.md) (P07.1). It
+uses the host Node.js 22.12 or newer and keeps Electron inside `desktop/node_modules`. Until P07.2
+`start.sh` does not open it; start the stack first, then:
+
+```bash
+cd desktop
+npm ci --ignore-scripts
+node node_modules/electron/install.js
+npm start
+```
+
+`npm ci --ignore-scripts` installs the pinned `electron` package without running any package
+script; `install.js` then downloads the Electron 45.1.0 binary for this system from the Electron
+releases on GitHub and checks it against the SHA-256 sums in the package's `checksums.json`. `npm start` opens one window on
+`http://127.0.0.1:${NARRASTEP_WEB_PORT:-4200}`; a second `npm start` brings that window to the
+front and exits. A port that is not a number from 1 to 65535 exits with code 2. Electron's own
+`npm start` command downloads a missing binary by itself; running `install.js` first keeps that
+download an explicit step.
+
+| Module | Responsibility |
+| --- | --- |
+| `src/main.cjs` | Electron entry: starts the shell or prints the configuration error |
+| `src/shell.cjs` | Single instance, sandbox, guards before the first load, quit when the window closes |
+| `src/policy.cjs` | The loopback origin, URL, request and permission rules and the window's web preferences |
+| `src/guards.cjs` | Applies the rules to the session and to every web contents |
+| `src/window.cjs` | Window size, fallback page on failure, leave dialog, keyboard zoom |
+| `src/fallback-page.cjs`, `src/messages.cjs` | The shell's own page and dialog texts in English and Italian |
+
+Tests use the Node.js test runner and need no other package:
+
+```bash
+cd desktop
+npm test
+```
+
+`test/policy.test.cjs`, `test/guards.test.cjs` and `test/shell.test.cjs` run the rules and the
+lifecycle against in-memory Electron stand-ins (`test/support/fake-electron.cjs`).
+`test/electron-window.test.cjs` starts the real Electron with `test/support/electron-harness.cjs`,
+which runs the production shell against two local HTTP servers: a stand-in app and a second
+origin that must never receive a request. It checks the web preferences, that the page has no
+`require`, `process`, `module` or `Buffer`, that popups, navigation, redirects, frames, webviews
+and requests to another port or to `localhost` are blocked, that the microphone, screen capture
+and notifications are denied and full screen is allowed, the Italian fallback page, and that a
+second launch exits while the first window loads the app again. Closing the window must end the
+process with code 0. These two tests are skipped, with a message, when the Electron binary is not
+installed.
+
+On Linux the window tests use Chromium's headless platform, so no display is needed, but Electron
+still needs the GTK 3, NSS and X11 client libraries. Chromium's sandbox also needs unprivileged
+user namespaces or a root-owned `chrome-sandbox`; in a container without either, set
+`NARRASTEP_DESKTOP_TEST_NO_SANDBOX=1` to add `--no-sandbox` to the test launches only. The shell
+itself never disables the sandbox. CI runs `npm ci --ignore-scripts` and `npm test`, so it runs
+the stand-in tests and skips the window tests.
+
+Formatting follows the web app's Prettier settings (`desktop/.prettierrc.json`) and uses its
+Prettier from the repository root:
+
+```bash
+apps/web/node_modules/.bin/prettier --check "desktop/src/*.cjs" "desktop/test/**/*.cjs" desktop/package.json
+```
+
 ## Database migrations
 
 Create a migration only after reviewing the generated operations:

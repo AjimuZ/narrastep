@@ -27,6 +27,8 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | K10 | The npm registry or the Electron download is blocked on first launch | No desktop window | The launcher says so; `./start.sh --headless` keeps Narrastep usable in a browser |
 | K12 | Loopback system audio records every application, including notification sounds | Unwanted audio in the recording | Recorder notice; the user can mute notifications while recording |
 | K11 | Italian strings are longer and break layouts | Truncated labels | 320 px and 200% zoom checks run in both languages (P04.5) |
+| K13 | On Linux, Chromium's sandbox needs unprivileged user namespaces or a root-owned `chrome-sandbox`; without either Electron refuses to start (seen on the build worker in P07.1) | No desktop window on such Linux systems | The shell never turns the sandbox off; the window tests add `--no-sandbox` only with `NARRASTEP_DESKTOP_TEST_NO_SANDBOX=1`; Windows is not affected; `./start.sh --headless` (P07.2) keeps the browser mode |
+| K14 | The web container sends `Permissions-Policy: camera=(), microphone=(), geolocation=()` with the app page (`apps/web/nginx.conf`, inherited by `location /`), and Chromium then refuses `getUserMedia` for the microphone (reproduced on 2026-10-29 with a stand-in server in headless Chromium; not run against the nginx container) | The recorder cannot use the microphone on the Docker stack, in a browser and in the desktop window | Allow the microphone for the app's own origin (`microphone=(self)`) before the P05.6 manual test and P07.4; tests so far used the development server, which does not send the header |
 
 ## Open questions
 

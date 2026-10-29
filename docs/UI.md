@@ -276,6 +276,26 @@ The table above is the target. What the English interface does today:
 | Export | Title "Export" with the project name; New package (primary: contents, original-video option, **Create package**, the current package with an activity line, because the worker writes fixed stage values rather than a measured percentage), Size estimate, and Packages titled with each stored ZIP name and **Download package** |
 | Not found | "Page not found" with **Open projects** |
 
+### Desktop window (P07.1)
+
+The Electron window ([ADR 0014](decisions/0014-desktop-app-shell.md)) shows the same screens. Its
+own interface is small and follows the page language (`<html lang>`), or the system language
+before the app has loaded:
+
+- **Window:** titled by the page; 1280 × 800, reduced to fit a smaller screen, never below
+  320 × 480; background `--color-bg` while loading; no menu bar on Windows and Linux.
+- **Zoom:** Ctrl (Cmd on macOS) with `+` or `=`, `-` and `0` step through 25% to 500% and reset,
+  as in a browser, because there is no View menu.
+- **Leave dialog:** when a screen asks before unloading (recording, uploading, unsaved edits) and
+  the user closes the window, a native dialog titled "Leave this page?" ("Uscire da questa
+  pagina?") says "A recording, an upload or unsaved edits may be lost." ("Una registrazione, un
+  caricamento o modifiche non salvate potrebbero andare persi.") with **Stay** (default, Escape)
+  and **Leave** (**Resta**, **Esci**).
+- **Not reachable page:** when the app does not answer, a local page without scripts says
+  "Narrastep is not reachable" ("Narrastep non è raggiungibile"), names the address, tells the user
+  to start Narrastep with `./start.sh` and offers a **Try again** (**Riprova**) link; colors come
+  from `--color-bg`, `--color-text` and `--color-focus-ring`.
+
 ## Verification
 
 The browser checks live in `apps/web/tests/e2e/accessibility.spec.ts` (with `support/fake-api.ts` and

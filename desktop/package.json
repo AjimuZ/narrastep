@@ -1,0 +1,19 @@
+{
+  "name": "@narrastep/desktop",
+  "productName": "Narrastep",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Narrastep desktop window: an isolated Electron shell for the local web app",
+  "license": "MIT",
+  "main": "src/main.cjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.cjs\""
+  },
+  "devDependencies": {
+    "electron": "45.1.0"
+  }
+}

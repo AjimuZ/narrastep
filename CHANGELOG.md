@@ -78,6 +78,14 @@ All notable changes to Narrastep are documented in this file.
 - New settings `NARRASTEP_RECORDING_CHUNK_SECONDS` (5), `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND`
   (2500000) and `NARRASTEP_RECORDING_MAX_FRAME_RATE` (15), sent to the recorder in the new
   `capture` field of recording session responses.
+- Desktop window (Electron 45.1.0, in `desktop/`): `npm --prefix desktop start` opens Narrastep
+  in its own window. The window loads only Narrastep at `http://127.0.0.1` on the web port and
+  blocks every other address, new windows and popups; the page gets no access to the computer
+  except full-screen video, so recording does not work in the window yet. Launching it again
+  brings the open window to the front, and closing it leaves Docker and running jobs alone. When
+  Narrastep is not running the window says so with **Try again**, it asks before closing during a
+  recording, an upload or unsaved edits, and Ctrl `+`, `-` and `0` zoom. English and Italian.
+  `start.sh` does not open it yet.
 
 ### Changed
 
