@@ -13,13 +13,18 @@ evidence below it. Planned items must not appear as enabled actions in the inter
 - [x] P01.3 Owner accepts ADRs 0009–0013, including `llama.cpp` instead of Ollama.
 - [x] P01.4 Record the bilingual interface (ADR 0015), the desktop shell proposal (ADR 0014) and
   the free-license rule with a license inventory.
-- [ ] P01.5 Owner chooses the remaining improvement candidates.
+- [x] P01.5 Owner chooses the remaining improvement candidates.
 
 Exit: `python scripts/check_docs.py` passes; every planned feature is labelled planned.
 
 P01.1–P01.4 evidence (2026-10-28): `python scripts/check_docs.py` reports valid links. The owner
 accepted ADRs 0009–0013 and asked for English and Italian, a pixel title font and free licenses
-only. No code behavior changed, so no other check was run. P01.5 waits for the owner.
+only. No code behavior changed, so no other check was run.
+
+P01.5 evidence (2026-10-29): the owner decided Q2: I-15 → P08.5, I-05 → P06.4, I-02 → P09.1,
+I-07 → P09.2; I-01 (`start.ps1`) waits until after P08.12; optional candidates stay candidates.
+Q2 moved to Resolved in `docs/RISKS.md`, "Improvement candidates" updated, package P09 added (planned,
+not implemented). `python3 scripts/check_docs.py` valid and `git diff --check HEAD` clean (see handoff).
 
 ## P02 — Project types
 
@@ -132,7 +137,8 @@ Decision: [ADR 0011](decisions/0011-optional-local-generation.md). Specification
   Progress (2026-10-29, not yet checked): `backend/Dockerfile` copies `llama-server` and the libraries it loads from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0@sha256:a94b642b3e2620749bf2ff5672df922c23a6202710e54a8f7667e58df70aba5a` (build b11146, commit 7fe450e19, amd64 and arm64) into `/opt/llama.cpp` with the MIT `LICENSE` (`backend/third_party/llama.cpp/LICENSE`), lists `libgomp1`, and runs `python scripts/check_llama_server.py` at build (new `backend/app/services/llama_server.py`: `LD_LIBRARY_PATH` for the server process only, `llama-server --version`, pinned build and commit). Growth measured from the files extracted from the pinned layers: 31 files, 40,120,320 bytes uncompressed (16,548,532 gzip) on amd64; 25 files, 27,996,160 bytes (12,305,424 gzip) on arm64; `libgomp1` adds nothing (FFmpeg and Tesseract already install it, resolved against the Debian 13 package index). A static check of the amd64 files against the `python:3.12.13-slim` layers plus `libgomp1` resolved every library, symbol version (glibc 2.38, `GLIBCXX_3.4.32`, OpenSSL 3, OpenMP 4.5) and strong symbol; without `libgomp1` it reported the missing library. New `backend/tests/test_llama_server.py` (17 tests; negative controls without the library path and without the pin comparison failed); backend `python -B -m pytest` 210 passed, 11 skipped (with FFmpeg 7.1: 220 passed, 1 skipped); `ruff format --check`, `ruff check`, `mypy app`, `scripts/export_openapi.py --check`, `scripts/check_docs.py`, `git diff --check HEAD`; `apps/web` `npm run build`, `npm run test` (161), `npm run lint` passed. Open: `docker compose build` with the in-image `llama-server --version` check and `docker history` (no Docker on this worker; running the downloaded binary outside Docker was not permitted).
 - [ ] P06.2 Model manager: download, resume, verify, enable, delete, kill switch.
 - [ ] P06.3 Generation job with type-specific prompts and chronological parts.
-- [ ] P06.4 Settings and Document screens; optional inclusion in the package.
+- [ ] P06.4 Settings and Document screens; optional inclusion in the package; copy the result as Markdown
+  and a single-file Markdown with images (I-05).
 - [ ] P06.5 Benchmark time and peak memory on the owner's computer (10 and 60 minutes, E2B).
 - [ ] P06.6 Clickable `[mm:ss]` references in Review and Document that move the video to that
   time (I-04).
@@ -177,7 +183,8 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
   Progress (2026-10-29, not yet checked): every external image now has an exact tag and the digest of its multi-platform index, checked against the registries: `python:3.14.10-slim-trixie@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999` (Debian 13.7, newest 3.14; 3.15 kept behind by P08.2), `node:22.23.1-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2` (version kept: `engine-strict` ties it to `.nvmrc`, `engines.node` and CI, which P08.4 moves together; newest LTS 26.13.0), `nginx:1.28.0-alpine` → `nginx:1.30.6-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949` (newest stable line, same digest as `stable-alpine`), `redis:7.2.14-alpine` → `valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b` with `valkey-server --appendonly yes` and `valkey-cli ping`, and `llama.cpp` kept at `server-v0.5.0@sha256:a94b642b…` (still the newest `server-v*` release; `server-b*` up to b11977 are per-commit builds). Q10 resolved in ADR 0017: Valkey (BSD-3-Clause) instead of Redis 7.2.17 (BSD, old branch) or Redis 8 (RSALv2/SSPLv1/AGPLv3); service name, URLs and `narrastep-redis` volume kept; Valkey's entrypoint uses uid 999 like the Redis image (both checked from the image layers and history); `valkey-server` reports `redis_version:7.2.4` to clients. Debian packages resolved for the pinned base from the Debian 13 index: FFmpeg 7.1.5-0+deb13u1, Tesseract 5.5.0-1+b1 (data 4.1.0-2), `libgomp1` 14.2.0-19 (newer only in Debian testing; not pinned because Debian removes superseded versions, reason in the Dockerfile and `docs/LICENSES.md`). Static check without running anything: the 31 `llama.cpp` files from the pinned layers against the pinned Python base layers plus `libgomp1` 14.2.0-19 resolved every library, symbol version and strong symbol (0 problems; without `libgomp1`, MISSING `libgomp.so.1`). nginx 1.30.6's default `nginx.conf` still includes `conf.d/*.conf`, and busybox `wget` for the health check is present. New `backend/tests/test_container_images.py` (4): exact tag and digest for all 5 images, the `docs/LICENSES.md` "Container images" table equals the files, the broker is Valkey with its commands, the Node image equals `.nvmrc`; negative controls (floating nginx tag, Valkey digest removed, Redis restored, wrong digest in the docs, Node 22.23.4, Python or `llama.cpp` digest removed) each failed the matching test. Backend `python -B -m pytest` 239 passed, 27 skipped (249 passed, 17 skipped with FFmpeg on `PATH`); ruff check and format, `mypy app`, `scripts/export_openapi.py --check`, `scripts/check_docs.py`, `git diff --check HEAD`; `apps/web` `npm run build`, `npm run test` (161), `npm run lint`; `desktop` `npm run test` (127) passed. Not run: `docker compose build`, the in-image `check_llama_server.py` and `check_transcription_stack.py`, and a healthy stack on a real engine. The worker has no Docker or Podman and no user namespaces, and running the downloaded server binaries outside a container was not permitted. The task stays unchecked until they run.
 - [ ] P08.4 Update the Angular application's and the desktop shell's npm packages, the Node.js version and the GitHub Actions to the latest versions that pass.
   Exit: `npm ci`, `npm run build`, `npm run lint`, `npm run test`, `npm run typecheck:e2e` and `npx prettier --check .` pass in `apps/web`; `npm test` passes in `desktop`; `.nvmrc`, Dockerfile and CI Node versions agree; the Electron pin in ADR 0014 and `docs/LICENSES.md` are current; browser journeys are run or reported as not run.
-- [ ] P08.5 Document the dependency policy and the update procedure, and record the refresh.
+- [ ] P08.5 Document the dependency policy and the update procedure, and record the refresh; add the automated
+  license inventory inside the containers (I-15).
   **Requires tasks:** P08.2, P08.3, P08.4.
   Exit: `docs/DEVELOPMENT.md` has an "Updating dependencies" procedure (what to run, where licenses are recorded, what stays pinned and why); `docs/LICENSES.md` matches the installed versions; K9 and K15 are updated; `python scripts/check_docs.py` passes.
 - [ ] P08.6 Hardware probe and a pure profile function that turns CPU, memory, free disk and free ports into `.env` values.
@@ -206,6 +213,16 @@ suites pass on the updated dependencies; shell tests pass for both start scripts
 is generated and an existing one is untouched; the owner smoke test on Podman is recorded in
 [Status](STATUS.md); `./start.sh` and `./start.sh --headless` still work on Docker.
 
+## P09 — Owner-selected improvements
+
+**Depends on:** P02, P03. **Areas:** backend, frontend, documentation.
+Chosen by the owner on 2026-10-29 (Q2). Planned, not delivered.
+
+- [ ] P09.1 Glossary per project passed to Whisper as hints (I-02).
+  Exit: names and terms saved in a project are sent to the transcriber as hints in both languages; tests cover an empty glossary and a long one; API, OpenAPI, PROCESSING_PIPELINE and UI documents updated.
+- [ ] P09.2 Storage view and cleanup after export (I-07).
+  Exit: the interface shows the space each project uses and removes the original video only after the package exists and the user confirms; tests cover refusal before an export; API, OpenAPI and UI documents updated.
+
 ## Improvement candidates
 
 Proposed on 2026-10-28 (P01.5). **Recommended** items give the most value for their cost;
@@ -218,15 +235,22 @@ Scheduled by the owner on 2026-10-28:
 - I-12 changed: a recording is saved without processing → P05.3–P05.4;
 - desktop app: Electron shell as in Symphony, PWA dropped → P07.
 
-Waiting for the owner's choice:
+Scheduled by the owner on 2026-10-29 (Q2, P01.5):
+
+- I-15 automated license inventory → P08.5 (with the dependency policy and update procedure);
+- I-05 copy result as Markdown, single-file Markdown with images → P06.4 (Document screen);
+- I-02 glossary per project passed to Whisper as hints → P09.1;
+- I-07 storage view and cleanup after export → P09.2;
+- I-01 `start.ps1` waits until after P08.12, because `start.sh` already runs in Git Bash; it stays a
+  candidate and is not scheduled.
+
+The optional candidates stay candidates until the owner schedules them.
+
+Still candidates:
 
 | ID | Improvement | Why | Priority | After |
 | --- | --- | --- | --- | --- |
-| I-01 | `start.ps1` launcher for Windows PowerShell | `start.sh` needs Git Bash or WSL; PowerShell is always present | Recommended | P01 |
-| I-02 | Glossary per project passed to Whisper as hints | Names, products and jargon are the most common transcription errors | Recommended | P02 |
-| I-05 | Copy result as Markdown, single-file Markdown with images | Paste straight into Jira, Confluence, Teams or a ticket | Recommended | P06 |
-| I-07 | Storage view and cleanup after export | Videos are large; free space without losing the package | Recommended | P03 |
-| I-15 | Automated license inventory inside the containers | Keeps [Licenses](LICENSES.md) true as dependencies change | Recommended | P01 |
+| I-01 | `start.ps1` launcher for Windows PowerShell | `start.sh` needs Git Bash or WSL; PowerShell is always present | Recommended | P08.12 |
 | I-13 | Editable prompt templates per project type | Adapt the task-briefing or meeting output to the owner's team format | Optional | P06 |
 | I-06 | Search across all projects (SQLite FTS5) | Find which recording mentioned a topic | Optional | P04 |
 | I-08 | Sensitive-data blur before export | Recordings show e-mails, names and tokens | Optional | P04 |

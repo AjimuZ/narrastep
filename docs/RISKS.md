@@ -37,7 +37,6 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 
 | ID | Question | Needed by |
 | --- | --- | --- |
-| Q2 | Which remaining improvement candidates to schedule? | P02 |
 | Q5 | When `huggingface.co` is blocked, allow importing the same verified model files from disk? | P06.2 |
 | Q6 | Default model: E2B (lighter) or E4B (better)? Decide after the P06.5 benchmark | P06.5 |
 
@@ -46,6 +45,7 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | ID | Question | Answer (2026-10-28) |
 | --- | --- | --- |
 | Q1 | Accept ADRs 0009–0013? | Accepted, including `llama.cpp` instead of Ollama |
+| Q2 | Which remaining improvement candidates to schedule? | Decided 2026-10-29 (P01.5): I-15 in P08.5, I-05 in P06.4, I-02 as P09.1, I-07 as P09.2; I-01 (`start.ps1`) waits until after P08.12; optional candidates stay candidates ([Roadmap](ROADMAP.md#improvement-candidates)) |
 | Q3 | Use a pixel title font? | Yes: Pixelify Sans (SIL OFL 1.1), titles only ([UI](UI.md#typography)) |
 | Q4 | Interface language? | English and Italian with a switch ([ADR 0015](decisions/0015-english-and-italian-interface.md)) |
 | Q7 | Desktop app: PWA or Electron? | Electron shell launched by `start.sh`, as in Symphony ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
