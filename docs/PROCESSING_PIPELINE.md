@@ -146,21 +146,22 @@ batches. Each batch reserves one file for `batch-input.md`, so its image capacit
 would exceed that capacity. Repeated evidence is copied once inside a batch and copied again only
 when a later batch also needs it. Steps without an image remain in chronological order without
 consuming an image slot, and an export with no images still receives one Markdown-only batch.
-Canonical screenshots and the existing complete LLM inputs remain unchanged. Existing immutable
-export archives are never rewritten.
+Canonical screenshots and the existing complete LLM inputs remain unchanged in content. Existing
+immutable export archives are never rewritten and keep the Version 0.2 layout.
 
 The project type also selects the wording of three package files
 (`backend/app/services/export_guides.py`, [ADR 0009](decisions/0009-project-types.md)):
 
 | File | Type-specific content |
 | --- | --- |
-| `llm/generation-prompt.md` | Type label, purpose, the document sections in order, screenshot guidance, the shared evidence-only rules and the type's own rules |
-| `chatgpt-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
-| `chatgpt-batches/batch-NNN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
+| `01-ai-input/generation-prompt.md` | Type label, purpose, the document sections in order, screenshot guidance, the shared evidence-only rules and the type's own rules |
+| `04-chatgpt-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
+| `04-chatgpt-batches/batch-NN-of-NN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
 
 The sections are those of the "Output per project type" table in
-[Local generation](LOCAL_GENERATION.md). `llm/llm-input.md`, screenshots, the manifest and its
-schema version do not change. A legacy `technical_walkthrough` value read from a job snapshot is
+[Local generation](LOCAL_GENERATION.md). `01-ai-input/llm-input.md` and the screenshots keep their
+content; P03.2 moved them into the numbered archive layout and raised the manifest schema to
+`0.3.0` (see "Export layout" in [Data model](DATA_MODEL.md)). A legacy `technical_walkthrough` value read from a job snapshot is
 treated as `task_briefing`; an unknown value falls back to `general` without failing the export.
 The scan rate and the image budgets above are the type-specific screenshot profile; a unit test
 checks that the analysis profile and the export budget use the same rates for every type.

@@ -6,7 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
@@ -28,6 +28,7 @@ from app.models import (
 from app.schemas import serialize_utc
 from app.services.adaptive_selection import extract_adaptive_frames_to_directory
 from app.services.diagnostics import METRICS_VERSION, MetricsCollector
+from app.services.export_names import export_archive_name
 from app.services.exporting import ExportRequest, ExportSegment, build_export_package
 from app.services.media import MediaServiceError, extract_pcm_audio, validate_video
 from app.services.pipeline import (
@@ -396,6 +397,12 @@ def perform_export(
                 raise FileExistsError("An immutable export artifact already exists.")
             request = ExportRequest(
                 export_id=export.id,
+                archive_name=export_archive_name(
+                    export.created_at,
+                    canonical_output_mode(project.output_mode.value),
+                    project.name,
+                    _export_sequence(session, export),
+                ),
                 project={
                     "id": project.id,
                     "name": project.name,
@@ -489,6 +496,29 @@ def perform_export(
             _record_export_metrics(session, export, workspace, metrics, "failed")
             project.state = ProjectState.REVIEW
             session.commit()
+
+
+def _export_sequence(session: Session, export: ProjectExport) -> int:
+    """Return the 1-based position of an export among its project's exports by creation time.
+
+    Failed exports keep their number. P03.3 stores the number with the export record; until then
+    it is recomputed here, so deleting an earlier export row would shift later numbers.
+    """
+    count = session.scalar(
+        select(func.count())
+        .select_from(ProjectExport)
+        .where(
+            ProjectExport.project_id == export.project_id,
+            or_(
+                ProjectExport.created_at < export.created_at,
+                and_(
+                    ProjectExport.created_at == export.created_at,
+                    ProjectExport.id <= export.id,
+                ),
+            ),
+        )
+    )
+    return max(1, int(count or 0))
 
 
 def _claim_processing_job(

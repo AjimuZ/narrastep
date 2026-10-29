@@ -18,7 +18,12 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
-- Added tested builders for descriptive export names (project slug, archive name, screenshot file name); the export does not use them yet.
+- Export packages now use a numbered layout inside one root folder named after the date, project
+  type, project name and export number (for example
+  `2026-10-28_meeting_sprint-planning_export-02`): `README.md`, `01-ai-input`, `02-screenshots`
+  (`step-003_00m42s.png`), `03-transcript`, `04-chatgpt-batches/batch-01-of-03` and `metadata`.
+  The manifest moved to `metadata/manifest.json` with schema version 0.3.0. Earlier exports keep
+  their layout. The downloaded file name does not change yet.
 
 - The new-project form now starts with the four project-type cards. The project name is optional
   and defaults to the type and the local date (for example "Meeting 2026-10-29"); the spoken

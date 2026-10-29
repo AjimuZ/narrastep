@@ -73,7 +73,8 @@ every project.
 3. OpenCV selects, scores and deduplicates screenshots and links them to transcript segments.
 4. You review the transcript and screenshots, then export an immutable ZIP.
 
-Long exports also contain `chatgpt-batches/` folders sized for the ChatGPT web upload limit
+Every export is one folder with numbered subfolders and a `README.md` that says where to start.
+Long exports also contain `04-chatgpt-batches/` folders sized for the ChatGPT web upload limit
 (20 files by default, configurable). Narrastep never uploads them. Details:
 [Processing pipeline](docs/PROCESSING_PIPELINE.md).
 

@@ -1,10 +1,11 @@
-"""Atomic construction of immutable Narrastep 0.2 ZIP packages."""
+"""Atomic construction of immutable Narrastep ZIP packages in the numbered archive layout."""
 
 from __future__ import annotations
 
 import json
 import math
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -17,9 +18,30 @@ from PIL import Image
 
 from app.schemas import serialize_utc
 from app.services.diagnostics import MetricsCollector
-from app.services.export_guides import build_batch_guide, build_batch_task, build_generation_prompt
+from app.services.export_guides import (
+    build_batch_guide,
+    build_batch_task,
+    build_generation_prompt,
+    guide_for,
+)
+from app.services.export_names import export_archive_name, screenshot_file_name
 from app.services.pipeline import perceptual_hash_similarity
 from app.services.screenshot_materialization import decode_exact_frame, write_png_atomic
+
+# Manifest schema versions: 0.2.0 archives (folders `llm`, `transcript`, `screenshots`,
+# `chatgpt-batches`, `metadata`, manifest at the root, no root folder) are never rewritten; every
+# new export is 0.3.0 (ADR 0013). Manifest `paths` are relative to the archive root folder.
+MANIFEST_SCHEMA_VERSION = "0.3.0"
+
+# Numbered folders of the archive, in reading order (docs/DATA_MODEL.md, "Export layout").
+AI_INPUT_DIR = "01-ai-input"
+SCREENSHOTS_DIR = "02-screenshots"
+TRANSCRIPT_DIR = "03-transcript"
+BATCHES_DIR = "04-chatgpt-batches"
+METADATA_DIR = "metadata"
+SOURCE_DIR = "source"
+
+_ARCHIVE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +73,11 @@ class ExportSegment:
 
 @dataclass(frozen=True, slots=True)
 class ExportRequest:
-    """Carry a complete filesystem-safe snapshot for one immutable export."""
+    """Carry a complete filesystem-safe snapshot for one immutable export.
+
+    `archive_name` is the ZIP base name and the archive root folder (ADR 0013). When omitted it is
+    derived from `created_at`, the project type and name with export number 1.
+    """
 
     export_id: str
     project: dict[str, Any]
@@ -63,6 +89,7 @@ class ExportRequest:
     original_video_path: Path | None = None
     include_original_video: bool = False
     created_at: datetime | None = None
+    archive_name: str | None = None
     extra_manifest: dict[str, Any] = field(default_factory=dict)
     chatgpt_max_files_per_batch: int = 20
     duplicate_similarity_threshold: float = 0.92
@@ -152,7 +179,14 @@ BUDGET_MULTIPLIERS = {"compact": 0.75, "balanced": 1.0, "detailed": 1.25}
 
 
 def build_export_package(request: ExportRequest, metrics: MetricsCollector | None = None) -> Path:
-    """Build a complete package in temporary storage and atomically publish its ZIP."""
+    """Build a complete package in temporary storage and atomically publish its ZIP.
+
+    The ZIP holds one root folder named after the archive (ADR 0013) with the numbered folders,
+    `README.md` and `metadata/manifest.json` (schema 0.3.0). Raises ValueError for an unsafe
+    `archive_name`, FileExistsError when the destination exists and FileNotFoundError when a
+    selected evidence asset is missing; a failed build leaves no partial ZIP behind.
+    """
+    archive_name = _resolve_archive_name(request)
     request.destination_path.parent.mkdir(parents=True, exist_ok=True)
     if request.destination_path.exists():
         raise FileExistsError("An immutable export artifact already exists.")
@@ -162,12 +196,30 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
         with tempfile.TemporaryDirectory(
             prefix=f"export-{request.export_id}-", dir=request.destination_path.parent
         ) as temporary_directory:
-            package_root = Path(temporary_directory) / "package"
+            # The folder name is the archive root; `_write_zip` prefixes every entry with it.
+            package_root = Path(temporary_directory) / archive_name
             package_root.mkdir()
             rendered_segments = _render_screenshots(request, package_root, metrics)
-            manifest = _build_manifest(request, rendered_segments)
-            _write_json(package_root / "manifest.json", manifest)
-            transcript_root = package_root / "transcript"
+            batch_count = _write_chatgpt_batches(request, rendered_segments, package_root, metrics)
+            metadata_root = package_root / METADATA_DIR
+            metadata_root.mkdir()
+            _write_json(
+                metadata_root / "manifest.json",
+                _build_manifest(request, rendered_segments, archive_name),
+            )
+            _write_json(metadata_root / "source.json", request.source)
+            (package_root / "README.md").write_text(
+                _build_archive_readme(request, archive_name, batch_count), encoding="utf-8"
+            )
+            ai_input_root = package_root / AI_INPUT_DIR
+            ai_input_root.mkdir()
+            (ai_input_root / "llm-input.md").write_text(
+                _build_llm_input(request, rendered_segments), encoding="utf-8"
+            )
+            (ai_input_root / "generation-prompt.md").write_text(
+                build_generation_prompt(request.output_mode), encoding="utf-8"
+            )
+            transcript_root = package_root / TRANSCRIPT_DIR
             transcript_root.mkdir()
             _copy_raw_transcript(
                 request.raw_transcript_path, transcript_root / "raw-transcript.json"
@@ -178,20 +230,8 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
             (transcript_root / "subtitles.srt").write_text(
                 _build_srt(rendered_segments), encoding="utf-8"
             )
-            llm_root = package_root / "llm"
-            llm_root.mkdir()
-            (llm_root / "llm-input.md").write_text(
-                _build_llm_input(request, rendered_segments), encoding="utf-8"
-            )
-            (llm_root / "generation-prompt.md").write_text(
-                build_generation_prompt(request.output_mode), encoding="utf-8"
-            )
-            _write_chatgpt_batches(request, rendered_segments, package_root, metrics)
-            metadata_root = package_root / "metadata"
-            metadata_root.mkdir()
-            _write_json(metadata_root / "source.json", request.source)
             if request.include_original_video and request.original_video_path is not None:
-                source_root = package_root / "source"
+                source_root = package_root / SOURCE_DIR
                 source_root.mkdir()
                 shutil.copy2(
                     request.original_video_path,
@@ -202,6 +242,25 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
     finally:
         partial_zip.unlink(missing_ok=True)
     return request.destination_path
+
+
+def _resolve_archive_name(request: ExportRequest) -> str:
+    """Return the validated archive root folder name for a request.
+
+    Falls back to the ADR 0013 pattern with export number 1 when the caller did not supply one.
+    Raises ValueError when the name is not a plain file name (path separators, leading dot, or
+    characters outside letters, digits, dot, underscore and hyphen), so it is safe as a ZIP entry
+    prefix and as a folder on every platform.
+    """
+    name = request.archive_name or export_archive_name(
+        request.created_at or datetime.now(UTC),
+        request.output_mode,
+        request.project.get("name"),
+        1,
+    )
+    if not _ARCHIVE_NAME.fullmatch(name) or name.endswith("."):
+        raise ValueError("The archive name must be a plain, portable file name.")
+    return name
 
 
 def estimate_export_package(request: ExportRequest) -> ExportEstimate:
@@ -256,7 +315,7 @@ def _render_screenshots(
     metrics: MetricsCollector | None = None,
 ) -> list[RenderedExportSegment]:
     """Select and normalize every distinct reusable screenshot required by the review."""
-    screenshot_root = package_root / "screenshots"
+    screenshot_root = package_root / SCREENSHOTS_DIR
     screenshot_root.mkdir()
     selection = _select_screenshot_groups(
         request.segments,
@@ -268,7 +327,8 @@ def _render_screenshots(
     )
     artifacts_by_source_id: dict[str, ExportedScreenshot] = {}
     for group in selection.representatives:
-        filename = f"step-{group.first_sequence + 1:03d}.png"
+        # The file name carries the step number and the video time of the group's first step.
+        filename = screenshot_file_name(group.first_sequence + 1, group.segments[0].start_seconds)
         destination = screenshot_root / filename
         if group.source_path is not None and group.source_path.is_file():
             with Image.open(group.source_path) as image:
@@ -283,7 +343,7 @@ def _render_screenshots(
             id=destination.stem,
             source_screenshot_id=group.source_screenshot_id,
             timestamp_seconds=group.timestamp_seconds,
-            relative_path=f"screenshots/{filename}",
+            relative_path=f"{SCREENSHOTS_DIR}/{filename}",
         )
 
     if metrics is not None:
@@ -418,13 +478,17 @@ def _write_chatgpt_batches(
     rendered: list[RenderedExportSegment],
     package_root: Path,
     metrics: MetricsCollector | None = None,
-) -> None:
-    """Write chronological upload folders without changing the canonical export evidence."""
+) -> int:
+    """Write chronological upload folders without changing the canonical export evidence.
+
+    Folders are named `batch-{nn}-of-{total}` under `04-chatgpt-batches/` and each holds
+    `batch-input.md` plus copies of the screenshots it needs. Returns the number of batches.
+    """
     batches = _build_chatgpt_batches(
         rendered,
         max_files_per_batch=request.chatgpt_max_files_per_batch,
     )
-    batches_root = package_root / "chatgpt-batches"
+    batches_root = package_root / BATCHES_DIR
     batches_root.mkdir()
     if metrics is not None:
         metrics.set("batchCount", len(batches))
@@ -435,7 +499,7 @@ def _write_chatgpt_batches(
     )
 
     for batch_index, batch in enumerate(batches, start=1):
-        batch_root = batches_root / f"batch-{batch_index:03d}"
+        batch_root = batches_root / batch_folder_name(batch_index, len(batches))
         batch_root.mkdir()
         for screenshot in batch.screenshots:
             source = package_root / screenshot.relative_path
@@ -449,6 +513,17 @@ def _write_chatgpt_batches(
             ),
             encoding="utf-8",
         )
+    return len(batches)
+
+
+def batch_folder_name(batch_index: int, batch_count: int) -> str:
+    """Return `batch-{nn}-of-{total}` with both numbers zero-padded to at least two digits.
+
+    Requires `1 <= batch_index <= batch_count`; both numbers use the width of `batch_count` so
+    folders sort in reading order.
+    """
+    width = max(2, len(str(batch_count)))
+    return f"batch-{batch_index:0{width}d}-of-{batch_count:0{width}d}"
 
 
 def _build_chatgpt_batches(
@@ -603,9 +678,13 @@ def _groups_are_visually_similar(
 
 
 def _build_manifest(
-    request: ExportRequest, rendered: list[RenderedExportSegment]
+    request: ExportRequest, rendered: list[RenderedExportSegment], archive_name: str
 ) -> dict[str, Any]:
-    """Describe project, source, active segments, and honest evidence associations."""
+    """Describe project, source, active segments, and honest evidence associations.
+
+    Schema 0.3.0 adds `archiveName` and lists every `paths` entry relative to the archive root
+    folder (the manifest itself sits in `metadata/`).
+    """
     manifest_segments = []
     screenshots = []
     associations = []
@@ -650,7 +729,8 @@ def _build_manifest(
                 }
             )
     manifest = {
-        "schemaVersion": "0.2.0",
+        "schemaVersion": MANIFEST_SCHEMA_VERSION,
+        "archiveName": archive_name,
         "exportId": request.export_id,
         "createdAt": serialize_utc(request.created_at or datetime.now(UTC)),
         "narrastepVersion": "0.2.0",
@@ -660,13 +740,15 @@ def _build_manifest(
         "screenshots": screenshots,
         "associations": associations,
         "paths": {
-            "manifest": "manifest.json",
-            "rawTranscript": "transcript/raw-transcript.json",
-            "reviewedTranscript": "transcript/reviewed-transcript.md",
-            "subtitles": "transcript/subtitles.srt",
-            "llmInput": "llm/llm-input.md",
-            "generationPrompt": "llm/generation-prompt.md",
-            "sourceMetadata": "metadata/source.json",
+            "readme": "README.md",
+            "manifest": f"{METADATA_DIR}/manifest.json",
+            "rawTranscript": f"{TRANSCRIPT_DIR}/raw-transcript.json",
+            "reviewedTranscript": f"{TRANSCRIPT_DIR}/reviewed-transcript.md",
+            "subtitles": f"{TRANSCRIPT_DIR}/subtitles.srt",
+            "llmInput": f"{AI_INPUT_DIR}/llm-input.md",
+            "generationPrompt": f"{AI_INPUT_DIR}/generation-prompt.md",
+            "chatgptBatches": BATCHES_DIR,
+            "sourceMetadata": f"{METADATA_DIR}/source.json",
             "originalVideo": _original_video_export_path(request),
         },
         "includedOriginalVideo": bool(
@@ -675,6 +757,41 @@ def _build_manifest(
     }
     manifest.update(request.extra_manifest)
     return manifest
+
+
+def _build_archive_readme(request: ExportRequest, archive_name: str, batch_count: int) -> str:
+    """Render the root `README.md`: what each folder holds and which file to open first."""
+    guide = guide_for(request.output_mode)
+    lines = [
+        f"# {request.project.get('name') or 'Narrastep export'}",
+        "",
+        f"Archive: `{archive_name}`. Project type: {guide.label}.",
+        "",
+        "## Where to start",
+        "",
+        f"- To use ChatGPT, open `{BATCHES_DIR}/README.md` and upload one `batch-*` folder at a "
+        f"time ({batch_count} in this export).",
+        f"- To use any other assistant, give it `{AI_INPUT_DIR}/generation-prompt.md` and "
+        f"`{AI_INPUT_DIR}/llm-input.md` together with the files in `{SCREENSHOTS_DIR}/`.",
+        "- To read the reviewed procedure yourself, open "
+        f"`{TRANSCRIPT_DIR}/reviewed-transcript.md`.",
+        "",
+        "## Folders",
+        "",
+        f"- `{AI_INPUT_DIR}/`: the evidence-only input and the prompt for the project type.",
+        f"- `{SCREENSHOTS_DIR}/`: one PNG per distinct screen, named "
+        "`step-{step}_{minutes}m{seconds}s.png` after the step and the video time.",
+        f"- `{TRANSCRIPT_DIR}/`: reviewed Markdown, `subtitles.srt` and `raw-transcript.json`.",
+        f"- `{BATCHES_DIR}/`: self-contained upload folders for the ChatGPT web interface.",
+        f"- `{METADATA_DIR}/`: `manifest.json` (schema {MANIFEST_SCHEMA_VERSION}) and "
+        "`source.json`.",
+    ]
+    if request.include_original_video and request.original_video_path is not None:
+        lines.append(f"- `{SOURCE_DIR}/`: the original video, included at your request.")
+    lines.extend(
+        ["", "Narrastep never uploads this archive. Everything in it was produced locally.", ""]
+    )
+    return "\n".join(lines)
 
 
 def _copy_raw_transcript(source: Path, destination: Path) -> None:
@@ -688,7 +805,7 @@ def _original_video_export_path(request: ExportRequest) -> str | None:
     """Return the optional source path exactly as it appears in the immutable package."""
     if not request.include_original_video or request.original_video_path is None:
         return None
-    return f"source/original-video{request.original_video_path.suffix.lower()}"
+    return f"{SOURCE_DIR}/original-video{request.original_video_path.suffix.lower()}"
 
 
 def _build_reviewed_markdown(request: ExportRequest, rendered: list[RenderedExportSegment]) -> str:
@@ -766,7 +883,10 @@ def _write_json(path: Path, value: Any) -> None:
 
 
 def _write_zip(package_root: Path, destination: Path) -> None:
-    """Write files in sorted order so equivalent evidence produces a stable layout."""
+    """Write files in sorted order below the root folder, so equivalent evidence is stable.
+
+    Every entry is prefixed with the name of `package_root`, which is the archive name.
+    """
     with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(item for item in package_root.rglob("*") if item.is_file()):
-            archive.write(path, path.relative_to(package_root).as_posix())
+            archive.write(path, path.relative_to(package_root.parent).as_posix())

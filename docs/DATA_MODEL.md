@@ -93,29 +93,46 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 | Change | Package |
 | --- | --- |
 | `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
-| `ProjectExport.sequence` and `ProjectExport.downloadName` | P03 |
+| `ProjectExport.sequence` and `ProjectExport.downloadName` store the number and the ZIP name that P03.2 already computes while building the archive | P03.3 |
 | `RecordingSession` (state, per-track chunk count, stored bytes and start offset, timestamps) with chunks under `projects/{id}/recording/{track}/` | P05 |
 | `source/microphone.webm` kept beside the mixed source video of in-app recordings | P05.2 |
 | `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
 | `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |
 | `Generation` (project, model key, prompt version, status, progress, relative document path) | P06 |
 
-### Planned export layout
+### Export layout
 
-From [ADR 0013](decisions/0013-descriptive-export-names.md), for
-`2026-10-28_meeting_sprint-planning_export-02.zip`:
+Implemented in P03.2 from [ADR 0013](decisions/0013-descriptive-export-names.md), for
+`2026-10-28_meeting_sprint-planning_export-02.zip`. The ZIP holds one root folder with the same
+name; the folder numbers give the reading order:
 
 ```text
 2026-10-28_meeting_sprint-planning_export-02/
   README.md                         what each folder contains and where to start
-  01-ai-input/                      evidence-only input and type-specific prompt
+  01-ai-input/                      llm-input.md and the type-specific generation-prompt.md
   02-screenshots/step-003_00m42s.png
-  03-transcript/                    reviewed Markdown, subtitles.srt, raw-transcript.json
-  04-chatgpt-batches/batch-01-of-03/
-  05-generated-document/document.md (only when included)
-  metadata/                         manifest.json, source.json
+  03-transcript/                    reviewed-transcript.md, subtitles.srt, raw-transcript.json
+  04-chatgpt-batches/               README.md and batch-01-of-03/ (batch-input.md plus its images)
+  05-generated-document/document.md (only when included; added with local generation, P06)
+  metadata/                         manifest.json (schema 0.3.0), source.json
   source/original-video.mp4         (only when requested)
 ```
+
+Rules:
+
+- The screenshot file name is `step-{nnn}_{mm}m{ss}s.png`: the number of the first step that uses
+  the image and the video time at which that step starts. Batch folders hold copies with the same
+  names. Batch folders are `batch-{nn}-of-{total}` (three digits once there are more than 99).
+- `manifest.json` schema `0.3.0` adds `archiveName` and `paths.readme` and `paths.chatgptBatches`.
+  Every `paths` value is relative to the archive root folder, not to the `metadata/` folder.
+- Version 0.2 archives (schema `0.2.0`, no root folder, folders `transcript/`, `screenshots/`,
+  `llm/`, `chatgpt-batches/` and `metadata/`, manifest at the top level) are never rewritten and
+  are still downloaded as stored. Nothing in Narrastep reads a manifest after export, so both
+  versions coexist; a future reader must switch on `schemaVersion`.
+- The archive name is computed when the worker builds the package. The export number is the
+  position of the export among its project's exports by creation time; P03.3 stores it and the
+  name with the export record (see "Planned changes"). The package on disk stays
+  `exports/narrastep-{export UUID}.zip`.
 
 ## Migration policy
 

@@ -133,7 +133,7 @@ def guide_for(output_mode: str) -> ProjectTypeGuide:
 
 
 def build_generation_prompt(output_mode: str) -> str:
-    """Render `llm/generation-prompt.md`: the type's document structure plus the shared rules."""
+    """Render `01-ai-input/generation-prompt.md`: the type's sections plus the shared rules."""
     guide = guide_for(output_mode)
     sections = "\n".join(f"{index}. {title}" for index, title in enumerate(guide.sections, 1))
     rules = "\n".join(f"- {rule}" for rule in (*_SHARED_RULES, *guide.type_rules))
@@ -149,7 +149,7 @@ def build_generation_prompt(output_mode: str) -> str:
 
 
 def build_batch_guide(output_mode: str, max_files_per_batch: int, batch_count: int) -> str:
-    """Render `chatgpt-batches/README.md` for the project type.
+    """Render `04-chatgpt-batches/README.md` for the project type.
 
     Requires `max_files_per_batch >= 2`, which `_build_chatgpt_batches` already enforces.
     """
@@ -165,7 +165,8 @@ def build_batch_guide(output_mode: str, max_files_per_batch: int, batch_count: i
         f"{max_files_per_batch} files: one `batch-input.md` file and up to "
         f"{max_files_per_batch - 1} screenshot files.\n\n"
         "After the last batch, assemble the answers into one document with these sections, in "
-        f"this order: {sections}. The full instructions are in `llm/generation-prompt.md`.\n\n"
+        f"this order: {sections}. The full instructions are in "
+        "`../01-ai-input/generation-prompt.md`.\n\n"
         "Narrastep does not upload these files or contact ChatGPT.\n"
     )
 

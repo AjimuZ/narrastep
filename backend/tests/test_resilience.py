@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import io
+import json
+import zipfile
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
+from package_reader import open_package
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -273,3 +277,62 @@ def test_processing_setup_failure_reaches_safe_terminal_state(
     assert failed is not None and failed.status == JobStatus.FAILED
     assert failed.error_code == "PROCESSING_FAILED"
     assert session.get(Project, project.id).state == ProjectState.FAILED  # type: ignore[union-attr]
+
+
+def test_export_root_folder_carries_the_project_export_sequence(session: Session) -> None:
+    """Name the archive root after the creation date, project type, slug and export number."""
+    project = _project_with_source(session, ProjectState.EXPORTING)
+    workspace = create_project_workspace(get_settings().data_root, project.id)
+    (workspace / "transcript" / "raw-transcript.json").write_text(
+        '{"segments": []}', encoding="utf-8"
+    )
+    earlier = ProjectExport(
+        project_id=project.id,
+        status=ExportStatus.COMPLETED,
+        created_at=datetime(2026, 10, 27, 8, 0, tzinfo=UTC),
+    )
+    current = ProjectExport(
+        project_id=project.id,
+        status=ExportStatus.QUEUED,
+        created_at=datetime(2026, 10, 28, 9, 0, tzinfo=UTC),
+    )
+    session.add_all([earlier, current])
+    session.commit()
+
+    perform_export(current.id, get_settings())
+
+    session.expire_all()
+    done = session.get(ProjectExport, current.id)
+    assert done is not None and done.status == ExportStatus.COMPLETED, done.error_code
+    assert done.relative_path is not None
+    with open_package(get_settings().data_root / done.relative_path) as archive:
+        assert archive.root == f"2026-10-28_{project.output_mode.value}_resilience_export-02"
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+    assert manifest["schemaVersion"] == "0.3.0"
+    assert manifest["archiveName"] == archive.root
+
+
+def test_version_0_2_export_still_downloads_unchanged(client: TestClient, session: Session) -> None:
+    """Serve an archive written in the Version 0.2 layout byte for byte; it is never rewritten."""
+    project = Project(name="Legacy", state=ProjectState.COMPLETED)
+    session.add(project)
+    session.flush()
+    workspace = create_project_workspace(get_settings().data_root, project.id)
+    export = ProjectExport(project_id=project.id, status=ExportStatus.COMPLETED)
+    session.add(export)
+    session.flush()
+    archive_path = workspace / "exports" / f"narrastep-{export.id}.zip"
+    with zipfile.ZipFile(archive_path, "w") as legacy:
+        legacy.writestr("manifest.json", json.dumps({"schemaVersion": "0.2.0"}))
+        legacy.writestr("screenshots/step-001.png", b"png")
+        legacy.writestr("llm/llm-input.md", "# Narrastep evidence package\n")
+    export.relative_path = archive_path.relative_to(get_settings().data_root).as_posix()
+    session.commit()
+
+    response = client.get(f"/api/v1/exports/{export.id}/download")
+
+    assert response.status_code == 200
+    assert response.content == archive_path.read_bytes()
+    with zipfile.ZipFile(io.BytesIO(response.content)) as served:
+        assert served.namelist()[0] == "manifest.json"
+        assert json.loads(served.read("manifest.json"))["schemaVersion"] == "0.2.0"

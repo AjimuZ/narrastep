@@ -405,7 +405,7 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
   await expect(page.getByText('User selected')).toBeVisible();
   await page.getByRole('link', { name: 'Export project' }).click();
   await expectNoHorizontalOverflow(page);
-  await expect(page.getByText('manifest.json (schema 0.2.0)')).toBeVisible();
+  await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
   await expect(
     page.getByText('chatgpt-batches/batch-NNN/batch-input.md + up to 19 images'),
   ).toBeVisible();

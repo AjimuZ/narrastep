@@ -43,14 +43,15 @@ export class ExportComponent implements OnInit {
   );
 
   readonly standardFiles = [
-    'manifest.json (schema 0.2.0)',
-    'transcript/raw-transcript.json',
-    'transcript/reviewed-transcript.md',
-    'transcript/subtitles.srt',
-    'screenshots/step-NNN.png',
-    'chatgpt-batches/batch-NNN/batch-input.md + up to 19 images',
-    'llm/llm-input.md',
-    'llm/generation-prompt.md',
+    'README.md',
+    '01-ai-input/llm-input.md',
+    '01-ai-input/generation-prompt.md',
+    '02-screenshots/step-NNN_MMmSSs.png',
+    '03-transcript/reviewed-transcript.md',
+    '03-transcript/subtitles.srt',
+    '03-transcript/raw-transcript.json',
+    '04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images',
+    'metadata/manifest.json (schema 0.3.0)',
     'metadata/source.json',
   ];
 

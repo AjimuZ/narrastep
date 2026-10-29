@@ -104,7 +104,10 @@ and generation share one pure screenshot-selection and budget function. Thumbnai
 images are materialized inside the temporary export workspace, not the mutable review workspace.
 The worker writes JSON, Markdown, SRT, normalized screenshots, prompt material, and optional source
 video (the prompt, batch guide and batch task wording come from the project type through
-`services/export_guides.py`), creates the ZIP, then atomically promotes it into the project export directory. Historical
+`services/export_guides.py`), creates the ZIP, then atomically promotes it into the project export directory.
+The ZIP has one root folder named after the archive and numbered folders in reading order
+(`services/export_names.py` builds the names, [Data model](DATA_MODEL.md#export-layout) lists
+the layout); the file on disk keeps its UUID name. Historical
 exports and their actual metrics do not change when review data changes.
 
 ## Diagnostics and privacy

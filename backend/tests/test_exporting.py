@@ -3,22 +3,28 @@
 from __future__ import annotations
 
 import json
-import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import pytest
+from package_reader import open_package
 from PIL import Image
 
 from app.services import exporting
 from app.services.diagnostics import MetricsCollector
+from app.services.export_names import export_archive_name
 from app.services.exporting import (
     ExportRequest,
     ExportSegment,
+    batch_folder_name,
     build_export_package,
     estimate_export_package,
 )
+
+BATCHES = "04-chatgpt-batches"
+BATCH_1 = f"{BATCHES}/batch-01-of-01"
+SCREENSHOTS = "02-screenshots"
 
 
 def test_export_contains_complete_honest_package(tmp_path: Path) -> None:
@@ -66,39 +72,42 @@ def test_export_contains_complete_honest_package(tmp_path: Path) -> None:
 
     assert result == destination
     assert not destination.with_suffix(".zip.partial").exists()
-    with zipfile.ZipFile(destination) as archive:
+    with open_package(destination) as archive:
         names = set(archive.namelist())
         assert {
-            "manifest.json",
-            "transcript/raw-transcript.json",
-            "transcript/reviewed-transcript.md",
-            "transcript/subtitles.srt",
-            "screenshots/step-001.png",
-            "llm/llm-input.md",
-            "llm/generation-prompt.md",
-            "chatgpt-batches/README.md",
-            "chatgpt-batches/batch-001/batch-input.md",
-            "chatgpt-batches/batch-001/step-001.png",
+            "metadata/manifest.json",
+            "03-transcript/raw-transcript.json",
+            "03-transcript/reviewed-transcript.md",
+            "03-transcript/subtitles.srt",
+            "02-screenshots/step-001_00m00s.png",
+            "01-ai-input/llm-input.md",
+            "01-ai-input/generation-prompt.md",
+            "04-chatgpt-batches/README.md",
+            f"{BATCH_1}/batch-input.md",
+            f"{BATCH_1}/step-001_00m00s.png",
             "metadata/source.json",
         }.issubset(names)
-        manifest = json.loads(archive.read("manifest.json"))
-        assert manifest["schemaVersion"] == "0.2.0"
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        assert manifest["schemaVersion"] == "0.3.0"
         assert manifest["createdAt"].endswith("Z")
         assert manifest["segments"][0]["primaryScreenshotId"] == "shot-1"
-        assert manifest["segments"][0]["primaryScreenshotPath"] == "screenshots/step-001.png"
+        assert (
+            manifest["segments"][0]["primaryScreenshotPath"] == "02-screenshots/step-001_00m00s.png"
+        )
         assert manifest["segments"][1]["primaryScreenshotId"] is None
-        assert manifest["paths"]["rawTranscript"] == "transcript/raw-transcript.json"
-        assert manifest["paths"]["llmInput"] == "llm/llm-input.md"
-        reviewed = archive.read("transcript/reviewed-transcript.md").decode("utf-8")
+        assert manifest["paths"]["rawTranscript"] == "03-transcript/raw-transcript.json"
+        assert manifest["paths"]["llmInput"] == "01-ai-input/llm-input.md"
+        assert manifest["paths"]["manifest"] == "metadata/manifest.json"
+        reviewed = archive.read("03-transcript/reviewed-transcript.md").decode("utf-8")
         assert "No screenshot was included for this step" in reviewed
-        assert "(../screenshots/step-001.png)" in reviewed
-        llm_input = archive.read("llm/llm-input.md").decode("utf-8")
-        assert "../screenshots/step-001.png" in llm_input
+        assert "(../02-screenshots/step-001_00m00s.png)" in reviewed
+        llm_input = archive.read("01-ai-input/llm-input.md").decode("utf-8")
+        assert "../02-screenshots/step-001_00m00s.png" in llm_input
         assert "Do not invent unsupported steps" in llm_input
-        batch_input = archive.read("chatgpt-batches/batch-001/batch-input.md").decode("utf-8")
+        batch_input = archive.read(f"{BATCH_1}/batch-input.md").decode("utf-8")
         assert "Narrastep analysis batch 1 of 1" in batch_input
         assert "Evidence step 1" in batch_input
-        assert "Screenshot: step-001.png" in batch_input
+        assert "Screenshot: step-001_00m00s.png" in batch_input
         assert "Evidence step 2" in batch_input
         assert "Screenshot: none included" in batch_input
         assert all(not name.startswith("source/") for name in names)
@@ -125,13 +134,11 @@ def test_export_includes_original_only_when_explicitly_requested(tmp_path: Path)
 
     build_export_package(request)
 
-    with zipfile.ZipFile(destination) as archive:
+    with open_package(destination) as archive:
         assert "source/original-video.mp4" in archive.namelist()
-        assert "chatgpt-batches/batch-001/batch-input.md" in archive.namelist()
-        assert not any(
-            name.startswith("chatgpt-batches/batch-001/step-") for name in archive.namelist()
-        )
-        manifest = json.loads(archive.read("manifest.json"))
+        assert f"{BATCH_1}/batch-input.md" in archive.namelist()
+        assert not any(name.startswith(f"{BATCH_1}/step-") for name in archive.namelist())
+        manifest = json.loads(archive.read("metadata/manifest.json"))
         assert manifest["includedOriginalVideo"] is True
 
 
@@ -238,26 +245,24 @@ def test_reused_source_screenshot_has_unambiguous_step_artifacts(tmp_path: Path)
             created_at=datetime(2026, 7, 15),
         )
     )
-    with zipfile.ZipFile(destination) as archive:
-        manifest = json.loads(archive.read("manifest.json"))
-        screenshot_files = [name for name in archive.namelist() if name.startswith("screenshots/")]
-    assert screenshot_files == ["screenshots/step-001.png"]
+    with open_package(destination) as archive:
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        screenshot_files = [
+            name for name in archive.namelist() if name.startswith(f"{SCREENSHOTS}/")
+        ]
+    assert screenshot_files == ["02-screenshots/step-001_00m00s.png"]
     assert [item["sourceScreenshotId"] for item in manifest["screenshots"]] == ["shared-source-id"]
     assert [item["path"] for item in manifest["associations"]] == [
-        "screenshots/step-001.png",
-        "screenshots/step-001.png",
+        "02-screenshots/step-001_00m00s.png",
+        "02-screenshots/step-001_00m00s.png",
     ]
     assert [item["primaryScreenshotPath"] for item in manifest["segments"]] == [
-        "screenshots/step-001.png",
-        "screenshots/step-001.png",
+        "02-screenshots/step-001_00m00s.png",
+        "02-screenshots/step-001_00m00s.png",
     ]
-    with zipfile.ZipFile(destination) as archive:
-        batch_images = [
-            name
-            for name in archive.namelist()
-            if name.startswith("chatgpt-batches/batch-001/step-")
-        ]
-    assert batch_images == ["chatgpt-batches/batch-001/step-001.png"]
+    with open_package(destination) as archive:
+        batch_images = [name for name in archive.namelist() if name.startswith(f"{BATCH_1}/step-")]
+    assert batch_images == [f"{BATCH_1}/step-001_00m00s.png"]
     assert manifest["createdAt"].endswith("Z")
 
 
@@ -302,10 +307,12 @@ def test_automatic_export_keeps_every_distinct_primary_image(
         )
     )
 
-    with zipfile.ZipFile(destination) as archive:
-        manifest = json.loads(archive.read("manifest.json"))
-        screenshot_files = [name for name in archive.namelist() if name.startswith("screenshots/")]
-        llm_input = archive.read("llm/llm-input.md").decode("utf-8")
+    with open_package(destination) as archive:
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        screenshot_files = [
+            name for name in archive.namelist() if name.startswith(f"{SCREENSHOTS}/")
+        ]
+        llm_input = archive.read("01-ai-input/llm-input.md").decode("utf-8")
     assert len(screenshot_files) == 14
     assert len(manifest["screenshots"]) == 14
     assert len(manifest["segments"]) == 14
@@ -366,12 +373,12 @@ def test_chatgpt_batches_respect_the_configured_file_limit(
         )
     )
 
-    with zipfile.ZipFile(destination) as archive:
+    with open_package(destination) as archive:
         names = archive.namelist()
         batch_inputs = sorted(
             name
             for name in names
-            if name.startswith("chatgpt-batches/batch-") and name.endswith("/batch-input.md")
+            if name.startswith(f"{BATCHES}/batch-") and name.endswith("/batch-input.md")
         )
         assert len(batch_inputs) == expected_batch_count
         evidence_step_count = 0
@@ -426,14 +433,14 @@ def test_reused_screenshot_is_copied_when_later_batch_needs_it(tmp_path: Path) -
         )
     )
 
-    with zipfile.ZipFile(destination) as archive:
+    with open_package(destination) as archive:
         names = set(archive.namelist())
-        second_batch = archive.read("chatgpt-batches/batch-002/batch-input.md").decode("utf-8")
-    assert "chatgpt-batches/batch-001/step-001.png" in names
-    assert "chatgpt-batches/batch-002/step-001.png" in names
-    assert "chatgpt-batches/batch-002/step-003.png" in names
+        second_batch = archive.read(f"{BATCHES}/batch-02-of-02/batch-input.md").decode("utf-8")
+    assert f"{BATCHES}/batch-01-of-02/step-001_00m00s.png" in names
+    assert f"{BATCHES}/batch-02-of-02/step-001_00m00s.png" in names
+    assert f"{BATCHES}/batch-02-of-02/step-003_00m02s.png" in names
     assert "## Evidence step 4" in second_batch
-    assert "Screenshot: step-001.png" in second_batch
+    assert "Screenshot: step-001_00m00s.png" in second_batch
 
 
 def test_visually_similar_automatic_images_reuse_the_best_representative(
@@ -478,10 +485,12 @@ def test_visually_similar_automatic_images_reuse_the_best_representative(
         )
     )
 
-    with zipfile.ZipFile(destination) as archive:
-        manifest = json.loads(archive.read("manifest.json"))
-        screenshot_files = [name for name in archive.namelist() if name.startswith("screenshots/")]
-    assert screenshot_files == ["screenshots/step-003.png"]
+    with open_package(destination) as archive:
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        screenshot_files = [
+            name for name in archive.namelist() if name.startswith(f"{SCREENSHOTS}/")
+        ]
+    assert screenshot_files == ["02-screenshots/step-003_00m02s.png"]
     assert [item["sourceScreenshotId"] for item in manifest["screenshots"]] == ["shot-2"]
     assert {item["sourceScreenshotId"] for item in manifest["associations"]} == {"shot-2"}
     assert len(manifest["associations"]) == 3
@@ -526,13 +535,15 @@ def test_manual_images_are_preserved_across_multiple_batches(tmp_path: Path) -> 
         )
     )
 
-    with zipfile.ZipFile(destination) as archive:
-        manifest = json.loads(archive.read("manifest.json"))
-        screenshot_files = [name for name in archive.namelist() if name.startswith("screenshots/")]
+    with open_package(destination) as archive:
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        screenshot_files = [
+            name for name in archive.namelist() if name.startswith(f"{SCREENSHOTS}/")
+        ]
         batch_inputs = [
             name
             for name in archive.namelist()
-            if name.startswith("chatgpt-batches/batch-") and name.endswith("/batch-input.md")
+            if name.startswith(f"{BATCHES}/batch-") and name.endswith("/batch-input.md")
         ]
     assert len(screenshot_files) == 4
     assert len(manifest["screenshots"]) == 4
@@ -600,6 +611,147 @@ def test_thumbnail_only_estimate_and_export_share_selection_and_actual_metrics(
     assert metrics.counters["exportCanonicalImageCount"] == 1
     assert metrics.counters["batchCount"] == 1
     assert metrics.counters["exportBatchCopyCount"] == 1
-    with zipfile.ZipFile(destination) as archive:
-        assert "screenshots/step-001.png" in archive.namelist()
-    assert not list(tmp_path.glob("screenshots/*.png"))
+    with open_package(destination) as archive:
+        assert "02-screenshots/step-001_00m00s.png" in archive.namelist()
+    assert not list(tmp_path.glob("02-screenshots/*.png"))
+
+
+def test_archive_has_one_named_root_and_numbered_layout(tmp_path: Path) -> None:
+    """Name the root folder after the archive and list every path of the ADR 0013 layout."""
+    raw = tmp_path / "raw.json"
+    raw.write_text('{"segments": []}', encoding="utf-8")
+    screenshot = tmp_path / "late.png"
+    Image.new("RGB", (8, 8), (9, 9, 9)).save(screenshot)
+    video = tmp_path / "capture.MP4"
+    video.write_bytes(b"video")
+    created_at = datetime(2026, 10, 28, 15, 30, tzinfo=UTC)
+    archive_name = export_archive_name(created_at, "meeting", "Sprint Planning", 2)
+    assert archive_name == "2026-10-28_meeting_sprint-planning_export-02"
+    segments = [
+        ExportSegment(
+            id=f"segment-{index}",
+            sequence=index,
+            start_seconds=start,
+            end_seconds=start + 5,
+            raw_text="Raw",
+            reviewed_text="Reviewed",
+            speaker=None,
+            confidence=None,
+            screenshot_id="shot-late" if index == 2 else None,
+            screenshot_path=screenshot if index == 2 else None,
+        )
+        for index, start in enumerate((0.0, 20.0, 42.9))
+    ]
+    destination = tmp_path / "exports" / "narrastep-export-id.zip"
+    build_export_package(
+        ExportRequest(
+            export_id="export-id",
+            project={"id": "project", "name": "Sprint Planning"},
+            source={"assetId": "asset"},
+            segments=segments,
+            raw_transcript_path=raw,
+            destination_path=destination,
+            output_mode="meeting",
+            original_video_path=video,
+            include_original_video=True,
+            created_at=created_at,
+            archive_name=archive_name,
+        )
+    )
+
+    with open_package(destination) as archive:
+        assert archive.root == archive_name
+        assert all(name.startswith(f"{archive_name}/") for name in archive.raw_names())
+        names = set(archive.namelist())
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        readme = archive.read("README.md").decode("utf-8")
+        prompt_guide = archive.read(f"{BATCHES}/README.md").decode("utf-8")
+    assert names == {
+        "README.md",
+        "01-ai-input/generation-prompt.md",
+        "01-ai-input/llm-input.md",
+        "02-screenshots/step-003_00m42s.png",
+        "03-transcript/raw-transcript.json",
+        "03-transcript/reviewed-transcript.md",
+        "03-transcript/subtitles.srt",
+        f"{BATCHES}/README.md",
+        f"{BATCHES}/batch-01-of-01/batch-input.md",
+        f"{BATCHES}/batch-01-of-01/step-003_00m42s.png",
+        "metadata/manifest.json",
+        "metadata/source.json",
+        "source/original-video.mp4",
+    }
+    assert manifest["schemaVersion"] == "0.3.0"
+    assert manifest["archiveName"] == archive_name
+    assert manifest["segments"][2]["primaryScreenshotPath"] == "02-screenshots/step-003_00m42s.png"
+    assert manifest["paths"]["readme"] == "README.md"
+    assert manifest["paths"]["chatgptBatches"] == BATCHES
+    assert manifest["paths"]["originalVideo"] == "source/original-video.mp4"
+    # Every path the manifest lists exists in the archive.
+    listed = [value for value in manifest["paths"].values() if value is not None]
+    assert all(
+        path in names or any(name.startswith(f"{path}/") for name in names) for path in listed
+    )
+    assert "Meeting" in readme and "(1 in this export)" in readme
+    assert "../01-ai-input/generation-prompt.md" in prompt_guide
+
+
+def test_archive_without_a_name_uses_the_adr_pattern(tmp_path: Path) -> None:
+    """Derive the root folder from date, type and project name when no name is supplied."""
+    raw = tmp_path / "raw.json"
+    raw.write_text('{"segments": []}', encoding="utf-8")
+    destination = tmp_path / "default.zip"
+    build_export_package(
+        ExportRequest(
+            export_id="default",
+            project={"id": "project", "name": "Démo été"},
+            source={"assetId": "asset"},
+            segments=[],
+            raw_transcript_path=raw,
+            destination_path=destination,
+            output_mode="tutorial",
+            created_at=datetime(2026, 1, 2, tzinfo=UTC),
+        )
+    )
+    with open_package(destination) as archive:
+        assert archive.root == "2026-01-02_tutorial_demo-ete_export-01"
+
+
+def test_batch_folders_are_numbered_in_reading_order() -> None:
+    """Pad batch numbers so folders sort chronologically, widening past ninety-nine batches."""
+    assert batch_folder_name(1, 3) == "batch-01-of-03"
+    assert batch_folder_name(12, 12) == "batch-12-of-12"
+    assert batch_folder_name(7, 100) == "batch-007-of-100"
+
+
+@pytest.mark.parametrize(
+    "archive_name",
+    ["../escape", "a/b", "a\\b", ".hidden", "", "name.", "with space", "é" * 3],
+)
+def test_unsafe_archive_names_are_rejected_without_output(
+    tmp_path: Path, archive_name: str
+) -> None:
+    """Refuse names that are not plain portable file names before anything is written."""
+    raw = tmp_path / "raw.json"
+    raw.write_text('{"segments": []}', encoding="utf-8")
+    destination = tmp_path / "unsafe.zip"
+    request = ExportRequest(
+        export_id="unsafe",
+        project={"id": "project", "name": "Unsafe"},
+        source={"assetId": "asset"},
+        segments=[],
+        raw_transcript_path=raw,
+        destination_path=destination,
+        output_mode="general",
+        created_at=datetime(2026, 1, 2, tzinfo=UTC),
+        archive_name=archive_name or None,
+    )
+    if archive_name == "":
+        # An empty name falls back to the generated pattern instead of failing.
+        build_export_package(request)
+        assert destination.exists()
+        return
+    with pytest.raises(ValueError):
+        build_export_package(request)
+    assert not destination.exists()
+    assert not destination.with_suffix(".zip.partial").exists()

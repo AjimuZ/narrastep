@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import json
-import zipfile
 from pathlib import Path
 
 import pytest
+from package_reader import open_package
 
 from app.models import OutputMode
 from app.services import adaptive_selection, exporting
@@ -108,15 +108,15 @@ def test_export_package_writes_type_specific_files(tmp_path: Path, output_mode: 
 
     build_export_package(request)
 
-    with zipfile.ZipFile(request.destination_path) as archive:
-        prompt = archive.read("llm/generation-prompt.md").decode("utf-8")
-        guide = archive.read("chatgpt-batches/README.md").decode("utf-8")
-        batch = archive.read("chatgpt-batches/batch-001/batch-input.md").decode("utf-8")
-        manifest = json.loads(archive.read("manifest.json"))
+    with open_package(request.destination_path) as archive:
+        prompt = archive.read("01-ai-input/generation-prompt.md").decode("utf-8")
+        guide = archive.read("04-chatgpt-batches/README.md").decode("utf-8")
+        batch = archive.read("04-chatgpt-batches/batch-01-of-01/batch-input.md").decode("utf-8")
+        manifest = json.loads(archive.read("metadata/manifest.json"))
     expected = guide_for(output_mode)
     assert prompt == build_generation_prompt(output_mode)
     assert expected.sections[0] in prompt and expected.label in guide
     assert f"Requested document mode: {output_mode}" in batch
     assert "This batch is the whole recording." in batch
     assert "Evidence step 1" in batch
-    assert manifest["paths"]["generationPrompt"] == "llm/generation-prompt.md"
+    assert manifest["paths"]["generationPrompt"] == "01-ai-input/generation-prompt.md"

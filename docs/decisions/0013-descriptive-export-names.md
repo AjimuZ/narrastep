@@ -18,7 +18,7 @@ do not say which file to open first.
     cut to 48 characters; it falls back to `project`.
   - `nn` is the per-project export sequence number.
 - **Archive layout:** one root folder with the same name as the ZIP, then numbered folders in
-  reading order, described in [Data model](../DATA_MODEL.md#planned-export-layout).
+  reading order, described in [Data model](../DATA_MODEL.md#export-layout).
 - **Screenshots:** `step-{nnn}_{mm}m{ss}s.png`, so the file name gives the step and video time.
 - The name is computed once at export creation and stored with the export record. Workspace
   storage keeps UUID paths ([ADR 0005](0005-filesystem-media-storage.md)).
@@ -32,7 +32,9 @@ do not say which file to open first.
 
 ## Consequences
 
-- `manifest.json` gets a new schema version and the export guide lists the new paths.
+- `manifest.json` gets a new schema version (`0.3.0`, implemented in P03.2) and the export guide
+  lists the new paths. The manifest moves to `metadata/manifest.json` and its `paths` are relative
+  to the archive root folder.
 - Evidence: unit tests for slug edge cases (accents, emoji, empty, very long, reserved Windows
   names) and an export test that checks the ZIP name and layout (P03 in the
   [roadmap](../ROADMAP.md)).

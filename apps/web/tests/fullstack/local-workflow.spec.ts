@@ -71,7 +71,7 @@ test('processes generated media through the real local API and exports reviewed 
   await expect(page.getByText('User selected')).toBeVisible();
 
   await page.getByRole('link', { name: 'Export project' }).click();
-  await expect(page.getByText('manifest.json (schema 0.2.0)')).toBeVisible();
+  await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
   await page.getByRole('button', { name: 'Generate ZIP export' }).click();
   const downloadLink = page.getByRole('link', { name: 'Download ZIP' });
   await expect(downloadLink).toBeVisible({ timeout: 120_000 });
@@ -202,48 +202,61 @@ function syntheticVideoArguments(destination: string): string[] {
 
 /** Checks required paths and reviewed evidence inside the downloaded immutable ZIP. */
 function assertExportPackage(archivePath: string, reviewedText: string): void {
-  const entries = readZipEntries(archivePath);
+  const entries = stripArchiveRoot(readZipEntries(archivePath));
   const requiredPaths = [
-    'manifest.json',
-    'transcript/raw-transcript.json',
-    'transcript/reviewed-transcript.md',
-    'transcript/subtitles.srt',
-    'llm/llm-input.md',
-    'llm/generation-prompt.md',
-    'chatgpt-batches/README.md',
-    'chatgpt-batches/batch-001/batch-input.md',
+    'README.md',
+    'metadata/manifest.json',
     'metadata/source.json',
+    '03-transcript/raw-transcript.json',
+    '03-transcript/reviewed-transcript.md',
+    '03-transcript/subtitles.srt',
+    '01-ai-input/llm-input.md',
+    '01-ai-input/generation-prompt.md',
+    '04-chatgpt-batches/README.md',
+    '04-chatgpt-batches/batch-01-of-01/batch-input.md',
   ];
   for (const requiredPath of requiredPaths) {
     expect(entries.has(requiredPath), `Expected ${requiredPath} in the export.`).toBe(true);
   }
-  expect([...entries.keys()].some((name) => /^screenshots\/step-\d{3}\.png$/.test(name))).toBe(
-    true,
-  );
   expect(
-    [...entries.keys()].some((name) => /^chatgpt-batches\/batch-001\/step-\d{3}\.png$/.test(name)),
+    [...entries.keys()].some((name) => /^02-screenshots\/step-\d{3}_\d{2}m\d{2}s\.png$/.test(name)),
+  ).toBe(true);
+  expect(
+    [...entries.keys()].some((name) =>
+      /^04-chatgpt-batches\/batch-01-of-01\/step-\d{3}_\d{2}m\d{2}s\.png$/.test(name),
+    ),
   ).toBe(true);
   expect([...entries.keys()].some((name) => name.startsWith('source/original-video'))).toBe(false);
 
-  const manifest = JSON.parse(requiredEntry(entries, 'manifest.json').toString('utf8')) as {
+  const manifest = JSON.parse(
+    requiredEntry(entries, 'metadata/manifest.json').toString('utf8'),
+  ) as {
     schemaVersion: string;
     segments: Array<{ reviewedText: string }>;
   };
-  expect(manifest.schemaVersion).toBe('0.2.0');
+  expect(manifest.schemaVersion).toBe('0.3.0');
   expect(manifest.segments).toHaveLength(3);
   expect(manifest.segments[0]?.reviewedText.replace('\n', '')).toBe(reviewedText);
-  expect(requiredEntry(entries, 'transcript/raw-transcript.json').toString('utf8')).toContain(
+  expect(requiredEntry(entries, '03-transcript/raw-transcript.json').toString('utf8')).toContain(
     'Deterministic mock transcript segment 1.',
   );
-  expect(requiredEntry(entries, 'transcript/reviewed-transcript.md').toString('utf8')).toContain(
-    '../screenshots/step-001.png',
+  expect(requiredEntry(entries, '03-transcript/reviewed-transcript.md').toString('utf8')).toContain(
+    '../02-screenshots/step-001_',
   );
-  expect(requiredEntry(entries, 'llm/generation-prompt.md').toString('utf8')).toContain(
+  expect(requiredEntry(entries, '01-ai-input/generation-prompt.md').toString('utf8')).toContain(
     'Do not invent',
   );
   expect(
-    requiredEntry(entries, 'chatgpt-batches/batch-001/batch-input.md').toString('utf8'),
+    requiredEntry(entries, '04-chatgpt-batches/batch-01-of-01/batch-input.md').toString('utf8'),
   ).toContain('Narrastep analysis batch 1 of 1');
+}
+
+/** Removes the single archive root folder (ADR 0013) so paths read like the documented layout. */
+function stripArchiveRoot(entries: Map<string, Buffer>): Map<string, Buffer> {
+  const roots = new Set([...entries.keys()].map((name) => name.split('/')[0]));
+  expect(roots.size, 'Expected exactly one archive root folder.').toBe(1);
+  const prefix = `${[...roots][0]}/`;
+  return new Map([...entries].map(([name, content]) => [name.slice(prefix.length), content]));
 }
 
 /** Returns one expected ZIP entry or fails with a focused package-integrity message. */
