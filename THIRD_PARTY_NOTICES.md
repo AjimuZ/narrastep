@@ -23,3 +23,19 @@ offline, so the version number and the file hash above are the verifiable identi
 hash with the upstream release before publishing. The font is not sold by itself and is not
 renamed or modified, as the license requires. The unit test `ui.spec.ts` fails when the font file
 no longer matches the hash in this file.
+
+## llama.cpp license text
+
+| Item | Value |
+| --- | --- |
+| Use | License notice for the `llama.cpp` server binaries that the backend image copies from the official image (P06.1) |
+| File | `backend/third_party/llama.cpp/LICENSE`, copied to `/opt/llama.cpp/LICENSE` in the backend image |
+| Upstream | <https://github.com/ggml-org/llama.cpp/blob/7fe450e19305b828c199d602c23a8337aaa1f03b/LICENSE> (commit of release `v0.5.0`, build `b11146`) |
+| SHA-256 | `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d` |
+| Copyright | Copyright (c) 2023-2026 The ggml authors |
+| License | MIT License |
+
+The file was downloaded from the upstream commit above on 2026-10-29 and is unmodified. The
+binaries themselves are not stored in the repository; they are copied at image build from
+`ghcr.io/ggml-org/llama.cpp:server-v0.5.0` pinned by digest (see
+[Local generation](docs/LOCAL_GENERATION.md#server-in-the-backend-image)).

@@ -1,7 +1,8 @@
 # Local generation
 
-Status: **planned** (P06 in the [roadmap](ROADMAP.md)). Version 0.2 exports evidence and prompts
-only and never calls a model. Decision:
+Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binaries, which the
+backend image contains since P06.1 and which nothing starts yet. Version 0.2 exports evidence and
+prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
 ## Goal
@@ -33,6 +34,58 @@ downloads them from the original source. Narrastep must:
 - show the license name and link before the download;
 - keep the license text with the downloaded files in `/data/models`;
 - use "Gemma" only to name the model, never to suggest that Google endorses Narrastep.
+
+## Server in the backend image
+
+Implemented in P06.1 (`backend/Dockerfile`, `backend/app/services/llama_server.py`,
+`backend/scripts/check_llama_server.py`).
+
+| Item | Value |
+| --- | --- |
+| Source image | `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` |
+| Pinned digest | `sha256:a94b642b3e2620749bf2ff5672df922c23a6202710e54a8f7667e58df70aba5a` (index for `linux/amd64` and `linux/arm64`) |
+| Release | `v0.5.0`, build `b11146`, commit `7fe450e19305b828c199d602c23a8337aaa1f03b` (image built 2026-09-23) |
+| Location | `/opt/llama.cpp`: `llama-server`, `libllama-server-impl.so`, `libllama-common`, `libllama`, `libmtmd` (vision input), `libggml`, `libggml-base` and one `libggml-cpu-*.so` per CPU family, plus the MIT `LICENSE` |
+| Left out | The `llama` multi-tool and the libraries of its other commands (`cli`, `completion`, `bench`, `batched-bench`, `perplexity`, `quantize`, `fit-params`); the CPU image has no GPU backend |
+| System libraries | `libstdc++6`, `libgcc-s1` and `libssl3t64` come with `python:3.12.13-slim` (Debian 13); `libgomp1` (OpenMP) is listed in the apt line, although FFmpeg and Tesseract already install it |
+
+- The official build loads one CPU backend at run time, chosen for the processor among
+  `x64`, `sse42`, `sandybridge`, `ivybridge`, `piledriver`, `haswell`, `skylakex`, `cannonlake`,
+  `cascadelake`, `icelake`, `cooperlake`, `zen4`, `alderlake` and `sapphirerapids` on amd64, and
+  eight `armv8`/`armv9` variants on arm64. It looks for them next to the executable, so they stay in
+  the same folder.
+- The binaries look for their own libraries in `/app/build/bin` and the working directory, so the
+  caller sets `LD_LIBRARY_PATH=/opt/llama.cpp` for the server process only
+  (`llama_server_environment`). The API and worker processes never get it, so the bundled
+  libraries cannot replace the ones Python uses.
+- The image build runs `python scripts/check_llama_server.py`, which runs
+  `llama-server --version` with that environment and fails the build when a library is missing or
+  incompatible, the command fails or the reported build and commit are not `11146` and
+  `7fe450e19` (risk K6).
+- The binaries need glibc 2.38, `GLIBCXX_3.4.32` (GCC 13), OpenSSL 3 and OpenMP 4.5. Debian 13
+  provides glibc 2.41 and GCC 14 libraries. A Debian 12 (`bookworm`) base, with glibc 2.36, would
+  not run them.
+- To update the server, choose a newer `server-v*` tag, pin its index digest in the Dockerfile,
+  and change `PINNED_LLAMA_SERVER_BUILD` and `PINNED_LLAMA_SERVER_COMMIT` in `llama_server.py`
+  and the `LICENSE` file if it changed.
+
+### Image growth
+
+Measured on 2026-10-29 from the files the Dockerfile keeps, extracted from the pinned image
+layers (the build itself was not run, because the worker that made P06.1 has no Docker):
+
+| Platform | Files | Uncompressed layer | Compressed (gzip -9) |
+| --- | ---: | ---: | ---: |
+| `linux/amd64` | 31 (10 symlinks) | 40,120,320 bytes (38.3 MiB) | 16,548,532 bytes (15.8 MiB) |
+| `linux/arm64` | 25 (10 symlinks) | 27,996,160 bytes (26.7 MiB) | 12,305,424 bytes (11.7 MiB) |
+
+- `libgomp1` adds nothing: the existing packages already install it (368 KiB installed in Debian 13).
+- The `LICENSE` file adds 1,078 bytes and the check script and module a few kilobytes.
+- Docker reports the uncompressed layer size, so the backend image grows by about 40 MB on
+  amd64. The first build also downloads the pinned image once (about 300 MB compressed on amd64,
+  mostly its Ubuntu packages); it stays in the build cache and is not part of the backend image.
+- To confirm on a computer with Docker: `docker compose build api`, then
+  `docker history narrastep-backend:0.2.0` shows the `COPY /opt/llama.cpp/` layer size.
 
 ## States
 

@@ -29,6 +29,8 @@ inventory inside the containers is roadmap item I-15.
 | swagger-ui-bundle | 1.1.0 | Apache-2.0 | Serves API docs locally, no CDN |
 | FFmpeg (Debian package) | distribution version | GPL-2.0-or-later build | Built locally; if images are ever published, GPL source obligations apply |
 | Tesseract and language data | distribution version | Apache-2.0 | |
+| `llama.cpp` server (CPU) | v0.5.0, build b11146 | MIT | Copied into `/opt/llama.cpp` from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` pinned by digest (P06.1); license text in `backend/third_party/llama.cpp/LICENSE`, copied beside the binaries |
+| OpenMP runtime `libgomp1` (Debian package) | distribution version | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |
 | Nginx | 1.28.0 | BSD-2-Clause | |
 | Node.js (build only) | 22.23.1 | MIT | |
 | Angular, Angular CDK | 22.0.x | MIT | |
@@ -44,12 +46,12 @@ Files copied into the repository and shipped unmodified are recorded in
 | File | License | Package | Note |
 | --- | --- | --- | --- |
 | Pixelify Sans font (`apps/web/public/fonts/PixelifySans.ttf`) | SIL OFL 1.1 | P04.2 | Variable TTF, version 1.000, served from the same origin; `OFL.txt` beside it |
+| `llama.cpp` license text (`backend/third_party/llama.cpp/LICENSE`) | MIT | P06.1 | Copied into the backend image beside the server binaries |
 
 ## Planned components
 
 | Component | License | Package | Note |
 | --- | --- | --- | --- |
-| `llama.cpp` server (CPU) | MIT | P06 | Copied from the official image pinned by digest |
 | Gemma 4 E2B and E4B weights | Apache-2.0 | P06 | Downloaded by the user; license shown before download and stored with the files |
 | `@angular/localize` | MIT | P04 | English and Italian interface |
 | Electron | MIT | P07 | Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)); downloaded into `desktop/node_modules`; unsigned |

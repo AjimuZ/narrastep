@@ -186,6 +186,23 @@ Diagnostic JSON files appear under `projects/{projectId}/diagnostics/`. They int
 only identifiers, counters, durations, sizes, versions, and terminal state. Do not add transcript,
 OCR, filename, window-title, absolute-path, or image content to these files or stage logs.
 
+## Bundled llama.cpp server
+
+The backend image copies the CPU `llama.cpp` server into `/opt/llama.cpp` from the official image
+pinned by digest (P06.1, [Local generation](LOCAL_GENERATION.md#server-in-the-backend-image)). The
+build runs `python scripts/check_llama_server.py`, which fails when the server cannot load its
+libraries or is not the pinned build. To check a built image and its size:
+
+```bash
+docker compose build api
+docker run --rm narrastep-backend:0.2.0 python scripts/check_llama_server.py
+docker history narrastep-backend:0.2.0
+```
+
+The `COPY /opt/llama.cpp/` line of `docker history` is the size the server adds. A native backend
+has no `/opt/llama.cpp`; `tests/test_llama_server.py` covers the check with a stand-in script and
+needs neither the binary nor Docker.
+
 ## Adaptive promotion benchmark
 
 Copy [the local annotation example](benchmark-dataset.example.json), replace its placeholder paths

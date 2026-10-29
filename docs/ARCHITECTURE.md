@@ -189,7 +189,9 @@ flowchart LR
   window picker, Windows loopback system audio, microphone permission and native downloads. It
   has no other host bridge, and closing it never stops the containers.
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
-  and stops it afterwards. The worker keeps no Internet route, and generation is serialized with
+  and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
+  `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it
+  yet ([Local generation](LOCAL_GENERATION.md#server-in-the-backend-image)). The worker keeps no Internet route, and generation is serialized with
   processing by the single worker.
 
 See the decisions under [decisions](decisions/) and the [processing pipeline](PROCESSING_PIPELINE.md).

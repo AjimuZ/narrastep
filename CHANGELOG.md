@@ -81,6 +81,11 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- The backend image now contains the CPU `llama.cpp` server (release v0.5.0, MIT) for the coming
+  optional local document generation. It is copied from the official image pinned by digest, only
+  the server and its libraries are kept, and the build fails when they cannot run. Nothing starts
+  it and no model is included. The image grows by about 40 MB (amd64), and the first build also
+  downloads the pinned `ghcr.io/ggml-org/llama.cpp` image.
 - Accessibility pass in English and Italian: placeholder text and the danger button text now
   reach 4.5:1, input, select and textarea frames and the project-type radios 3:1 (new
   `--color-field-border`), project types form one radio group that moves with the arrow keys, the
