@@ -86,6 +86,21 @@ def test_project_types_are_accepted(client: TestClient, mode: str) -> None:
     assert response.json()["mode"] == mode
 
 
+def test_project_type_is_optional_until_processing(client: TestClient) -> None:
+    """Create a project without a type (P05.4); it can be chosen later but never cleared."""
+    created = client.post("/api/v1/projects", json={"name": "Untyped"})
+    assert created.status_code == 201
+    assert created.json()["mode"] is None
+    listed = client.get("/api/v1/projects").json()["items"]
+    assert [item["mode"] for item in listed] == [None]
+
+    chosen = client.patch(f"/api/v1/projects/{created.json()['id']}", json={"mode": "meeting"})
+    assert chosen.status_code == 200
+    assert chosen.json()["mode"] == "meeting"
+    cleared = client.patch(f"/api/v1/projects/{created.json()['id']}", json={"mode": None})
+    assert cleared.status_code == 422
+
+
 def test_legacy_technical_walkthrough_mode_is_rejected(client: TestClient) -> None:
     """Reject the retired Version 0.2 value instead of silently storing or remapping it."""
     created = client.post(

@@ -12,6 +12,8 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.PROJECT_NOT_FOUND:This project does not exist. It may have been deleted.`;
     case 'PROJECT_BUSY':
       return $localize`:@@error.PROJECT_BUSY:This project is busy with processing or a package. Wait until it finishes, then try again.`;
+    case 'PROJECT_TYPE_REQUIRED':
+      return $localize`:@@error.PROJECT_TYPE_REQUIRED:Choose a project type before processing this project.`;
     case 'INVALID_PROJECT_STATE':
       return $localize`:@@error.INVALID_PROJECT_STATE:This action is not available in the project's current state.`;
     case 'SOURCE_VIDEO_ALREADY_EXISTS':

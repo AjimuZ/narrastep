@@ -18,6 +18,7 @@ from app.main import app
 from app.models import (
     JobStatus,
     MediaAsset,
+    OutputMode,
     ProcessingJob,
     Project,
     ProjectExport,
@@ -36,9 +37,14 @@ from app.services.workspaces import (
 )
 
 
-def _uploaded_project(session: Session) -> tuple[Project, Path]:
-    """Arrange one validated source record and matching safe local file."""
-    project = Project(name="Process", state=ProjectState.UPLOADED)
+def _uploaded_project(
+    session: Session, output_mode: OutputMode | None = OutputMode.TUTORIAL
+) -> tuple[Project, Path]:
+    """Arrange one validated source record and matching safe local file.
+
+    `output_mode=None` makes a project without a type, like a saved recording.
+    """
+    project = Project(name="Process", state=ProjectState.UPLOADED, output_mode=output_mode)
     session.add(project)
     session.flush()
     workspace = create_project_workspace(get_settings().data_root, project.id)
@@ -60,6 +66,78 @@ def _uploaded_project(session: Session) -> tuple[Project, Path]:
     session.add(asset)
     session.commit()
     return project, source
+
+
+def test_processing_refuses_a_project_without_a_type(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep a typeless project Not processed and without a job until a type is chosen."""
+    project, _ = _uploaded_project(session, output_mode=None)
+    from app.tasks.celery_app import process_project_task
+
+    monkeypatch.setattr(process_project_task, "apply_async", lambda **_: None)
+
+    for body in ({}, {"sourceLanguage": "it"}):
+        refused = client.post(f"/api/v1/projects/{project.id}/process", json=body)
+        assert refused.status_code == 409
+        assert refused.json()["error"]["code"] == "PROJECT_TYPE_REQUIRED"
+    session.expire_all()
+    stored = session.get(Project, project.id)
+    assert stored is not None
+    assert stored.state == ProjectState.UPLOADED
+    assert stored.output_mode is None
+    assert stored.source_language == "auto"
+    assert session.scalar(select(func.count()).select_from(ProcessingJob)) == 0
+
+
+def test_process_body_sets_type_and_language_with_the_queued_state(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Store the type and language chosen in the Process dialog together with the queued job."""
+    project, _ = _uploaded_project(session, output_mode=None)
+    from app.tasks.celery_app import process_project_task
+
+    monkeypatch.setattr(process_project_task, "apply_async", lambda **_: None)
+
+    queued = client.post(
+        f"/api/v1/projects/{project.id}/process",
+        json={"mode": "meeting", "sourceLanguage": "IT"},
+    )
+    assert queued.status_code == 202
+    session.expire_all()
+    stored = session.get(Project, project.id)
+    assert stored is not None
+    assert stored.state == ProjectState.QUEUED
+    assert stored.output_mode == OutputMode.MEETING
+    assert stored.source_language == "it"
+    job = session.get(ProcessingJob, queued.json()["id"])
+    assert job is not None
+    assert job.configuration_snapshot["projectMode"] == "meeting"
+    assert client.get(f"/api/v1/projects/{project.id}").json()["mode"] == "meeting"
+
+
+def test_process_body_overrides_an_existing_type_and_validates_choices(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Let the dialog change a stored type, and reject unknown types or languages with 422."""
+    project, _ = _uploaded_project(session)
+    from app.tasks.celery_app import process_project_task
+
+    monkeypatch.setattr(process_project_task, "apply_async", lambda **_: None)
+
+    for body in ({"mode": "technical_walkthrough"}, {"sourceLanguage": "xx-not-a-language"}):
+        invalid = client.post(f"/api/v1/projects/{project.id}/process", json=body)
+        assert invalid.status_code == 422
+        assert invalid.json()["error"]["code"] == "VALIDATION_ERROR"
+    session.expire_all()
+    stored = session.get(Project, project.id)
+    assert stored is not None and stored.state == ProjectState.UPLOADED
+
+    queued = client.post(f"/api/v1/projects/{project.id}/process", json={"mode": "general"})
+    assert queued.status_code == 202
+    session.expire_all()
+    stored = session.get(Project, project.id)
+    assert stored is not None and stored.output_mode == OutputMode.GENERAL
 
 
 def test_queue_and_cancel_job_use_persisted_frontend_contract(
@@ -330,7 +408,7 @@ def test_failed_project_exposes_latest_job_after_refresh(
     client: TestClient, session: Session
 ) -> None:
     """Let the processing page reload persisted failure details through activeJobId."""
-    project = Project(name="Failed", state=ProjectState.FAILED)
+    project = Project(name="Failed", state=ProjectState.FAILED, output_mode=OutputMode.TUTORIAL)
     session.add(project)
     session.flush()
     job = ProcessingJob(

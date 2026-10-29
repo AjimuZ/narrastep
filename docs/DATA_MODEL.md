@@ -21,7 +21,7 @@ erDiagram
 
 ### Project
 
-Stores user metadata, project type (`output_mode`: `task_briefing`, `meeting`, `tutorial` or `general`, enforced by the `output_mode` CHECK constraint), requested and detected language, lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
+Stores user metadata, project type (`output_mode`: `task_briefing`, `meeting`, `tutorial` or `general`, enforced by the `output_mode` CHECK constraint; nullable since migration `20261029_0006`: a recording has no type until processing starts, and processing refuses a project without one), requested and detected language, lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
 
 Statuses are `draft`, `uploaded`, `queued`, `processing`, `review`, `exporting`, `completed`, and `failed`.
 
@@ -138,7 +138,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 
 | Change | Package |
 | --- | --- |
-| `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
 | `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
 | `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |
 | `Generation` (project, model key, prompt version, status, progress, relative document path) | P06 |

@@ -1,10 +1,11 @@
 // Unit tests of the New project screen: type cards, default name, options, upload and steps.
+import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Project, UploadProgress } from '../../core/api.models';
+import { Project, StartProcessingRequest, UploadProgress } from '../../core/api.models';
 import { ApiService } from '../../core/services/api.service';
 import { NewProjectComponent } from './new-project.component';
 
@@ -267,5 +268,61 @@ describe('NewProjectComponent', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+  describe('Resuming a saved recording without a project type (P05.4)', () => {
+    const SAVED_RECORDING: Project = { ...PROJECT, mode: null, status: 'uploaded' };
+
+    /** Resumes `?projectId=` with a controllable Process dialog and a spy start call. */
+    async function setupResume(): Promise<{
+      component: NewProjectComponent;
+      dialogResult: Subject<StartProcessingRequest | undefined>;
+      startProcessing: ReturnType<typeof vi.fn>;
+    }> {
+      const dialogResult = new Subject<StartProcessingRequest | undefined>();
+      const startProcessing = vi.fn(() => of({ id: 'job-1' }));
+      await TestBed.configureTestingModule({
+        imports: [NewProjectComponent],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ApiService,
+            useValue: { getProject: () => of(SAVED_RECORDING), startProcessing },
+          },
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { queryParamMap: { get: () => SAVED_RECORDING.id } } },
+          },
+        ],
+      })
+        .overrideProvider(Dialog, {
+          useValue: { open: () => ({ closed: dialogResult.asObservable() }) },
+        })
+        .compileComponents();
+      const fixture = TestBed.createComponent(NewProjectComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      return { component: fixture.componentInstance, dialogResult, startProcessing };
+    }
+
+    it('opens the Process dialog before starting and sends the chosen type', async () => {
+      const { component, dialogResult, startProcessing } = await setupResume();
+      expect(component.currentStep()).toBe(3);
+
+      component.startProcessing();
+      expect(startProcessing).not.toHaveBeenCalled();
+      dialogResult.next({ mode: 'task_briefing' });
+
+      expect(startProcessing).toHaveBeenCalledWith(SAVED_RECORDING.id, { mode: 'task_briefing' });
+    });
+
+    it('starts nothing when the dialog is cancelled', async () => {
+      const { component, dialogResult, startProcessing } = await setupResume();
+
+      component.startProcessing();
+      dialogResult.next(undefined);
+
+      expect(startProcessing).not.toHaveBeenCalled();
+      expect(component.starting()).toBe(false);
+    });
   });
 });

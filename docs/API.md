@@ -30,7 +30,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | DELETE | `/api/v1/projects/{projectId}` | Delete a non-busy project and its workspace | 204 |
 | POST | `/api/v1/projects/{projectId}/video` | Stream, probe, and store the only source video | 201 |
 | GET | `/api/v1/projects/{projectId}/video` | Stream source video with byte-range support | 200/206 |
-| POST | `/api/v1/projects/{projectId}/process` | Queue or retry processing | 202 |
+| POST | `/api/v1/projects/{projectId}/process` | Queue or retry processing; the optional body carries the project type and spoken language | 202 |
 | GET | `/api/v1/jobs/{jobId}` | Read persisted job state | 200 |
 | GET | `/api/v1/jobs/{jobId}/events` | Stream progress with SSE | 200 |
 | POST | `/api/v1/jobs/{jobId}/cancel` | Request cooperative cancellation | 202 |
@@ -59,7 +59,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 
 ## Important requests
 
-Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general` (default `tutorial`). The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code.
+Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general`, or absent: a project has no type (`mode: null`) until the user chooses one, at the latest when processing starts (P05.4). Projects made by the recorder have none; the new-project form still sends one. `PATCH` can set or change the type but not clear it. The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code.
 
 Split accepts:
 
@@ -165,11 +165,21 @@ VIDEO_AUDIO_TRACK_MISSING` without system audio and microphone; `507 INSUFFICIEN
 chunks are deleted, so `GET` reports the saved session with empty tracks. The conversion rules are
 in [Recording](RECORDING.md#completion-rules-p052).
 
+### Starting processing (P05.4)
+
+`POST /api/v1/projects/{projectId}/process` accepts an optional JSON body `{mode?, sourceLanguage?}`
+(an empty body or `{}` is still valid). `mode` is a project type and `sourceLanguage` is `auto` or a
+Whisper language code; both are validated like on creation (`422 VALIDATION_ERROR`). They are stored
+in the same statement that moves the project to `queued`, so a refused start (busy project, wrong
+state, no worker) changes neither. A project without a type and without `mode` in the body is
+refused with `409 PROJECT_TYPE_REQUIRED` before anything is queued; the job's configuration snapshot
+records the type that was used. The Process dialog sends `mode` for every start from a Not
+processed project; a retry of a failed project sends no body because its type is already stored.
+
 ## Planned changes
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- Optional `mode` until processing starts ([ADR 0009](decisions/0009-project-types.md), P05.4).
 - Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).
 
 ## Progress events
@@ -201,6 +211,7 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `WORKER_UNAVAILABLE` | 503 or failed operation | No local Celery worker is available. |
 | `PROCESSING_INTERRUPTED` | interrupted job | Startup reconciliation found abandoned running work; retry is allowed. |
 | `PROCESSING_CANCELLED` | cancelled job | Cooperative cancellation completed and derivatives were removed. |
+| `PROJECT_TYPE_REQUIRED` | 409 | Processing was requested for a project without a project type and the request did not choose one. |
 | `PROJECT_ASSET_MISSING` | 404, 409, or failed operation | Required source, screenshot, or export evidence is unavailable. |
 | `INVALID_SEGMENT_OPERATION` | 404, 409, or 422 | Split, merge, or edit invariants were not met. |
 | `INVALID_SCREENSHOT_ASSOCIATION` | 422 | The selected screenshot is not valid evidence for the segment's project. |

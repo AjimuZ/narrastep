@@ -146,7 +146,8 @@
     justify-content: stretch;
   }
 
+  // Size by content so three buttons wrap onto a second line instead of breaking their words.
   .project-actions .ns-button {
-    flex: 1;
+    flex: 1 1 auto;
   }
 }

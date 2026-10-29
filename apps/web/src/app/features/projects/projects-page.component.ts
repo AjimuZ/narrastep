@@ -13,13 +13,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { EMPTY, catchError, filter, finalize, switchMap } from 'rxjs';
 
-import { Project, ProjectMode, ProjectStatus } from '../../core/api.models';
+import { Project, ProjectMode, ProjectStatus, StartProcessingRequest } from '../../core/api.models';
 import { ApiService } from '../../core/services/api.service';
 import { errorText } from '../../core/i18n/error-text';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../shared/dialogs/confirm-dialog.component';
+import { openProcessDialog } from '../../shared/dialogs/process-dialog.component';
 import { projectTypeLabel, projectTypes } from '../../shared/project-types';
 import {
   StatusLabel,
@@ -56,7 +57,8 @@ export class ProjectsPageComponent {
   readonly deletingProjectId = signal<string | null>(null);
   readonly searchQuery = signal('');
   readonly statusFilter = signal<'all' | ProjectStatus>('all');
-  readonly typeFilter = signal<'all' | ProjectMode>('all');
+  /** `none` lists the projects whose type is not chosen yet (saved recordings). */
+  readonly typeFilter = signal<'all' | 'none' | ProjectMode>('all');
   readonly projectTypes = projectTypes();
   readonly statusOptions = projectStatusOptions();
   readonly sortOrder = signal<'updated_desc' | 'created_desc' | 'name_asc'>('updated_desc');
@@ -72,7 +74,7 @@ export class ProjectsPageComponent {
       return (
         matchesQuery &&
         (status === 'all' || project.status === status) &&
-        (type === 'all' || project.mode === type)
+        (type === 'all' || (type === 'none' ? project.mode === null : project.mode === type))
       );
     });
 
@@ -139,6 +141,34 @@ export class ProjectsPageComponent {
     void this.router.navigate(['/projects', project.id]);
   }
 
+  /**
+   * Opens the Process dialog for a Not processed project and, once the user confirms, queues
+   * processing and shows its progress. Cancelling the dialog changes nothing; an API refusal is
+   * shown above the list.
+   */
+  processProject(project: Project): void {
+    openProcessDialog(this.dialog, project)
+      .pipe(
+        filter((choices): choices is StartProcessingRequest => choices !== undefined),
+        switchMap((choices) => {
+          this.errorMessage.set(null);
+          return this.api.startProcessing(project.id, choices).pipe(
+            catchError((error: unknown) => {
+              this.errorMessage.set(this.errorText(error));
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => void this.router.navigate(['/projects', project.id]));
+  }
+
+  /** Accessible name of the Process button, which shows only a verb. */
+  processLabel(project: Project): string {
+    return $localize`:@@projects.process_aria:Process ${project.name}:NAME:`;
+  }
+
   /** Requires an accessible destructive confirmation before deleting local evidence. */
   confirmDelete(project: Project): void {
     const data: ConfirmDialogData = {
@@ -176,7 +206,7 @@ export class ProjectsPageComponent {
   }
 
   /** Presents project types as product language instead of API enum syntax. */
-  modeLabel(mode: ProjectMode): string {
+  modeLabel(mode: ProjectMode | null): string {
     return projectTypeLabel(mode);
   }
 
@@ -187,7 +217,7 @@ export class ProjectsPageComponent {
 
   /** Limits the current local list to one project type. */
   updateTypeFilter(event: Event): void {
-    this.typeFilter.set((event.target as HTMLSelectElement).value as 'all' | ProjectMode);
+    this.typeFilter.set((event.target as HTMLSelectElement).value as 'all' | 'none' | ProjectMode);
   }
 
   /** Applies a local project-library search without issuing network requests. */

@@ -57,6 +57,14 @@ All notable changes to Narrastep are documented in this file.
   **Not processed**. Leaving the screen or switching the language while recording asks first.
   Recordings that stopped before they were saved show as **Recording interrupted** in Projects and
   open in the recorder with "Save what was recorded" and Discard. English and Italian.
+- Project type is optional until processing: a saved recording has none and Projects shows it as
+  **Not chosen** (the Type filter has the same entry). **Process** on a Not processed project (it
+  replaces Open there) opens a dialog that asks for the project type, with the spoken language
+  under More options, and then starts processing; Cancel or Escape starts nothing. Processing a
+  project without a type is refused with the new error `PROJECT_TYPE_REQUIRED` (translated in
+  Italian). `POST /api/v1/projects` without `mode` creates a project without a type, where it used
+  to default to `tutorial`; `POST /api/v1/projects/{id}/process` accepts an optional
+  `{mode, sourceLanguage}` body. English and Italian.
 - New settings `NARRASTEP_RECORDING_CHUNK_SECONDS` (5), `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND`
   (2500000) and `NARRASTEP_RECORDING_MAX_FRAME_RATE` (15), sent to the recorder in the new
   `capture` field of recording session responses.

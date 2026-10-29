@@ -76,7 +76,7 @@ def perform_processing(
         processing_snapshot = job.configuration_snapshot or {}
         # A job queued before the project-type migration may still carry a legacy value.
         project_mode = canonical_output_mode(
-            str(processing_snapshot.get("projectMode", project.output_mode.value))
+            str(processing_snapshot.get("projectMode", project.mode_value))
         )
         metrics = MetricsCollector(
             project_id=project.id,
@@ -406,7 +406,7 @@ def perform_export(
                     "id": project.id,
                     "name": project.name,
                     "description": project.description,
-                    "mode": project.output_mode.value,
+                    "mode": project.mode_value,
                     "sourceLanguage": project.source_language,
                     "detectedLanguage": project.detected_language,
                     "createdAt": serialize_utc(project.created_at),
@@ -429,7 +429,7 @@ def perform_export(
                 segments=export_segments,
                 raw_transcript_path=workspace / "transcript" / "raw-transcript.json",
                 destination_path=destination,
-                output_mode=project.output_mode.value,
+                output_mode=project.mode_value,
                 original_video_path=source_path,
                 include_original_video=export.include_original_video,
                 created_at=export.created_at,
@@ -526,7 +526,7 @@ def assign_export_name(session: Session, export: ProjectExport, project: Project
         export.sequence = _export_sequence(session, export)
     export.download_name = export_zip_file_name(
         export.created_at,
-        canonical_output_mode(project.output_mode.value),
+        canonical_output_mode(project.mode_value),
         project.name,
         export.sequence,
     )

@@ -125,7 +125,9 @@ class Project(Base):
     description: Mapped[str | None] = mapped_column(Text)
     source_language: Mapped[str] = mapped_column(String(16), default="auto", nullable=False)
     detected_language: Mapped[str | None] = mapped_column(String(16))
-    output_mode: Mapped[OutputMode] = mapped_column(
+    # Null until the user chooses a type: recorder projects have none, and processing refuses a
+    # project without one (P05.4). Uploaded projects normally get a type at creation.
+    output_mode: Mapped[OutputMode | None] = mapped_column(
         Enum(
             OutputMode,
             name="output_mode",
@@ -133,8 +135,7 @@ class Project(Base):
             create_constraint=True,
             values_callable=lambda values: [item.value for item in values],
         ),
-        default=OutputMode.TUTORIAL,
-        nullable=False,
+        nullable=True,
     )
     state: Mapped[ProjectState] = mapped_column(
         Enum(
@@ -173,6 +174,15 @@ class Project(Base):
     recording_session: Mapped[RecordingSession | None] = relationship(
         back_populates="project", cascade="all, delete-orphan", uselist=False, lazy="selectin"
     )
+
+    @property
+    def mode_value(self) -> str:
+        """Return the project type value used by exports and job snapshots.
+
+        Processing refuses a project without a type, so exports always have one; the generic
+        fallback only keeps a hand-edited database from failing an export. Never raises.
+        """
+        return (self.output_mode or OutputMode.GENERAL).value
 
 
 class MediaAsset(Base):

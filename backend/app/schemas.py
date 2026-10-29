@@ -179,7 +179,7 @@ class ProjectCreate(ApiModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
     source_language: str = Field(default="auto", max_length=16)
-    mode: OutputMode = OutputMode.TUTORIAL
+    mode: OutputMode | None = None
 
     @field_validator("name")
     @classmethod
@@ -239,6 +239,28 @@ class ProjectUpdate(ApiModel):
         return normalized
 
 
+class ProcessStart(ApiModel):
+    """Validate the optional choices sent when processing starts (P05.4).
+
+    `mode` sets the project type and is required when the project has none; `source_language`
+    replaces the spoken language. Both are stored atomically with the queued state.
+    """
+
+    mode: OutputMode | None = None
+    source_language: str | None = Field(default=None, max_length=16)
+
+    @field_validator("source_language")
+    @classmethod
+    def validate_source_language(cls, value: str | None) -> str | None:
+        """Accept automatic detection or a lowercase Whisper-supported language code."""
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized != "auto" and normalized not in SUPPORTED_WHISPER_LANGUAGES:
+            raise ValueError("Source language must be 'auto' or a Whisper-supported language code.")
+        return normalized
+
+
 class MediaAssetResponse(ApiModel):
     """Expose safe source-video metadata without exposing its local absolute path."""
 
@@ -269,7 +291,7 @@ class ProjectResponse(ApiModel):
     name: str
     description: str | None
     source_language: str
-    mode: OutputMode
+    mode: OutputMode | None
     detected_language: str | None
     status: ProjectState
     created_at: datetime

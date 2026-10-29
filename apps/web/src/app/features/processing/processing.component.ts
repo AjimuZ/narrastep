@@ -1,4 +1,5 @@
 // Processing screen: one project's persisted job, its stage list, real progress, cancel and retry.
+import { Dialog } from '@angular/cdk/dialog';
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -14,10 +15,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Subscription, catchError, finalize, interval, of, switchMap, tap } from 'rxjs';
 
-import { ProcessingJob, ProcessingStage, Project } from '../../core/api.models';
+import {
+  ProcessingJob,
+  ProcessingStage,
+  Project,
+  StartProcessingRequest,
+} from '../../core/api.models';
 import { errorText, localizedError } from '../../core/i18n/error-text';
 import { activeLocale } from '../../core/i18n/language';
 import { ApiService } from '../../core/services/api.service';
+import { openProcessDialog } from '../../shared/dialogs/process-dialog.component';
 import { projectTypeLabel } from '../../shared/project-types';
 import { StatusLabel, jobStatusLabel, projectStatusLabel } from '../../shared/status-labels';
 import {
@@ -101,6 +108,7 @@ export class ProcessingComponent implements OnInit {
   });
 
   private readonly api = inject(ApiService);
+  private readonly dialog = inject(Dialog);
   private readonly destroyRef = inject(DestroyRef);
   private monitorSubscription: Subscription | null = null;
 
@@ -144,17 +152,47 @@ export class ProcessingComponent implements OnInit {
       });
   }
 
-  /** Starts or retries real processing and switches directly into resilient job monitoring. */
+  /**
+   * Starts or retries real processing. A project without a type (a saved recording) first opens
+   * the Process dialog; cancelling it starts nothing.
+   */
   startProcessing(): void {
     if (this.actionPending()) {
       return;
     }
+    const project = this.project();
+    if (project && project.mode === null) {
+      openProcessDialog(this.dialog, project)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((choices) => {
+          if (choices) {
+            this.queueProcessing(choices);
+          }
+        });
+      return;
+    }
+    this.queueProcessing({});
+  }
+
+  /** Queues processing with the dialog's choices and switches directly into resilient job monitoring. */
+  private queueProcessing(choices: StartProcessingRequest): void {
     this.monitorSubscription?.unsubscribe();
     this.actionPending.set(true);
     this.errorMessage.set(null);
     this.monitorSubscription = this.api
-      .startProcessing(this.projectId())
+      .startProcessing(this.projectId(), choices)
       .pipe(
+        tap(() =>
+          this.project.update((current) =>
+            current
+              ? {
+                  ...current,
+                  mode: choices.mode ?? current.mode,
+                  sourceLanguage: choices.sourceLanguage ?? current.sourceLanguage,
+                }
+              : current,
+          ),
+        ),
         tap((job) => {
           this.applyJob(job);
           // Enqueueing is complete; monitoring must not disable cooperative cancellation.

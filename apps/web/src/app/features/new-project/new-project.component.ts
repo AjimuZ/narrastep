@@ -1,4 +1,5 @@
 // New project screen: project type, name and options, then one video upload, then the processing start.
+import { Dialog } from '@angular/cdk/dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,11 +13,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, catchError, finalize } from 'rxjs';
 
-import { Project, ProjectMode } from '../../core/api.models';
+import { Project, ProjectMode, StartProcessingRequest } from '../../core/api.models';
 import { errorText } from '../../core/i18n/error-text';
-import { formatFileSize, languageName } from '../../core/i18n/format';
-import { activeLocale } from '../../core/i18n/language';
+import { formatFileSize } from '../../core/i18n/format';
 import { ApiService } from '../../core/services/api.service';
+import { openProcessDialog } from '../../shared/dialogs/process-dialog.component';
+import { languageSuggestions } from '../../shared/language-options';
 import { projectTypes } from '../../shared/project-types';
 import { PixelIconComponent, SegmentedGaugeComponent, WindowComponent } from '../../shared/ui';
 
@@ -69,32 +71,10 @@ export class NewProjectComponent implements OnInit {
   ];
 
   /** Spoken-language suggestions; names come from `Intl.DisplayNames` in the active language. */
-  readonly languageSuggestions: readonly { code: string; label: string }[] = [
-    { code: 'auto', label: $localize`:@@new_project.language_auto:Detect automatically` },
-    ...[
-      'ar',
-      'zh',
-      'nl',
-      'en',
-      'fr',
-      'de',
-      'hi',
-      'it',
-      'ja',
-      'ko',
-      'pl',
-      'pt',
-      'ru',
-      'es',
-      'sv',
-      'tr',
-      'uk',
-    ]
-      .map((code) => ({ code, label: languageName(code) }))
-      .sort((left, right) => left.label.localeCompare(right.label, activeLocale())),
-  ];
+  readonly languageSuggestions = languageSuggestions();
 
   private readonly api = inject(ApiService);
+  private readonly dialog = inject(Dialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -128,7 +108,7 @@ export class NewProjectComponent implements OnInit {
           name: project.name,
           description: project.description ?? '',
           sourceLanguage: project.sourceLanguage,
-          mode: project.mode,
+          mode: project.mode ?? this.projectForm.controls.mode.value,
         });
         if (project.status === 'draft') {
           this.currentStep.set(2);
@@ -287,17 +267,34 @@ export class NewProjectComponent implements OnInit {
       });
   }
 
-  /** Explicitly queues local processing only after the user confirms the long-running operation. */
+  /**
+   * Explicitly queues local processing only after the user confirms the long-running operation.
+   * A resumed project without a type (a saved recording) first opens the Process dialog.
+   */
   startProcessing(): void {
     const project = this.project();
     if (!project || this.starting()) {
       return;
     }
+    if (project.mode === null) {
+      openProcessDialog(this.dialog, project)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((choices) => {
+          if (choices) {
+            this.queueProcessing(project, choices);
+          }
+        });
+      return;
+    }
+    this.queueProcessing(project, {});
+  }
 
+  /** Sends the start request and opens the processing screen; an API refusal is shown on this step. */
+  private queueProcessing(project: Project, choices: StartProcessingRequest): void {
     this.starting.set(true);
     this.requestError.set(null);
     this.api
-      .startProcessing(project.id)
+      .startProcessing(project.id, choices)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.starting.set(false)),

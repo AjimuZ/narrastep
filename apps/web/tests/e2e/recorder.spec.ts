@@ -66,7 +66,7 @@ async function useRecordingApi(
     id: PROJECT_ID,
     name: projectName,
     description: null,
-    mode: 'general',
+    mode: null,
     sourceLanguage: 'auto',
     detectedLanguage: null,
     status: api.saved ? 'uploaded' : 'draft',
@@ -271,6 +271,8 @@ test.describe('recorder with fake devices', () => {
     await page.getByRole('link', { name: 'Open projects' }).click();
     const row = page.locator('.project-row').filter({ hasText: 'Weekly sync' });
     await expect(row).toContainText('Not processed');
+    // The recorder chooses no project type; the Process dialog asks for it (P05.4).
+    await expect(row.locator('[data-label="Type"]')).toContainText('Not chosen');
     expect(api.processRequests).toEqual([]);
   });
 

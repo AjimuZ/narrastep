@@ -1,0 +1,112 @@
+// The Process dialog is wider than a confirmation: it holds the four project type cards.
+.process-dialog {
+  width: min(40rem, calc(100vw - 2rem));
+}
+
+.process-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.process-body p {
+  margin: 0;
+}
+
+.type-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.type-fieldset legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-2);
+}
+
+.type-card {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) 1.25rem;
+  cursor: pointer;
+}
+
+// Keyboard focus rings the whole card instead of the small radio square.
+.type-card:has(input:focus-visible) {
+  outline: var(--px) solid var(--color-focus-ring);
+  outline-offset: var(--px);
+}
+
+.type-card input {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0.15rem 0 0;
+  padding: 2px;
+  border: 1px solid var(--color-field-border);
+  border-radius: 0;
+  background: var(--color-bg-deep);
+  background-clip: content-box;
+  appearance: none;
+  cursor: pointer;
+}
+
+.type-card input:checked {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+.type-card input:focus-visible {
+  outline: none;
+}
+
+.type-card__text {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.type-card__text strong {
+  color: var(--color-text-strong);
+}
+
+.type-card__text small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.type-fieldset .ns-notice {
+  margin-top: var(--space-2);
+}
+
+.more-options {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+}
+
+.more-options summary {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
+  color: var(--color-text-strong);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.more-options[open] summary {
+  margin-bottom: var(--space-4);
+}
+
+.language-field {
+  max-width: 12rem;
+}

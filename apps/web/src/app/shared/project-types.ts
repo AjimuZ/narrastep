@@ -34,7 +34,10 @@ export function projectTypes(): ProjectTypeOption[] {
   ];
 }
 
-/** Label of a project type; every `ProjectMode` has one. */
-export function projectTypeLabel(mode: ProjectMode): string {
+/** Label of a project type; every `ProjectMode` has one, and a project without a type reads "Not chosen". */
+export function projectTypeLabel(mode: ProjectMode | null): string {
+  if (mode === null) {
+    return $localize`:@@project_type.none:Not chosen`;
+  }
   return projectTypes().find((type) => type.value === mode)?.label ?? mode;
 }

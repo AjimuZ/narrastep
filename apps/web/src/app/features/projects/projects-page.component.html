@@ -67,6 +67,7 @@
             @for (type of projectTypes; track type.value) {
               <option [value]="type.value">{{ type.label }}</option>
             }
+            <option value="none" i18n="@@project_type.none">Not chosen</option>
           </select>
         </label>
         <label class="ns-form-row">
@@ -142,14 +143,26 @@
                 }}</time>
               </div>
               <div class="project-actions">
-                <button
-                  class="ns-button ns-button--small"
-                  type="button"
-                  [attr.aria-label]="openLabel(project)"
-                  (click)="openProject(project)"
-                >
-                  <ns-pixel-icon name="chevron-right" /><span i18n="@@projects.open">Open</span>
-                </button>
+                @if (project.status === 'uploaded' && project.recording?.state !== 'recording') {
+                  <!-- Process replaces Open: for a Not processed project Open only led to the old start step. -->
+                  <button
+                    class="ns-button ns-button--small ns-button--primary"
+                    type="button"
+                    [attr.aria-label]="processLabel(project)"
+                    (click)="processProject(project)"
+                  >
+                    <ns-pixel-icon name="play" /><span i18n="@@projects.process">Process</span>
+                  </button>
+                } @else {
+                  <button
+                    class="ns-button ns-button--small"
+                    type="button"
+                    [attr.aria-label]="openLabel(project)"
+                    (click)="openProject(project)"
+                  >
+                    <ns-pixel-icon name="chevron-right" /><span i18n="@@projects.open">Open</span>
+                  </button>
+                }
                 <button
                   class="ns-button ns-button--small ns-button--danger"
                   type="button"

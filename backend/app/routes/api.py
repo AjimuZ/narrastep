@@ -53,6 +53,7 @@ from app.schemas import (
     HealthResponse,
     JobResponse,
     MediaAssetResponse,
+    ProcessStart,
     ProjectCreate,
     ProjectListResponse,
     ProjectResponse,
@@ -446,14 +447,13 @@ def create_recording(
 ) -> dict[str, object]:
     """Create a project and its open recording session with one chunk folder per track.
 
-    The project has no source video until the session is completed (P05.2) and uses the
-    `general` type until the type becomes optional before processing (P05.4).
+    The project has no source video until the session is completed (P05.2) and no project type
+    until the user chooses one when processing starts (P05.4).
     """
     metadata = request or RecordingCreate()
     project = Project(
         name=metadata.name or default_recording_name(),
         source_language=metadata.source_language,
-        output_mode=OutputMode.GENERAL,
     )
     session.add(project)
     session.flush()
@@ -608,23 +608,34 @@ def discard_recording(
 )
 def start_processing(
     project_id: str,
+    request: ProcessStart | None = None,
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, object]:
-    """Persist a queued processing job before handing it to the local Celery worker."""
+    """Persist a queued processing job before handing it to the local Celery worker.
+
+    The optional body carries the project type and spoken language chosen in the Process dialog.
+    A project without a type (for example a recording) is refused with `PROJECT_TYPE_REQUIRED`
+    unless the body supplies one.
+    """
     project = _require_project(session, project_id)
     reservation = acquire_project_operation(settings.data_root, project.id, "process")
     try:
         session.refresh(project)
-        return _queue_processing_job(session, project, settings)
+        return _queue_processing_job(session, project, settings, request or ProcessStart())
     finally:
         release_project_operation(reservation)
 
 
 def _queue_processing_job(
-    session: Session, project: Project, settings: Settings
+    session: Session, project: Project, settings: Settings, choices: ProcessStart
 ) -> dict[str, object]:
-    """Validate, reserve, persist, and dispatch one processing attempt."""
+    """Validate, reserve, persist, and dispatch one processing attempt.
+
+    `choices` are applied in the same statement that queues the project, so a refused or failed
+    start never changes the type or language. Raises `PROJECT_TYPE_REQUIRED` (409) when neither
+    the project nor `choices` has a type.
+    """
     if project.media_asset is None:
         raise ApiError("PROJECT_ASSET_MISSING", "Upload a valid source video first.", 409)
     if _active_job(session, project.id) is not None:
@@ -633,14 +644,26 @@ def _queue_processing_job(
         raise ApiError(
             "INVALID_PROJECT_STATE", "This project cannot be processed in its current state.", 409
         )
+    project_mode = choices.mode or project.output_mode
+    if project_mode is None:
+        raise ApiError(
+            "PROJECT_TYPE_REQUIRED", "Choose a project type before processing this project.", 409
+        )
     _ensure_worker_available(settings)
+    queued_values: dict[str, object] = {
+        "state": ProjectState.QUEUED,
+        "output_mode": OutputMode(project_mode),
+        "updated_at": utc_now(),
+    }
+    if choices.source_language is not None:
+        queued_values["source_language"] = choices.source_language
     transition = session.execute(
         update(Project)
         .where(
             Project.id == project.id,
             Project.state.in_((ProjectState.UPLOADED, ProjectState.FAILED)),
         )
-        .values(state=ProjectState.QUEUED, updated_at=utc_now())
+        .values(**queued_values)
     )
     if getattr(transition, "rowcount", 0) != 1:
         session.rollback()
@@ -672,7 +695,7 @@ def _queue_processing_job(
             "imageBudgetProfile": settings.image_budget_profile,
             "tesseractPath": settings.tesseract_path,
             "screenshotAlternatives": settings.screenshot_alternatives,
-            "projectMode": project.output_mode.value,
+            "projectMode": OutputMode(project_mode).value,
             "directDuplicateThreshold": settings.adaptive_direct_duplicate_threshold,
             "borderlineDuplicateThreshold": settings.adaptive_borderline_duplicate_threshold,
             "borderlineSsimThreshold": settings.adaptive_borderline_ssim_threshold,
@@ -1156,7 +1179,7 @@ def export_estimate(
             segments=[export_segment_snapshot(settings, segment) for segment in segments],
             raw_transcript_path=workspace / "transcript" / "raw-transcript.json",
             destination_path=workspace / "exports" / ".estimate.zip",
-            output_mode=project.output_mode.value,
+            output_mode=project.mode_value,
             original_video_path=source_path,
             include_original_video=include_original_video,
             chatgpt_max_files_per_batch=settings.chatgpt_max_files_per_batch,
@@ -1422,7 +1445,7 @@ def _project_payload(session: Session, project: Project, settings: Settings) -> 
         "id": project.id,
         "name": project.name,
         "description": project.description,
-        "mode": project.output_mode.value,
+        "mode": project.output_mode.value if project.output_mode else None,
         "sourceLanguage": project.source_language,
         "detectedLanguage": project.detected_language,
         "status": project.state.value,

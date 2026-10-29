@@ -1,10 +1,11 @@
 // Unit tests for the Processing screen: persisted progress, stage gauges, failure, cancel and retry.
+import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ProcessingJob, Project } from '../../core/api.models';
+import { ProcessingJob, Project, StartProcessingRequest } from '../../core/api.models';
 import { ApiService } from '../../core/services/api.service';
 import { ProcessingComponent } from './processing.component';
 
@@ -321,5 +322,88 @@ describe('ProcessingComponent', () => {
     expect(primary[0]?.getAttribute('href')).toBe('/projects/project-1/review');
     expect(fixture.nativeElement.querySelector('.stage-list [role="progressbar"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('ns-status-pill')?.textContent).toContain('Done');
+  });
+  describe('Start without a project type (P05.4)', () => {
+    const SAVED_RECORDING: Project = {
+      ...PROJECT,
+      mode: null,
+      status: 'uploaded',
+      activeJobId: null,
+    };
+
+    /** Opens the screen for `project` with a controllable Process dialog and a spy start call. */
+    async function setupStart(project: Project): Promise<{
+      fixture: ReturnType<typeof TestBed.createComponent<ProcessingComponent>>;
+      dialogResult: Subject<StartProcessingRequest | undefined>;
+      openDialog: ReturnType<typeof vi.fn>;
+      startProcessing: ReturnType<typeof vi.fn>;
+    }> {
+      const dialogResult = new Subject<StartProcessingRequest | undefined>();
+      const openDialog = vi.fn(() => ({ closed: dialogResult.asObservable() }));
+      const startProcessing = vi.fn(() => of(JOB));
+      await TestBed.configureTestingModule({
+        imports: [ProcessingComponent],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ApiService,
+            useValue: {
+              getProject: () => of(project),
+              startProcessing,
+              monitorJob: () => new Subject<ProcessingJob>().asObservable(),
+            },
+          },
+        ],
+      })
+        .overrideProvider(Dialog, { useValue: { open: openDialog } })
+        .compileComponents();
+      const fixture = TestBed.createComponent(ProcessingComponent);
+      fixture.componentRef.setInput('projectId', project.id);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return { fixture, dialogResult, openDialog, startProcessing };
+    }
+
+    it('asks for the type first and then sends the choices', async () => {
+      const { fixture, dialogResult, openDialog, startProcessing } =
+        await setupStart(SAVED_RECORDING);
+
+      fixture.componentInstance.startProcessing();
+      expect(openDialog).toHaveBeenCalledOnce();
+      expect(startProcessing).not.toHaveBeenCalled();
+
+      dialogResult.next({ mode: 'meeting' });
+      expect(startProcessing).toHaveBeenCalledWith(SAVED_RECORDING.id, { mode: 'meeting' });
+      expect(fixture.componentInstance.project()?.mode).toBe('meeting');
+    });
+
+    it('starts nothing when the dialog is cancelled', async () => {
+      const { fixture, dialogResult, startProcessing } = await setupStart(SAVED_RECORDING);
+
+      fixture.componentInstance.startProcessing();
+      dialogResult.next(undefined);
+
+      expect(startProcessing).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.actionPending()).toBe(false);
+    });
+
+    it('starts a project that already has a type without asking again', async () => {
+      const { fixture, openDialog, startProcessing } = await setupStart({
+        ...SAVED_RECORDING,
+        mode: 'tutorial',
+      });
+
+      fixture.componentInstance.startProcessing();
+
+      expect(openDialog).not.toHaveBeenCalled();
+      expect(startProcessing).toHaveBeenCalledWith(SAVED_RECORDING.id, {});
+    });
+
+    it('shows a missing type as Not chosen', async () => {
+      const { fixture } = await setupStart(SAVED_RECORDING);
+
+      expect(fixture.componentInstance.typeLabel(SAVED_RECORDING)).toBe('Not chosen');
+    });
   });
 });

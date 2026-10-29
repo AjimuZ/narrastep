@@ -1,0 +1,90 @@
+<section class="ns-dialog process-dialog" aria-labelledby="process-title">
+  <h2 id="process-title" class="ns-dialog__title">{{ title() }}</h2>
+  <div class="ns-dialog__body process-body">
+    <p class="muted" i18n="@@process_dialog.intro">
+      Processing transcribes the audio, extracts screenshots and links them to transcript segments.
+      It runs on this computer and can take several minutes.
+    </p>
+
+    <fieldset class="type-fieldset">
+      <legend class="ns-label" i18n="@@new_project.type_legend">Project type</legend>
+      <div class="type-grid">
+        @for (type of projectTypes; track type.value) {
+          <label class="ns-row type-card">
+            <input
+              type="radio"
+              name="process-type"
+              [value]="type.value"
+              [checked]="mode() === type.value"
+              [attr.aria-describedby]="
+                showErrors() && mode() === null ? 'process-type-error' : null
+              "
+              (change)="selectMode(type.value)"
+            />
+            <span class="type-card__text">
+              <strong>{{ type.label }}</strong>
+              <small>{{ type.help }}</small>
+            </span>
+          </label>
+        }
+      </div>
+      @if (showErrors() && mode() === null) {
+        <!-- A notice, not .ns-error: the danger color needs the darker inset background to reach 4.5:1. -->
+        <p
+          id="process-type-error"
+          class="ns-notice ns-notice--error"
+          role="alert"
+          i18n="@@process_dialog.type_error"
+        >
+          Choose a project type to start processing.
+        </p>
+      }
+    </fieldset>
+
+    <details class="more-options" [open]="moreOptionsOpen()" (toggle)="onMoreOptionsToggle($event)">
+      <summary i18n="@@new_project.more_options">More options</summary>
+      <div class="ns-form-row">
+        <label class="ns-label" for="process-language"
+          ><span i18n="@@new_project.language_label">Spoken language</span></label
+        >
+        <input
+          id="process-language"
+          class="ns-field language-field"
+          type="text"
+          list="process-language-options"
+          maxlength="4"
+          autocomplete="off"
+          [value]="language()"
+          [attr.aria-invalid]="showErrors() && !languageValid() ? 'true' : null"
+          [attr.aria-describedby]="
+            showErrors() && !languageValid()
+              ? 'process-language-help process-language-error'
+              : 'process-language-help'
+          "
+          (input)="setLanguage($event)"
+        />
+        <datalist id="process-language-options">
+          @for (option of languageSuggestions; track option.code) {
+            <option [value]="option.code">{{ option.label }}</option>
+          }
+        </datalist>
+        <p id="process-language-help" class="ns-help" i18n="@@new_project.language_help">
+          “auto” detects it; or enter a code such as “en” or “it”.
+        </p>
+        @if (showErrors() && !languageValid()) {
+          <p id="process-language-error" class="ns-error" i18n="@@new_project.language_error">
+            This is not a language code. Enter “auto” or a two- or three-letter code.
+          </p>
+        }
+      </div>
+    </details>
+  </div>
+  <div class="ns-dialog__actions">
+    <button class="ns-button" type="button" (click)="cancel()" i18n="@@dialog.cancel">
+      Cancel
+    </button>
+    <button class="ns-button ns-button--primary" type="button" (click)="start()">
+      <span i18n="@@common.start_processing">Start processing</span>
+    </button>
+  </div>
+</section>

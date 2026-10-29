@@ -63,8 +63,10 @@ Recording only captures and saves. It never starts processing.
    chunks, and with FFmpeg aligns the tracks by their offsets and mixes the microphone into the
    screen audio. The result is the project source video, validated with FFprobe. The microphone
    track is kept next to it as `source/microphone.webm` for speaker labels.
-7. **Later.** When the user opens the project and selects Process, Narrastep asks for the project
-   type ([ADR 0009](decisions/0009-project-types.md)) and starts the normal processing flow.
+7. **Later.** When the user selects **Process** on the Not processed project, the Process dialog
+   asks for the project type ([ADR 0009](decisions/0009-project-types.md)) and the API starts the
+   normal processing flow with it (P05.4). Without a type the API refuses to process the project
+   (`PROJECT_TYPE_REQUIRED`).
 
 ## Settings
 
@@ -179,8 +181,8 @@ All endpoints are in [openapi.json](openapi.json); request and response fields a
 - **Create.** The body is optional: `name` (the recorder sends it in the interface language and
   local time, for example `Registrazione 2026-10-29 14:05`) and `sourceLanguage`. Without a name the
   API uses `Recording {YYYY-MM-DD HH:MM}` in the server's local time, which is UTC in the
-  container. The project is a `draft` without a video. Until the type becomes optional (P05.4) it
-  gets the type `general`.
+  container. The project is a `draft` without a video and has no project type: the user chooses it in the
+  Process dialog (P05.4).
 - **Chunks.** The body is the raw `MediaRecorder` blob (`video/webm`, `audio/webm` or
   `application/octet-stream`), not multipart. `sequence` counts from 0 per track, up to 999999.
   Sequence 0 must start with the WebM (EBML) header; later chunks continue the same stream and

@@ -107,7 +107,7 @@ def test_create_opens_session_with_dated_project_and_empty_tracks(client: TestCl
     project = client.get(f"/api/v1/projects/{recording['projectId']}").json()
     assert re.fullmatch(r"Recording \d{4}-\d{2}-\d{2} \d{2}:\d{2}", project["name"])
     assert project["status"] == "draft"
-    assert project["mode"] == "general"
+    assert project["mode"] is None
     assert project["videoAsset"] is None
     assert project["activeJobId"] is None
     assert project["recording"] == {

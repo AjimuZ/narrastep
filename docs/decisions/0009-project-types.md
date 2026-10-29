@@ -31,6 +31,9 @@ Replace the four modes with four project types that describe the purpose of the 
 - The type may stay empty until processing starts, because an in-app recording is saved with a
   name only ([ADR 0010](0010-in-browser-recording.md)). Starting processing requires a type; it can
   be changed until then. Upload-created projects still choose it in the new-project form.
+  Implemented in P05.4: `Project.output_mode` is nullable (migration `20261029_0006`), the process
+  request accepts the type and answers `409 PROJECT_TYPE_REQUIRED` without one, and the Process
+  dialog asks for it.
 
 ## Alternatives
 

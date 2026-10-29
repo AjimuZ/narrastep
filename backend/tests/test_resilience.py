@@ -20,6 +20,7 @@ from app.models import (
     ExportStatus,
     JobStatus,
     MediaAsset,
+    OutputMode,
     ProcessingJob,
     Project,
     ProjectExport,
@@ -33,7 +34,7 @@ from app.services.workspaces import create_project_workspace
 
 def _project_with_source(session: Session, state: ProjectState) -> Project:
     """Create one project with a source row and owned file for lifecycle tests."""
-    project = Project(name="Resilience", state=state)
+    project = Project(name="Resilience", state=state, output_mode=OutputMode.TUTORIAL)
     session.add(project)
     session.flush()
     workspace = create_project_workspace(get_settings().data_root, project.id)
@@ -56,6 +57,36 @@ def _project_with_source(session: Session, state: ProjectState) -> Project:
     )
     session.commit()
     return project
+
+
+def test_worker_preflight_keeps_the_chosen_type_unsaved(
+    client: TestClient,
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Do not store the type or language sent with a start that the worker preflight refuses."""
+    project = _project_with_source(session, ProjectState.UPLOADED)
+    project.output_mode = None
+    session.commit()
+    production_settings = get_settings().model_copy(
+        update={"environment": "production", "mock_processing": False, "celery_always_eager": False}
+    )
+    app.dependency_overrides[get_settings] = lambda: production_settings
+    monkeypatch.setattr("app.routes.api._redis_available", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr("app.routes.api._worker_available", lambda *_args, **_kwargs: False)
+    try:
+        response = client.post(
+            f"/api/v1/projects/{project.id}/process",
+            json={"mode": "meeting", "sourceLanguage": "it"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+    assert response.status_code == 503
+    session.expire_all()
+    stored = session.get(Project, project.id)
+    assert stored is not None
+    assert stored.output_mode is None and stored.source_language == "auto"
 
 
 def test_worker_preflight_rejects_before_persisting_state(
@@ -314,7 +345,7 @@ def test_export_root_folder_carries_the_project_export_sequence(session: Session
 
 def test_version_0_2_export_still_downloads_unchanged(client: TestClient, session: Session) -> None:
     """Serve an archive written in the Version 0.2 layout byte for byte; it is never rewritten."""
-    project = Project(name="Legacy", state=ProjectState.COMPLETED)
+    project = Project(name="Legacy", state=ProjectState.COMPLETED, output_mode=OutputMode.TUTORIAL)
     session.add(project)
     session.flush()
     workspace = create_project_workspace(get_settings().data_root, project.id)

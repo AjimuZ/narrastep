@@ -73,6 +73,10 @@ labels since P02.1; the Italian column is in `messages.it.json` since P04.4
 | `tutorial` | Tutorial — A procedure to repeat or teach, step by step. | Tutorial — Una procedura da ripetere o insegnare, passo per passo. |
 | `general` | Generic — Anything else, such as a demo or a recorded note. | Generico — Tutto il resto, per esempio una demo o una nota registrata. |
 | (legend, column) | Project type, Type | Tipo di progetto, Tipo |
+| (project without a type) | Not chosen | Non scelto |
+
+A project has no type until the user chooses one (saved recordings, P05.4). The Type column shows
+**Not chosen**, and the Type filter offers it as an entry that lists those projects.
 
 ## Language
 
@@ -263,7 +267,8 @@ The table above is the target. What the English interface does today:
 
 | Screen | Implemented |
 | --- | --- |
-| Projects | Title, **Record** and **New project** (also in the empty state); one primary window with search, type, status and sort filters; rows are a table when the list is at least 68 rem wide and labelled cards below. Status pill (Recording or Recording interrupted for an open recorder session, P05.3), type, duration ("Unknown" without a video), segments, screenshots, last change, Open and Delete. Open on an open recorder session leads to the recorder. Process is not offered yet (P05.4) |
+| Projects | Title, **Record** and **New project** (also in the empty state); one primary window with search, type, status and sort filters; rows are a table when the list is at least 68 rem wide and labelled cards below. Status pill (Recording or Recording interrupted for an open recorder session, P05.3), type, duration ("Unknown" without a video), segments, screenshots, last change, Open and Delete. Open on an open recorder session leads to the recorder. A Not processed row shows **Process** instead of Open (Open only led to the old start step) and opens the Process dialog; the Type column reads "Not chosen" for a project without a type, and the Type filter has a "Not chosen" entry (P05.4) |
+| Process | A modal dialog (`ns-process-dialog`, `shared/dialogs/`) titled "Process “{name}”" on a Not processed project, opened from Projects, from the Processing screen's **Start processing** and from step 3 of a resumed new-project wizard when the project has no type. It explains what processing does, shows the four type cards unselected (the stored type is preselected), and keeps the spoken language under "More options". **Start processing** without a type keeps the dialog open and shows "Choose a project type to start processing." in an alert notice; an invalid language code opens "More options" with its error. Cancel or Escape starts nothing and returns focus to the trigger. The choices are sent with the start request (`mode`, and `sourceLanguage` only when changed). It is 40 rem wide at most and scrolls inside itself below the viewport height (P05.4) |
 | Recorder | Title "Record"; Sources window (screen, system audio, microphone with device list and level gauge, consent and headset notices, **Start recording**); Recording window (state pill, length, uploaded size, sources, gauge, retry notice, Pause or Resume, **Stop**); Save recording window (length, uploaded size, parts still uploading, optional name, **Save** or **Save what was recorded**, Discard); Recording saved window (Open projects, Record again). `/record?recording={id}` opens an interrupted session. Details in [Recording](RECORDING.md#recorder-screen-p053) (P05.3) |
 | New project | Three steps (Project, Video, Processing) each in one primary window; type cards are `.ns-row` radio cards; **Create project**, then **Upload video** with a segmented upload gauge fed by the real upload percentage, then **Start processing** or Process later |
 | Processing | Title "Processing" with the project name; the stage list is the primary window. The API reports progress for the whole job only, so one overall gauge shows that value, finished stages show a full gauge, the running stage an activity line and pending stages only a word. **Open review**, Cancel processing, Retry processing; Project, Processing settings and Counters windows beside it |
@@ -279,9 +284,10 @@ open all eight screens (Projects, New project, Recorder, Processing, Processing 
 Export, Not found) in English and Italian against a deterministic fake API, and run the confirm,
 split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
 (the source checks); `tests/e2e/recorder.spec.ts` adds contrast and 320 px reflow of the checks,
-recording and save windows with fake devices in both languages. The last full run (2026-10-29,
-P05.3) passed 364 tests: 174 accessibility checks and 5 recorder tests per Chromium project, plus
-the 6 contract tests.
+recording and save windows with fake devices in both languages. `tests/e2e/process.spec.ts` covers the Process dialog on a saved recording (journey, refusal
+without a type, keyboard, language option, contrast, 320 px and 200% zoom) in both languages. The
+last full run (2026-10-29, P05.4) passed 388 tests: 174 accessibility checks, 5 recorder tests and
+12 Process dialog tests per Chromium project, plus the 6 contract tests.
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).

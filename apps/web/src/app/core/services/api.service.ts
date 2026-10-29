@@ -42,6 +42,7 @@ import {
   SegmentScreenshot,
   SplitSegmentRequest,
   TranscriptSegment,
+  StartProcessingRequest,
   UpdateProjectRequest,
   UpdateSegmentRequest,
   UploadProgress,
@@ -172,9 +173,15 @@ export class ApiService {
     return `${API_ROOT}/projects/${projectId}/video`;
   }
 
-  /** Queues the real local processing workflow for an uploaded project. */
-  startProcessing(projectId: string): Observable<ProcessingJob> {
-    return this.http.post<ProcessingJob>(`${API_ROOT}/projects/${projectId}/process`, {});
+  /**
+   * Queues the real local processing workflow for an uploaded project. `choices` carries the type
+   * and language picked in the Process dialog; a project without a type is refused without them.
+   */
+  startProcessing(
+    projectId: string,
+    choices: StartProcessingRequest = {},
+  ): Observable<ProcessingJob> {
+    return this.http.post<ProcessingJob>(`${API_ROOT}/projects/${projectId}/process`, choices);
   }
 
   /** Loads the latest persisted processing progress snapshot. */

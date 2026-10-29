@@ -28,7 +28,7 @@ the screen audio with FFmpeg, validates the result with FFprobe and stores it as
 video. The microphone track is kept to label transcript segments "You" or "Others".
 
 Recording only saves: the project is stored with an optional name and **Not processed** state.
-The user starts processing later and chooses the project type then. From that point the existing
+The user starts processing later and chooses the project type then: the type is optional until processing, the API refuses to process a project without one (`PROJECT_TYPE_REQUIRED`), and the Process dialog asks for it (P05.4). From that point the existing
 pipeline is unchanged. Details are in [Recording](../RECORDING.md).
 
 ## Alternatives

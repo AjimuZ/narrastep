@@ -9,7 +9,8 @@ export interface Project {
   id: string;
   name: string;
   description: string | null;
-  mode: ProjectMode;
+  /** Project type; null until the user chooses one, at the latest when processing starts (P05.4). */
+  mode: ProjectMode | null;
   sourceLanguage: string;
   detectedLanguage: string | null;
   status: ProjectStatus;
@@ -56,6 +57,15 @@ export interface CreateProjectRequest {
 }
 
 export type UpdateProjectRequest = Partial<CreateProjectRequest>;
+
+/**
+ * Choices sent with `POST /projects/{id}/process`. `mode` is required by the API when the project
+ * has no type; both values are stored together with the queued state.
+ */
+export interface StartProcessingRequest {
+  mode?: ProjectMode;
+  sourceLanguage?: string;
+}
 
 export interface MediaAsset {
   id: string;

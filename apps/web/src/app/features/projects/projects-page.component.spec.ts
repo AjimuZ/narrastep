@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Project } from '../../core/api.models';
+import { Project, StartProcessingRequest } from '../../core/api.models';
 import { NarrastepApiError } from '../../core/services/api-error.interceptor';
 import { ApiService } from '../../core/services/api.service';
 import { ProjectsPageComponent } from './projects-page.component';
@@ -274,6 +274,134 @@ describe('ProjectsPageComponent', () => {
     fixture.componentInstance.openProject(saved);
     expect(navigate).toHaveBeenLastCalledWith(['/projects/new'], {
       queryParams: { projectId: 'saved' },
+    });
+  });
+  describe('Process (P05.4)', () => {
+    const NOT_PROCESSED: Project = {
+      ...PROJECT,
+      id: 'recorded',
+      name: 'Recording 2026-10-29 14:05',
+      mode: null,
+      status: 'uploaded',
+      activeJobId: null,
+      recording: { id: 'rec-1', state: 'completed', interrupted: false },
+    };
+
+    /** Creates the page with a Not processed recording, a reviewed project and a mocked start call. */
+    async function setupProcess(startProcessing: ReturnType<typeof vi.fn>): Promise<{
+      fixture: ReturnType<typeof TestBed.createComponent<ProjectsPageComponent>>;
+      dialogResult: Subject<StartProcessingRequest | undefined>;
+      openDialog: ReturnType<typeof vi.fn>;
+      navigate: ReturnType<typeof vi.fn>;
+    }> {
+      const dialogResult = new Subject<StartProcessingRequest | undefined>();
+      const openDialog = vi.fn(() => ({ closed: dialogResult.asObservable() }));
+      await TestBed.configureTestingModule({
+        imports: [ProjectsPageComponent],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ApiService,
+            useValue: {
+              listProjects: () => of({ items: [NOT_PROCESSED, PROJECT], total: 2 }),
+              startProcessing,
+            },
+          },
+        ],
+      })
+        .overrideProvider(Dialog, { useValue: { open: openDialog } })
+        .compileComponents();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const fixture = TestBed.createComponent(ProjectsPageComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return { fixture, dialogResult, openDialog, navigate };
+    }
+
+    it('offers Process only on Not processed rows and shows a missing type as Not chosen', async () => {
+      const { fixture } = await setupProcess(vi.fn());
+      const element: HTMLElement = fixture.nativeElement;
+      const rows = Array.from(element.querySelectorAll('.project-row'));
+
+      const processButtons = rows.map((row) =>
+        Array.from(row.querySelectorAll('button')).some(
+          (item) => item.textContent?.trim() === 'Process',
+        ),
+      );
+      expect(processButtons).toEqual([true, false]);
+      // Process replaces Open on a Not processed row; the other row keeps Open.
+      const openButtons = rows.map((row) =>
+        Array.from(row.querySelectorAll('button')).some(
+          (item) => item.textContent?.trim() === 'Open',
+        ),
+      );
+      expect(openButtons).toEqual([false, true]);
+      expect(rows[0]?.querySelector('[data-label="Type"]')?.textContent?.trim()).toBe('Not chosen');
+      expect(
+        rows[0]?.querySelector('button[aria-label^="Process"]')?.getAttribute('aria-label'),
+      ).toBe('Process Recording 2026-10-29 14:05');
+    });
+
+    it('filters the projects whose type is not chosen', async () => {
+      const { fixture } = await setupProcess(vi.fn());
+      const component = fixture.componentInstance;
+
+      component.updateTypeFilter({ target: { value: 'none' } } as unknown as Event);
+
+      expect(component.visibleProjects().map((project) => project.id)).toEqual(['recorded']);
+    });
+
+    it('starts processing with the dialog choices and opens the processing screen', async () => {
+      const startProcessing = vi.fn(() => of({ id: 'job-1' }));
+      const { fixture, dialogResult, openDialog, navigate } = await setupProcess(startProcessing);
+
+      fixture.componentInstance.processProject(NOT_PROCESSED);
+      expect(openDialog).toHaveBeenCalledOnce();
+      expect(startProcessing).not.toHaveBeenCalled();
+
+      dialogResult.next({ mode: 'meeting', sourceLanguage: 'it' });
+
+      expect(startProcessing).toHaveBeenCalledWith('recorded', {
+        mode: 'meeting',
+        sourceLanguage: 'it',
+      });
+      expect(navigate).toHaveBeenCalledWith(['/projects', 'recorded']);
+    });
+
+    it('starts nothing when the dialog is cancelled', async () => {
+      const startProcessing = vi.fn(() => of({ id: 'job-1' }));
+      const { fixture, dialogResult, navigate } = await setupProcess(startProcessing);
+
+      fixture.componentInstance.processProject(NOT_PROCESSED);
+      dialogResult.next(undefined);
+
+      expect(startProcessing).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('shows the API refusal in its language and stays on the list', async () => {
+      const startProcessing = vi.fn(() =>
+        throwError(
+          () =>
+            new NarrastepApiError(
+              'PROJECT_TYPE_REQUIRED',
+              'Choose a project type before processing this project.',
+              {},
+              409,
+            ),
+        ),
+      );
+      const { fixture, dialogResult, navigate } = await setupProcess(startProcessing);
+
+      fixture.componentInstance.processProject(NOT_PROCESSED);
+      dialogResult.next({ mode: 'meeting' });
+      fixture.detectChanges();
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+        'Choose a project type before processing',
+      );
     });
   });
 });
