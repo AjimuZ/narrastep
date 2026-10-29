@@ -1,145 +1,137 @@
 <section class="page">
-  <header class="page-header panel library-hero">
-    <div>
-      <p class="eyebrow">Local project library</p>
-      <h1>Turn recorded work into reusable knowledge.</h1>
-      <p class="muted">
-        Videos, transcripts, screenshots, and exports stay in your local Narrastep data directory.
-      </p>
-    </div>
-    <div class="library-hero__actions">
-      <span class="privacy-pill">Stored locally</span>
-      <a class="button button--primary" routerLink="/projects/new">Create project</a>
-    </div>
+  <header class="page-header">
+    <h1>Projects</h1>
+    <a class="ns-button ns-button--primary" routerLink="/projects/new">
+      <ns-pixel-icon name="plus" />New project
+    </a>
   </header>
 
   @if (errorMessage(); as message) {
-    <div class="notice notice--error error-row" role="alert">
+    <div class="ns-notice ns-notice--error error-row" role="alert">
       <span>{{ message }}</span>
-      <button class="button button--quiet button--small" type="button" (click)="loadProjects()">
-        Try again
+      <button class="ns-button ns-button--small" type="button" (click)="loadProjects()">
+        <ns-pixel-icon name="refresh" />Try again
       </button>
     </div>
   }
 
   @if (loading()) {
-    <div class="project-grid" aria-label="Loading projects" aria-busy="true">
+    <div class="loading" aria-label="Loading projects" aria-busy="true">
       <span class="visually-hidden">Loading projects…</span>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
+      <ns-activity-line label="Loading projects" />
+      <div class="ns-placeholder"></div>
+      <div class="ns-placeholder"></div>
     </div>
   } @else if (projects().length === 0) {
-    <div class="panel empty-state">
-      <div class="empty-state__mark" aria-hidden="true">
-        <svg
-          class="icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="6 3 20 12 6 21 6 3" />
-        </svg>
-      </div>
-      <h2>Your project library is empty</h2>
-      <p class="muted">
-        Create a project, add one screen recording, and Narrastep will prepare it for review.
-      </p>
-      <a class="button button--primary" routerLink="/projects/new">Create your first project</a>
-    </div>
+    <ns-window title="No projects yet" [primary]="true">
+      <p class="muted">Create a project, then upload a screen recording to process it.</p>
+      <a class="ns-button ns-button--primary" routerLink="/projects/new">
+        <ns-pixel-icon name="plus" />New project
+      </a>
+    </ns-window>
   } @else {
-    <div class="list-heading">
-      <div>
-        <h2>Projects</h2>
-        <span class="muted">{{ visibleProjects().length }} shown · {{ total() }} total</span>
-      </div>
-      <div class="library-controls" aria-label="Project library controls">
-        <label class="search-field">
-          <span class="visually-hidden">Search projects</span>
+    <ns-window [title]="'All projects (' + total() + ')'" [primary]="true">
+      <div class="library-controls">
+        <label class="ns-form-row search-field">
+          <span class="ns-label">Search</span>
           <input
+            class="ns-field"
             type="search"
-            placeholder="Search projects"
+            placeholder="Name or description"
             [value]="searchQuery()"
             (input)="updateSearch($event)"
           />
         </label>
-        <label>
-          <span class="visually-hidden">Filter by status</span>
-          <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
-            <option value="all">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="uploaded">Uploaded</option>
-            <option value="queued">Queued</option>
-            <option value="processing">Processing</option>
-            <option value="review">Review</option>
-            <option value="exporting">Exporting</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
+        <label class="ns-form-row">
+          <span class="ns-label">Type</span>
+          <select class="ns-field" [value]="typeFilter()" (change)="updateTypeFilter($event)">
+            <option value="all">All types</option>
+            @for (type of projectTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
           </select>
         </label>
-        <label>
-          <span class="visually-hidden">Sort projects</span>
-          <select [value]="sortOrder()" (change)="updateSortOrder($event)">
-            <option value="updated_desc">Recently updated</option>
-            <option value="created_desc">Recently created</option>
+        <label class="ns-form-row">
+          <span class="ns-label">Status</span>
+          <select class="ns-field" [value]="statusFilter()" (change)="updateStatusFilter($event)">
+            <option value="all">All statuses</option>
+            @for (status of statusOptions; track status.value) {
+              <option [value]="status.value">{{ status.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="ns-form-row">
+          <span class="ns-label">Sort by</span>
+          <select class="ns-field" [value]="sortOrder()" (change)="updateSortOrder($event)">
+            <option value="updated_desc">Last change</option>
+            <option value="created_desc">Date created</option>
             <option value="name_asc">Name A–Z</option>
           </select>
         </label>
       </div>
-    </div>
 
-    @if (visibleProjects().length === 0) {
-      <div class="panel filtered-empty" role="status">
-        <h3>No projects match these filters</h3>
-        <p class="muted">Change the search text or status to see more local projects.</p>
-      </div>
-    } @else {
-      <div class="project-list" aria-label="Projects">
-        <div class="project-list__header" aria-hidden="true">
-          <span>Project</span><span>Status</span><span>Type</span><span>Duration</span
-          ><span>Segments</span><span>Screenshots</span><span>Updated</span><span>Actions</span>
+      @if (visibleProjects().length === 0) {
+        <div class="ns-notice filtered-empty" role="status">
+          No project matches these filters. Change the search or the filters.
         </div>
-        @for (project of visibleProjects(); track project.id) {
-          <article class="panel project-row">
-            <div class="project-identity">
-              <h3>{{ project.name }}</h3>
-              <p class="muted">{{ project.description || 'No project description.' }}</p>
-            </div>
-            <div data-label="Status">
-              <span class="status-badge" [attr.data-status]="project.status">{{
-                project.status
-              }}</span>
-            </div>
-            <div class="mode" data-label="Type">{{ modeLabel(project.mode) }}</div>
-            <div data-label="Duration">{{ durationLabel(project) }}</div>
-            <div data-label="Segments">{{ project.activeSegmentCount ?? 0 }}</div>
-            <div data-label="Screenshots">{{ project.screenshotCount ?? 0 }}</div>
-            <time [attr.datetime]="project.updatedAt" data-label="Updated">
-              {{ project.updatedAt | date: 'short' }}
-            </time>
-            <footer>
-              <button
-                class="button button--secondary button--small"
-                type="button"
-                (click)="openProject(project)"
-              >
-                Open project
-              </button>
-              <button
-                class="button button--danger button--small"
-                type="button"
-                [disabled]="deletingProjectId() === project.id"
-                (click)="confirmDelete(project)"
-              >
-                {{ deletingProjectId() === project.id ? 'Deleting…' : 'Delete' }}
-              </button>
-            </footer>
-          </article>
-        }
-      </div>
-    }
+      } @else {
+        <p class="muted list-count" role="status">
+          {{ visibleProjects().length }} of {{ total() }} shown
+        </p>
+        <ul class="project-list" aria-label="Projects">
+          <li class="project-list__header" aria-hidden="true">
+            <span>Project</span><span>Status</span><span>Type</span><span>Duration</span
+            ><span>Segments</span><span>Screenshots</span><span>Last change</span
+            ><span class="visually-hidden">Actions</span>
+          </li>
+          @for (project of visibleProjects(); track project.id) {
+            <li class="ns-row project-row">
+              <div class="project-identity">
+                <h3>{{ project.name }}</h3>
+                @if (project.description) {
+                  <p class="muted">{{ project.description }}</p>
+                }
+              </div>
+              <div data-label="Status">
+                <ns-status-pill
+                  [label]="statusLabel(project).label"
+                  [tone]="statusLabel(project).tone"
+                />
+              </div>
+              <div data-label="Type">{{ modeLabel(project.mode) }}</div>
+              <div class="mono" data-label="Duration">{{ durationLabel(project) }}</div>
+              <div class="mono" data-label="Segments">{{ project.activeSegmentCount ?? 0 }}</div>
+              <div class="mono" data-label="Screenshots">{{ project.screenshotCount ?? 0 }}</div>
+              <div data-label="Last change">
+                <time [attr.datetime]="project.updatedAt">{{
+                  project.updatedAt | date: 'short'
+                }}</time>
+              </div>
+              <div class="project-actions">
+                <button
+                  class="ns-button ns-button--small"
+                  type="button"
+                  [attr.aria-label]="'Open ' + project.name"
+                  (click)="openProject(project)"
+                >
+                  <ns-pixel-icon name="chevron-right" />Open
+                </button>
+                <button
+                  class="ns-button ns-button--small ns-button--danger"
+                  type="button"
+                  [attr.aria-label]="'Delete ' + project.name"
+                  [disabled]="deletingProjectId() === project.id"
+                  (click)="confirmDelete(project)"
+                >
+                  <ns-pixel-icon name="trash" />{{
+                    deletingProjectId() === project.id ? 'Deleting…' : 'Delete'
+                  }}
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </ns-window>
   }
 </section>

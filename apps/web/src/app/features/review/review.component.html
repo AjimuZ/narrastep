@@ -1,29 +1,29 @@
-<section class="review-page">
-  <header class="review-header">
-    <div>
-      <a class="back-link" routerLink="/projects">← Projects</a>
-      <p class="eyebrow">Review workspace</p>
-      <h1>{{ project()?.name || 'Loading review…' }}</h1>
+<section class="page review-page">
+  <header class="page-header">
+    <div class="review-title">
+      <a class="back-link" routerLink="/projects">
+        <ns-pixel-icon class="back-link__icon" name="chevron-right" />Back to projects
+      </a>
+      <h1>Review</h1>
+      <p>{{ project()?.name || 'Loading project…' }}</p>
     </div>
-    <div class="review-header__actions">
+    <div class="page-header__actions">
       @if (dirtyCount() > 0) {
-        <span class="unsaved" role="status">{{ dirtyCount() }} unsaved</span>
+        <span class="unsaved" role="status">
+          <ns-status-pill [label]="dirtyCount() + ' unsaved'" tone="wait" />
+        </span>
       }
-      <a class="button button--primary" [routerLink]="['/projects', projectId(), 'export']">
-        Export project
+      <a class="ns-button" [routerLink]="['/projects', projectId(), 'export']">
+        <ns-pixel-icon name="export" />Export
       </a>
     </div>
   </header>
 
   @if (errorMessage(); as message) {
-    <div class="notice notice--error workspace-notice" role="alert">
+    <div class="ns-notice ns-notice--error workspace-notice" role="alert">
       <span>{{ message }}</span>
-      <button
-        class="button button--quiet button--small"
-        type="button"
-        (click)="errorMessage.set(null)"
-      >
-        Dismiss
+      <button class="ns-button ns-button--small" type="button" (click)="errorMessage.set(null)">
+        <ns-pixel-icon name="close" />Dismiss
       </button>
     </div>
   }
@@ -31,7 +31,7 @@
 
   @if (!loading()) {
     <div class="workspace-switcher" role="radiogroup" aria-label="Review workspace view">
-      <label>
+      <label class="workspace-switcher__option">
         <input
           id="review-view-video"
           type="radio"
@@ -40,7 +40,7 @@
         />
         <span>Video</span>
       </label>
-      <label>
+      <label class="workspace-switcher__option">
         <input
           id="review-view-transcript"
           type="radio"
@@ -50,7 +50,7 @@
         />
         <span>Transcript</span>
       </label>
-      <label>
+      <label class="workspace-switcher__option">
         <input
           id="review-view-screenshot"
           type="radio"
@@ -64,31 +64,22 @@
 
   @if (loading()) {
     <div class="review-grid loading-grid" aria-busy="true">
-      <span class="visually-hidden">Loading review workspace…</span>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
+      <span class="visually-hidden">Loading review…</span>
+      <ns-activity-line class="loading-line" label="Loading review" />
+      <div class="ns-placeholder"></div>
+      <div class="ns-placeholder"></div>
+      <div class="ns-placeholder"></div>
     </div>
   } @else {
     <div class="review-grid" [style.--editor-pane-width]="editorPaneWidth()">
-      <aside
-        id="review-video-panel"
-        class="panel video-panel"
-        aria-labelledby="video-panel-heading"
-      >
-        <header class="panel-heading">
-          <div>
-            <p class="eyebrow">Source evidence</p>
-            <h2 id="video-panel-heading">Video</h2>
-          </div>
-        </header>
+      <ns-window id="review-video-panel" class="review-pane video-pane" [title]="'Video'">
         <video #videoPlayer controls preload="metadata" [src]="videoUrl()">
-          Your browser does not support the native video player.
+          This browser cannot play the video.
         </video>
         <div class="video-controls">
-          <div class="field playback-field">
-            <label for="playback-rate">Playback speed</label>
-            <select id="playback-rate" (change)="setPlaybackRate($event)">
+          <div class="ns-form-row playback-speed">
+            <label class="ns-label" for="playback-rate">Playback speed</label>
+            <select id="playback-rate" class="ns-field" (change)="setPlaybackRate($event)">
               <option value="0.5">0.5×</option>
               <option value="0.75">0.75×</option>
               <option value="1" selected>1×</option>
@@ -98,70 +89,68 @@
             </select>
           </div>
           <button
-            class="button button--secondary button--small"
+            class="ns-button ns-button--small"
             type="button"
             [disabled]="!selectedSegment()"
             (click)="jumpToSelectedSegment()"
           >
-            Jump to selected segment
+            <ns-pixel-icon name="play" />Jump to selected segment
           </button>
           <button
-            class="button button--secondary button--small"
+            class="ns-button ns-button--small"
             type="button"
             [disabled]="!selectedSegment() || screenshotPending()"
             title="Recover current frame (R)"
             (click)="recoverCurrentFrame()"
           >
-            Recover current frame
+            <ns-pixel-icon name="refresh" />Recover current frame
           </button>
         </div>
         @if (selectedSegment(); as segment) {
-          <div class="selected-time">
-            <span class="muted">Selected range</span>
-            <strong
-              >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</strong
+          <p class="selected-time">
+            <span class="muted">Segment time</span>
+            <span class="mono"
+              >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
             >
-          </div>
+          </p>
         }
-      </aside>
+      </ns-window>
 
-      <aside
+      <ns-window
         id="review-structure-panel"
-        class="panel structure-panel"
-        aria-labelledby="structure-heading"
+        class="review-pane structure-pane"
+        [title]="'Segments'"
       >
-        <header class="panel-heading">
-          <div>
-            <p class="eyebrow">Review structure</p>
-            <h2 id="structure-heading">Segments</h2>
-          </div>
-          <span class="muted">{{ segments().length }}</span>
-        </header>
-
-        <div class="review-filters" aria-label="Transcript and evidence filters">
-          <label>
-            <span class="visually-hidden">Search transcript</span>
+        <div class="review-filters">
+          <label class="ns-form-row">
+            <span class="ns-label">Search</span>
             <input
               #segmentSearchInput
+              class="ns-field"
               type="search"
-              placeholder="Search transcript (/ )"
+              placeholder="Segment text"
+              aria-keyshortcuts="/"
               [value]="segmentSearch()"
               (input)="updateSegmentSearch($event)"
             />
           </label>
-          <label>
-            <span class="visually-hidden">Filter review problems</span>
-            <select [value]="evidenceFilter()" (change)="updateEvidenceFilter($event)">
+          <label class="ns-form-row">
+            <span class="ns-label">Show</span>
+            <select
+              class="ns-field"
+              [value]="evidenceFilter()"
+              (change)="updateEvidenceFilter($event)"
+            >
               <option value="all">All segments</option>
-              <option value="missing">Missing evidence</option>
-              <option value="duplicate">Duplicate cluster</option>
+              <option value="missing">No screenshot</option>
+              <option value="duplicate">Shared screenshot</option>
               <option value="low_confidence">Low confidence</option>
-              <option value="manual">Manual selection</option>
-              <option value="problems">Problems</option>
+              <option value="manual">Screenshot chosen by hand</option>
+              <option value="problems">Needs attention</option>
             </select>
           </label>
-          <label class="pane-resizer">
-            <span>Editor width</span>
+          <label class="ns-form-row pane-resizer">
+            <span class="ns-label">Editor width</span>
             <input
               type="range"
               min="1"
@@ -173,11 +162,15 @@
           </label>
         </div>
 
+        <p class="muted segment-count">
+          {{ segments().length }} {{ segments().length === 1 ? 'segment' : 'segments' }}
+        </p>
+
         @if (selectedForMergeCount() > 0) {
           <div class="merge-toolbar">
             <span>{{ selectedForMergeCount() }} selected for merge</span>
             <button
-              class="button button--secondary button--small"
+              class="ns-button ns-button--small"
               type="button"
               [disabled]="selectedForMergeCount() < 2 || structuralPending()"
               (click)="mergeSelectedSegments()"
@@ -187,13 +180,13 @@
           </div>
         }
 
-        <nav class="segment-rail" aria-label="Transcript segment structure">
+        <nav class="segment-rail" aria-label="Segments">
           @for (segment of filteredSegments(); track segment.id) {
             <div
-              class="segment-rail__item"
+              class="ns-row segment-rail__item"
               [id]="'segment-' + segment.id"
-              [class.selected]="selectedSegmentId() === segment.id"
               [class.dirty]="isDirty(segment)"
+              [attr.aria-current]="selectedSegmentId() === segment.id ? 'true' : null"
             >
               <button
                 class="segment-select"
@@ -202,7 +195,7 @@
                 (click)="selectSegment(segment)"
               >
                 <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
-                <span
+                <span class="mono"
                   >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
                 >
               </button>
@@ -216,132 +209,121 @@
                 />
                 Merge
               </label>
+              @if (isDirty(segment)) {
+                <ns-status-pill class="segment-rail__state" label="Unsaved" tone="wait" />
+              }
             </div>
           } @empty {
-            <div class="empty-panel">
+            <div class="empty-state">
               @if (segments().length === 0) {
                 <h3>No transcript segments</h3>
-                <p class="muted">This project does not contain active review segments.</p>
+                <p class="muted">This project has no segments to review.</p>
               } @else {
                 <h3>No segments match</h3>
-                <p class="muted">Change the transcript search or evidence filter.</p>
+                <p class="muted">Change the search or the filter.</p>
               }
             </div>
           }
         </nav>
-      </aside>
+      </ns-window>
 
-      <section
+      <ns-window
         id="review-transcript-panel"
-        class="panel transcript-panel"
-        aria-labelledby="transcript-heading"
+        class="review-pane transcript-pane"
+        [title]="'Transcript'"
+        [primary]="true"
         [attr.aria-busy]="structuralPending()"
       >
-        <header class="panel-heading transcript-heading">
-          <div>
-            <p class="eyebrow">Reviewed content</p>
-            <h2 id="transcript-heading">Transcript</h2>
-          </div>
-          <span class="muted">{{ segments().length }} segments</span>
-        </header>
+        @if (selectedSegment(); as segment) {
+          <article class="segment" [class.dirty]="isDirty(segment)">
+            <header class="segment__header">
+              <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
+              <span class="mono"
+                >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
+              >
+            </header>
 
-        <div class="segment-list">
-          @if (selectedSegment(); as segment) {
-            <article class="segment selected" [class.dirty]="isDirty(segment)">
-              <header>
-                <div class="segment-select">
-                  <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
-                  <span
-                    >{{ timeLabel(segment.startSeconds) }} –
-                    {{ timeLabel(segment.endSeconds) }}</span
-                  >
-                </div>
-              </header>
-
-              <div class="segment-meta">
-                <span>{{ confidenceLabel(segment.confidence) }}</span>
-                @if (segment.speakerLabel) {
-                  <span>{{ segment.speakerLabel }}</span>
-                }
-                @if (isDirty(segment)) {
-                  <span class="dirty-label">Unsaved edit</span>
-                }
-              </div>
-
-              <label class="visually-hidden" [for]="'reviewed-' + segment.id">
-                Reviewed text for segment {{ segment.segmentIndex + 1 }}
-              </label>
-              <textarea
-                [id]="'reviewed-' + segment.id"
-                [value]="reviewedText(segment)"
-                [disabled]="structuralPending()"
-                (input)="updateEditedText(segment.id, $event)"
-                (select)="captureCaret(segment.id, $event)"
-                (click)="captureCaret(segment.id, $event)"
-                (keyup)="captureCaret(segment.id, $event)"
-              ></textarea>
-
-              <details>
-                <summary>Original transcription</summary>
-                <p>{{ segment.rawText }}</p>
-              </details>
-
-              <footer>
-                <button
-                  class="button button--quiet button--small"
-                  type="button"
-                  [disabled]="structuralPending() || isDirty(segment)"
-                  (click)="splitSegment(segment)"
-                >
-                  Split at caret
-                </button>
-                <button
-                  class="button button--primary button--small"
-                  type="button"
-                  [disabled]="
-                    structuralPending() || !isDirty(segment) || savingSegmentIds().has(segment.id)
-                  "
-                  (click)="saveSegment(segment)"
-                >
-                  {{ savingSegmentIds().has(segment.id) ? 'Saving…' : 'Save text' }}
-                </button>
-              </footer>
-            </article>
-          } @else {
-            <div class="empty-panel">
-              <h3>No transcript segments</h3>
-              <p class="muted">This project does not contain active review segments.</p>
+            <div class="segment-meta">
+              <span>{{ confidenceLabel(segment.confidence) }}</span>
+              @if (segment.speakerLabel) {
+                <span>{{ segment.speakerLabel }}</span>
+              }
+              @if (isDirty(segment)) {
+                <ns-status-pill label="Unsaved edit" tone="wait" />
+              }
             </div>
-          }
-        </div>
-      </section>
 
-      <aside
-        id="review-screenshot-panel"
-        class="panel screenshot-panel"
-        aria-labelledby="screenshot-heading"
-      >
-        <header class="panel-heading">
-          <div>
-            <p class="eyebrow">Visual evidence</p>
-            <h2 id="screenshot-heading">Screenshot</h2>
+            <label class="visually-hidden" [for]="'reviewed-' + segment.id">
+              Reviewed text for segment {{ segment.segmentIndex + 1 }}
+            </label>
+            <textarea
+              class="ns-field"
+              [id]="'reviewed-' + segment.id"
+              [value]="reviewedText(segment)"
+              [disabled]="structuralPending()"
+              (input)="updateEditedText(segment.id, $event)"
+              (select)="captureCaret(segment.id, $event)"
+              (click)="captureCaret(segment.id, $event)"
+              (keyup)="captureCaret(segment.id, $event)"
+            ></textarea>
+
+            <details>
+              <summary>Original transcription</summary>
+              <p>{{ segment.rawText }}</p>
+            </details>
+
+            <footer class="segment__actions">
+              <button
+                class="ns-button ns-button--small"
+                type="button"
+                [disabled]="structuralPending() || isDirty(segment)"
+                (click)="splitSegment(segment)"
+              >
+                Split at caret
+              </button>
+              <button
+                class="ns-button ns-button--primary"
+                type="button"
+                aria-keyshortcuts="Control+S Meta+S"
+                [disabled]="
+                  structuralPending() || !isDirty(segment) || savingSegmentIds().has(segment.id)
+                "
+                (click)="saveSegment(segment)"
+              >
+                <ns-pixel-icon name="check" />{{
+                  savingSegmentIds().has(segment.id) ? 'Saving…' : 'Save text'
+                }}
+              </button>
+            </footer>
+          </article>
+        } @else {
+          <div class="empty-state">
+            <h3>No transcript segments</h3>
+            <p class="muted">This project has no segments to review.</p>
           </div>
-        </header>
+        }
+      </ns-window>
 
+      <ns-window
+        id="review-screenshot-panel"
+        class="review-pane screenshot-pane"
+        [title]="'Screenshot'"
+      >
         @if (!selectedSegment()) {
-          <div class="empty-panel">
+          <div class="empty-state">
             <h3>Select a transcript segment</h3>
-            <p class="muted">Its primary screenshot and alternatives will appear here.</p>
+            <p class="muted">Its screenshots appear here.</p>
           </div>
         } @else if (screenshotLoading()) {
           <div class="screenshot-loading" aria-busy="true">
-            <span class="visually-hidden">Loading screenshot choices…</span>
-            <div class="skeleton"></div>
+            <span class="visually-hidden">Loading screenshots…</span>
+            <div class="ns-placeholder"></div>
           </div>
         } @else {
           @if (primaryScreenshot(); as primary) {
             <figure class="primary-shot">
               <button
+                class="media-frame"
                 type="button"
                 (click)="previewScreenshot(primary)"
                 aria-label="Open full-size primary screenshot"
@@ -352,13 +334,13 @@
                 />
               </button>
               <figcaption>
-                <div>
-                  <span class="status-badge">Primary</span>
+                <span class="pills">
+                  <ns-status-pill label="Primary" tone="info" />
                   @if (primary.isUserSelected) {
-                    <span class="user-choice">User selected</span>
+                    <ns-status-pill label="User selected" tone="ok" />
                   }
-                </div>
-                <strong>{{ timeLabel(primary.timestampSeconds) }}</strong>
+                </span>
+                <span class="mono">{{ timeLabel(primary.timestampSeconds) }}</span>
               </figcaption>
             </figure>
             <dl class="evidence-metadata">
@@ -368,47 +350,48 @@
               </div>
               <div>
                 <dt>Visual change</dt>
-                <dd>{{ primary.visualChangeScore ?? '—' }}</dd>
+                <dd class="mono">{{ primary.visualChangeScore ?? '—' }}</dd>
               </div>
               <div>
                 <dt>Text change</dt>
-                <dd>{{ primary.textChangeScore ?? '—' }}</dd>
+                <dd class="mono">{{ primary.textChangeScore ?? '—' }}</dd>
               </div>
               <div>
                 <dt>Coverage</dt>
-                <dd>{{ primary.confidence ?? '—' }}</dd>
+                <dd class="mono">{{ primary.confidence ?? '—' }}</dd>
               </div>
               <div>
                 <dt>Shared segments</dt>
-                <dd>{{ primary.sharedSegmentCount ?? 1 }}</dd>
+                <dd class="mono">{{ primary.sharedSegmentCount ?? 1 }}</dd>
               </div>
               <div>
-                <dt>Materialization</dt>
-                <dd>{{ primary.materializationState || 'png_ready' }}</dd>
+                <dt>Image file</dt>
+                <dd class="mono">{{ primary.materializationState || 'png_ready' }}</dd>
               </div>
             </dl>
             <div class="screenshot-actions">
               <button
-                class="button button--quiet button--small"
+                class="ns-button ns-button--small"
                 type="button"
                 (click)="previewScreenshot(primary)"
               >
-                Full-size preview
+                <ns-pixel-icon name="search" />View full size
               </button>
               <button
-                class="button button--danger button--small"
+                class="ns-button ns-button--small ns-button--danger"
                 type="button"
                 [disabled]="screenshotPending()"
                 (click)="removePrimaryScreenshot()"
               >
-                Remove primary
+                <ns-pixel-icon name="trash" />Remove primary
               </button>
             </div>
           } @else {
-            <div class="empty-panel no-primary">
+            <div class="empty-state no-primary">
               <h3>No primary screenshot</h3>
               <p class="muted">
-                The segment remains exportable. Choose a candidate below if one is useful.
+                The segment stays in the package without an image. Choose an alternative below if
+                one fits.
               </p>
             </div>
           }
@@ -420,7 +403,7 @@
                 @for (screenshot of alternativeScreenshots(); track screenshot.id) {
                   <article class="candidate">
                     <button
-                      class="candidate__preview"
+                      class="media-frame"
                       type="button"
                       (click)="previewScreenshot(screenshot)"
                       [attr.aria-label]="
@@ -432,13 +415,13 @@
                         [alt]="'Screenshot candidate at ' + timeLabel(screenshot.timestampSeconds)"
                       />
                     </button>
-                    <div>
+                    <div class="candidate__footer">
                       <span>
-                        {{ timeLabel(screenshot.timestampSeconds) }} ·
-                        {{ screenshot.selectionReason || 'candidate' }}
+                        <span class="mono">{{ timeLabel(screenshot.timestampSeconds) }}</span> ·
+                        {{ screenshot.selectionReason || 'alternative' }}
                       </span>
                       <button
-                        class="button button--secondary button--small"
+                        class="ns-button ns-button--small"
                         type="button"
                         [disabled]="screenshotPending()"
                         [attr.aria-label]="
@@ -454,12 +437,10 @@
               </div>
             </section>
           } @else if (!primaryScreenshot()) {
-            <p class="muted candidate-empty">
-              No screenshot candidates are available for this segment.
-            </p>
+            <p class="muted candidate-empty">This segment has no screenshots.</p>
           }
         }
-      </aside>
+      </ns-window>
     </div>
   }
 </section>

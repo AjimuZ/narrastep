@@ -1,3 +1,4 @@
+// Unit tests for the review screen: editing, structure changes, screenshots and markup.
 import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -394,7 +395,7 @@ describe('ReviewComponent', () => {
       'input[type="checkbox"]',
     ) as HTMLInputElement;
     const saveButton = fixture.nativeElement.querySelector(
-      '.segment footer .button--primary',
+      '.segment__actions .ns-button--primary',
     ) as HTMLButtonElement;
     expect(component.structuralPending()).toBe(true);
     expect(textarea.disabled).toBe(true);
@@ -540,5 +541,50 @@ describe('ReviewComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('No transcript segments');
     expect(fixture.nativeElement.textContent).toContain('Select a transcript segment');
     expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('renders pane windows with the transcript as the only primary window and a current segment row', async () => {
+    const { fixture } = await setup({ segments: [SEGMENT, SECOND_SEGMENT] });
+    const root = fixture.nativeElement as HTMLElement;
+
+    const titles = [...root.querySelectorAll('.ns-window__title')].map((title) =>
+      title.textContent?.trim(),
+    );
+    expect(titles).toEqual(['Video', 'Segments', 'Transcript', 'Screenshot']);
+    const primary = root.querySelectorAll('.ns-window--primary');
+    expect(primary).toHaveLength(1);
+    expect(primary[0]?.closest('#review-transcript-panel')).not.toBeNull();
+    expect(root.querySelectorAll('.ns-button--primary')).toHaveLength(1);
+
+    const rows = [...root.querySelectorAll('.segment-rail .ns-row')] as HTMLElement[];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.getAttribute('aria-current')).toBe('true');
+    expect(rows[1]?.hasAttribute('aria-current')).toBe(false);
+    expect(root.textContent).toContain('2 segments');
+  });
+
+  it('links to the export screen and shows screenshot states as words', async () => {
+    const { fixture } = await setup();
+    const root = fixture.nativeElement as HTMLElement;
+
+    const exportLink = [...root.querySelectorAll('a')].find(
+      (link) => link.textContent?.trim() === 'Export',
+    );
+    expect(exportLink?.getAttribute('href')).toBe('/projects/project-1/export');
+    const pills = [...root.querySelectorAll('ns-status-pill')].map((pill) =>
+      pill.textContent?.trim(),
+    );
+    expect(pills).toContain('Primary');
+  });
+
+  it('shows the unsaved count and an unsaved word on the edited segment', async () => {
+    const { fixture } = await setup();
+    fixture.componentInstance.editedTexts.set({ [SEGMENT.id]: 'Changed text.' });
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('.unsaved[role="status"]')?.textContent).toContain('1 unsaved');
+    expect(root.querySelector('.segment-rail__item.dirty')?.textContent).toContain('Unsaved');
+    expect(root.querySelector('article.segment.dirty')?.textContent).toContain('Unsaved edit');
   });
 });

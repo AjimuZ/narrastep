@@ -1,3 +1,4 @@
+// Export screen: package options, size estimate, creation progress and the package history.
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -16,10 +17,32 @@ import { EMPTY, catchError, finalize, forkJoin, of, switchMap, tap } from 'rxjs'
 import { ExportEstimate, Project, ProjectExport } from '../../core/api.models';
 import { NarrastepApiError } from '../../core/services/api-error.interceptor';
 import { ApiService } from '../../core/services/api.service';
+import { StatusLabel, exportStatusLabel } from '../../shared/status-labels';
+import {
+  ActivityLineComponent,
+  PixelIconComponent,
+  StatusPillComponent,
+  WindowComponent,
+} from '../../shared/ui';
 
+/** Words for the stages the export worker persists; other stages fall back to a generic word. */
+const EXPORT_STAGE_LABELS: Record<string, string> = {
+  queued: 'Waiting to start',
+  collecting_evidence: 'Collecting the reviewed evidence',
+  building_package: 'Building the package',
+};
+
+/** Creates and lists the immutable packages of one project; `projectId` comes from the route. */
 @Component({
   selector: 'ns-export',
-  imports: [DatePipe, RouterLink],
+  imports: [
+    ActivityLineComponent,
+    DatePipe,
+    PixelIconComponent,
+    RouterLink,
+    StatusPillComponent,
+    WindowComponent,
+  ],
   templateUrl: './export.component.html',
   styleUrl: './export.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -83,7 +106,12 @@ export class ExportComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false)),
         catchError((error: unknown) => {
-          this.errorMessage.set(this.errorText(error, 'Narrastep could not load export history.'));
+          this.errorMessage.set(
+            this.errorText(
+              error,
+              'The package history could not be loaded. Reload the page to try again.',
+            ),
+          );
           return EMPTY;
         }),
       )
@@ -124,7 +152,9 @@ export class ExportComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.creating.set(false)),
         catchError((error: unknown) => {
-          this.errorMessage.set(this.errorText(error, 'Narrastep could not generate this export.'));
+          this.errorMessage.set(
+            this.errorText(error, 'The package could not be created. Try again.'),
+          );
           return EMPTY;
         }),
       )
@@ -136,15 +166,25 @@ export class ExportComponent implements OnInit {
     return this.api.exportDownloadUrl(exportId);
   }
 
-  /** Formats optional ZIP size metadata without implying a value before completion. */
+  /** Formats optional ZIP size metadata; returns "Unknown" instead of implying a value. */
   formatFileSize(bytes: number | null): string {
     if (bytes === null) {
-      return 'Size unavailable';
+      return 'Unknown';
     }
     if (bytes < 1024 * 1024) {
       return `${(bytes / 1024).toFixed(1)} KB`;
     }
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  /** Word and pill tone for an export state. */
+  statusLabel(item: ProjectExport): StatusLabel {
+    return exportStatusLabel(item.status);
+  }
+
+  /** Readable word for the persisted stage of an active export; never a raw stage code. */
+  stageLabel(item: ProjectExport): string {
+    return (item.currentStage && EXPORT_STAGE_LABELS[item.currentStage]) || 'Creating the package';
   }
 
   /** Reads one numeric immutable-export metric while supporting older export records. */

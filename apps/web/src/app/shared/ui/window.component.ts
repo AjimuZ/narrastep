@@ -25,6 +25,9 @@ let nextWindowId = 0;
       display: block;
     }
   `,
+  // A static `title="…"` attribute would also stay on the host and show a native tooltip over the
+  // whole window; the input is the heading only, so the attribute is removed.
+  host: { '[attr.title]': 'null' },
 })
 export class WindowComponent {
   readonly title = input.required<string>();

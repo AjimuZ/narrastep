@@ -19,9 +19,21 @@ All notable changes to Narrastep are documented in this file.
 - Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
   activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and
   the Pixelify Sans title font bundled locally (SIL OFL 1.1; notice in `THIRD_PARTY_NOTICES.md`).
-  No screen uses them yet, so the interface looks unchanged until the restyle.
+  Every screen uses them since the restyle below.
 
 ### Changed
+
+- New pixel interface: a compact header with the product name and a service status (for example
+  "Services ready" or "Services offline"), and a menu on the left with Projects and New project
+  that becomes a bar at the top on narrow screens. Every screen and dialog now uses flat framed
+  windows, pixel icons and the Pixelify Sans titles, without gradients or shadows.
+- Plainer wording everywhere: buttons say what they do ("Create project", "Upload video",
+  "Start processing", "Open review", "Create package", "Download package"), taglines are gone, an
+  export is always called a package, errors say what to do next, and project states use words
+  such as "Not processed", "Ready for review" and "Package ready".
+- The projects list can also be filtered by project type.
+- The processing screen shows one overall progress gauge with the real percentage, a full gauge
+  for finished stages and a moving line for the running stage, instead of a single bar.
 
 - The interface styles now read every color, font, space and corner from one token file
   (`apps/web/src/styles/tokens.scss`) instead of two overlapping alias sets. Corners are now

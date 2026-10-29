@@ -1,3 +1,4 @@
+// Projects screen: the local project list with search, type and status filters, sort and deletion.
 import { DatePipe } from '@angular/common';
 import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import {
@@ -19,10 +20,30 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../shared/dialogs/confirm-dialog.component';
+import { PROJECT_TYPES, projectTypeLabel } from '../../shared/project-types';
+import {
+  PROJECT_STATUS_OPTIONS,
+  StatusLabel,
+  projectStatusLabel,
+} from '../../shared/status-labels';
+import {
+  ActivityLineComponent,
+  PixelIconComponent,
+  StatusPillComponent,
+  WindowComponent,
+} from '../../shared/ui';
 
 @Component({
   selector: 'ns-projects-page',
-  imports: [DatePipe, DialogModule, RouterLink],
+  imports: [
+    ActivityLineComponent,
+    DatePipe,
+    DialogModule,
+    PixelIconComponent,
+    RouterLink,
+    StatusPillComponent,
+    WindowComponent,
+  ],
   templateUrl: './projects-page.component.html',
   styleUrl: './projects-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,16 +56,24 @@ export class ProjectsPageComponent {
   readonly deletingProjectId = signal<string | null>(null);
   readonly searchQuery = signal('');
   readonly statusFilter = signal<'all' | ProjectStatus>('all');
+  readonly typeFilter = signal<'all' | ProjectMode>('all');
+  readonly projectTypes = PROJECT_TYPES;
+  readonly statusOptions = PROJECT_STATUS_OPTIONS;
   readonly sortOrder = signal<'updated_desc' | 'created_desc' | 'name_asc'>('updated_desc');
   readonly visibleProjects = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
     const status = this.statusFilter();
+    const type = this.typeFilter();
     const projects = this.projects().filter((project) => {
       const matchesQuery =
         query.length === 0 ||
         project.name.toLocaleLowerCase().includes(query) ||
         (project.description ?? '').toLocaleLowerCase().includes(query);
-      return matchesQuery && (status === 'all' || project.status === status);
+      return (
+        matchesQuery &&
+        (status === 'all' || project.status === status) &&
+        (type === 'all' || project.mode === type)
+      );
     });
 
     return projects.sort((left, right) => {
@@ -108,7 +137,7 @@ export class ProjectsPageComponent {
     const data: ConfirmDialogData = {
       title: `Delete “${project.name}”?`,
       message:
-        'This permanently removes the project metadata, uploaded video, transcript, screenshots, and exports from local storage.',
+        'The video, transcript, screenshots and packages of this project are deleted from this computer. This cannot be undone.',
       confirmLabel: 'Delete project',
       danger: true,
     };
@@ -142,13 +171,17 @@ export class ProjectsPageComponent {
 
   /** Presents project types as product language instead of API enum syntax. */
   modeLabel(mode: ProjectMode): string {
-    const labels: Record<ProjectMode, string> = {
-      task_briefing: 'Task briefing',
-      meeting: 'Meeting',
-      tutorial: 'Tutorial',
-      general: 'Generic',
-    };
-    return labels[mode];
+    return projectTypeLabel(mode);
+  }
+
+  /** State word and pill tone of a project row. */
+  statusLabel(project: Project): StatusLabel {
+    return projectStatusLabel(project.status);
+  }
+
+  /** Limits the current local list to one project type. */
+  updateTypeFilter(event: Event): void {
+    this.typeFilter.set((event.target as HTMLSelectElement).value as 'all' | ProjectMode);
   }
 
   /** Applies a local project-library search without issuing network requests. */
@@ -172,7 +205,7 @@ export class ProjectsPageComponent {
   durationLabel(project: Project): string {
     const durationSeconds = project.videoAsset?.durationSeconds;
     if (durationSeconds === null || durationSeconds === undefined) {
-      return 'Not available';
+      return 'Unknown';
     }
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = Math.floor(durationSeconds % 60);
@@ -183,6 +216,6 @@ export class ProjectsPageComponent {
   private errorText(error: unknown): string {
     return error instanceof NarrastepApiError
       ? error.message
-      : 'Narrastep could not load the local project collection.';
+      : 'Narrastep could not reach its local service. Check that it is running, then try again.';
   }
 }

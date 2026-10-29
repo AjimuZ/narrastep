@@ -1,3 +1,4 @@
+// Unit tests of the New project screen: type cards, default name, options, upload and steps.
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
@@ -63,7 +64,7 @@ describe('NewProjectComponent', () => {
     const { fixture } = await setup();
     const host = fixture.nativeElement as HTMLElement;
     const details = host.querySelector<HTMLDetailsElement>('details.more-options');
-    const cards = host.querySelector('.mode-grid') as HTMLElement;
+    const cards = host.querySelector('.type-grid') as HTMLElement;
     const name = host.querySelector('#project-name') as HTMLElement;
 
     expect(cards.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -81,7 +82,7 @@ describe('NewProjectComponent', () => {
     try {
       const { fixture, component, createProject } = await setup();
       const host = fixture.nativeElement as HTMLElement;
-      const radios = host.querySelectorAll<HTMLInputElement>('.mode-card input[type="radio"]');
+      const radios = host.querySelectorAll<HTMLInputElement>('.type-card input[type="radio"]');
       const nameInput = host.querySelector('#project-name') as HTMLInputElement;
 
       expect(nameInput.placeholder).toBe('Tutorial 2026-10-05');
@@ -139,13 +140,13 @@ describe('NewProjectComponent', () => {
   it('offers the four project types and creates a task briefing', async () => {
     const { fixture, component, createProject } = await setup();
     const host = fixture.nativeElement as HTMLElement;
-    const cardTitles = Array.from(host.querySelectorAll('.mode-card strong')).map((title) =>
+    const cardTitles = Array.from(host.querySelectorAll('.type-card strong')).map((title) =>
       title.textContent?.trim(),
     );
-    const radios = host.querySelectorAll<HTMLInputElement>('.mode-card input[type="radio"]');
+    const radios = host.querySelectorAll<HTMLInputElement>('.type-card input[type="radio"]');
 
     expect(cardTitles).toEqual(['Task briefing', 'Meeting', 'Tutorial', 'Generic']);
-    expect(component.modes.map((mode) => mode.value)).toEqual([
+    expect(component.projectTypes.map((type) => type.value)).toEqual([
       'task_briefing',
       'meeting',
       'tutorial',
@@ -170,7 +171,7 @@ describe('NewProjectComponent', () => {
     component.onFileInput(event);
 
     expect(component.selectedFile()).toBeNull();
-    expect(component.fileError()).toContain('MP4, WebM, MOV, or MKV');
+    expect(component.fileError()).toContain('MP4, WebM, MOV or MKV');
   });
 
   it('reports real upload progress and advances only after the backend completes validation', async () => {
@@ -187,14 +188,16 @@ describe('NewProjectComponent', () => {
     progress.next({ state: 'uploading', percent: 37, asset: null });
     fixture.detectChanges();
 
-    const progressElement = fixture.nativeElement.querySelector('progress') as HTMLProgressElement;
-    const fileInput = fixture.nativeElement.querySelector('#video-file') as HTMLInputElement;
+    const host = fixture.nativeElement as HTMLElement;
+    const gauge = host.querySelector('ns-segmented-gauge [role="img"]') as HTMLElement;
+    const fileInput = host.querySelector('#video-file') as HTMLInputElement;
     expect(uploadVideo).toHaveBeenCalledWith(PROJECT.id, file);
     expect(component.uploading()).toBe(true);
     expect(component.currentStep()).toBe(2);
     expect(fileInput.disabled).toBe(true);
-    expect(progressElement.value).toBe(37);
-    expect(progressElement.closest('[aria-live="polite"]')?.textContent).toContain('37%');
+    expect(gauge.getAttribute('aria-label')).toBe('Upload 37%');
+    expect(gauge.closest('[aria-live="polite"]')?.textContent).toContain('37%');
+    expect(host.querySelector('.wizard-actions button')?.textContent?.trim()).toBe('Uploading…');
 
     const replacement = new File(['other-video'], 'other.mp4', { type: 'video/mp4' });
     component.onFileInput({
@@ -210,5 +213,59 @@ describe('NewProjectComponent', () => {
     expect(component.uploadPercent()).toBe(100);
     expect(component.currentStep()).toBe(3);
     expect(fixture.nativeElement.textContent).toContain('Ready to process');
+    expect(fixture.nativeElement.textContent).toContain('Start processing');
+  });
+
+  it('marks the current step and the finished steps in the step indicator', async () => {
+    const { fixture, component } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    const labels = () =>
+      Array.from(host.querySelectorAll('.steps li')).map((step) => step.textContent?.trim());
+    const current = () => host.querySelector('.steps [aria-current="step"]')?.textContent?.trim();
+
+    expect(labels()).toEqual(['1 Project', '2 Video', '3 Processing']);
+    expect(current()).toBe('1 Project');
+
+    component.createProject();
+    fixture.detectChanges();
+
+    expect(current()).toBe('2 Video');
+    expect(labels()[0]).toBe('Project (done)');
+    expect(host.querySelector('ns-window h2')?.textContent?.trim()).toBe('Video');
+  });
+
+  it('opens More options and marks the description when it is too long', async () => {
+    const { fixture, component, createProject } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    component.projectForm.controls.description.setValue('x'.repeat(501));
+
+    component.createProject();
+    fixture.detectChanges();
+
+    const description = host.querySelector('#project-description') as HTMLTextAreaElement;
+    expect(createProject).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLDetailsElement>('details.more-options')?.open).toBe(true);
+    expect(description.getAttribute('aria-invalid')).toBe('true');
+    expect(description.getAttribute('aria-describedby')).toContain('description-error');
+    expect(host.querySelector('#description-error')?.textContent).toContain('500 characters');
+  });
+
+  it('labels step one with the Create project action and the name help', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 9, 8, 0, 0));
+    try {
+      const { fixture } = await setup();
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(host.querySelector('h1')?.textContent?.trim()).toBe('New project');
+      expect(host.querySelector('button[type="submit"]')?.textContent?.trim()).toBe(
+        'Create project',
+      );
+      expect(host.querySelector('#project-name-help')?.textContent?.trim()).toBe(
+        'Leave empty to use “Tutorial 2026-01-09”.',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

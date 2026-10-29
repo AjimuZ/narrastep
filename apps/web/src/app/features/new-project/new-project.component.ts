@@ -1,3 +1,4 @@
+// New project screen: project type, name and options, then one video upload, then the processing start.
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,12 +15,20 @@ import { EMPTY, catchError, finalize } from 'rxjs';
 import { Project, ProjectMode } from '../../core/api.models';
 import { NarrastepApiError } from '../../core/services/api-error.interceptor';
 import { ApiService } from '../../core/services/api.service';
+import { PROJECT_TYPES } from '../../shared/project-types';
+import { PixelIconComponent, SegmentedGaugeComponent, WindowComponent } from '../../shared/ui';
 
 const SUPPORTED_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv']);
 
 @Component({
   selector: 'ns-new-project',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [
+    PixelIconComponent,
+    ReactiveFormsModule,
+    RouterLink,
+    SegmentedGaugeComponent,
+    WindowComponent,
+  ],
   templateUrl: './new-project.component.html',
   styleUrl: './new-project.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,28 +57,10 @@ export class NewProjectComponent implements OnInit {
   });
 
   /** The four ADR 0009 project types, in the documented order, with one line of help each. */
-  readonly modes: readonly { value: ProjectMode; label: string; detail: string }[] = [
-    {
-      value: 'task_briefing',
-      label: 'Task briefing',
-      detail: 'Someone explains a task or a problem you must solve later.',
-    },
-    {
-      value: 'meeting',
-      label: 'Meeting',
-      detail: 'A discussion whose decisions and key points need a summary.',
-    },
-    {
-      value: 'tutorial',
-      label: 'Tutorial',
-      detail: 'A procedure to repeat or teach, step by step.',
-    },
-    {
-      value: 'general',
-      label: 'Generic',
-      detail: 'Anything else, such as a demo or a recorded note.',
-    },
-  ];
+  readonly projectTypes = PROJECT_TYPES;
+
+  /** Names of the three wizard steps, in order; step `n` is `steps[n - 1]`. */
+  readonly steps = ['Project', 'Video', 'Processing'] as const;
 
   readonly languageSuggestions: readonly { code: string; label: string }[] = [
     { code: 'auto', label: 'Detect automatically' },
@@ -111,7 +102,12 @@ export class NewProjectComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.creating.set(false)),
         catchError((error: unknown) => {
-          this.requestError.set(this.errorText(error, 'Narrastep could not resume this project.'));
+          this.requestError.set(
+            this.errorText(
+              error,
+              'This project could not be opened. Go back to projects and try again.',
+            ),
+          );
           return EMPTY;
         }),
       )
@@ -141,7 +137,9 @@ export class NewProjectComponent implements OnInit {
    * to the generic label.
    */
   defaultName(now: Date = new Date()): string {
-    const type = this.modes.find((mode) => mode.value === this.projectForm.controls.mode.value);
+    const type = this.projectTypes.find(
+      (option) => option.value === this.projectForm.controls.mode.value,
+    );
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${type?.label ?? 'Generic'} ${now.getFullYear()}-${month}-${day}`;
@@ -175,7 +173,9 @@ export class NewProjectComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.creating.set(false)),
         catchError((error: unknown) => {
-          this.requestError.set(this.errorText(error, 'Narrastep could not create the project.'));
+          this.requestError.set(
+            this.errorText(error, 'The project could not be created. Try again.'),
+          );
           return EMPTY;
         }),
       )
@@ -232,7 +232,7 @@ export class NewProjectComponent implements OnInit {
     const files = event.dataTransfer?.files;
     if (!files || files.length !== 1) {
       this.selectedFile.set(null);
-      this.fileError.set('Choose exactly one video file.');
+      this.fileError.set('Drop one video at a time.');
       return;
     }
     this.selectFile(files.item(0));
@@ -256,7 +256,10 @@ export class NewProjectComponent implements OnInit {
         finalize(() => this.uploading.set(false)),
         catchError((error: unknown) => {
           this.requestError.set(
-            this.errorText(error, 'Narrastep could not validate or store this video.'),
+            this.errorText(
+              error,
+              'The video could not be stored. Try again or choose another video.',
+            ),
           );
           return EMPTY;
         }),
@@ -284,7 +287,7 @@ export class NewProjectComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.starting.set(false)),
         catchError((error: unknown) => {
-          this.requestError.set(this.errorText(error, 'Narrastep could not queue processing.'));
+          this.requestError.set(this.errorText(error, 'Processing could not start. Try again.'));
           return EMPTY;
         }),
       )
@@ -313,11 +316,11 @@ export class NewProjectComponent implements OnInit {
     }
     const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
     if (!SUPPORTED_EXTENSIONS.has(extension)) {
-      this.fileError.set('Choose an MP4, WebM, MOV, or MKV video.');
+      this.fileError.set('This file type is not supported. Choose an MP4, WebM, MOV or MKV video.');
       return;
     }
     if (file.size === 0) {
-      this.fileError.set('The selected file is empty.');
+      this.fileError.set('The file is empty. Choose another video.');
       return;
     }
     this.selectedFile.set(file);

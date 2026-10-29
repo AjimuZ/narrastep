@@ -48,7 +48,7 @@ const spritePath = 'public/icons/sprite.svg';
   `,
 })
 class HostComponent {
-  readonly percent = signal(40);
+  readonly percent = signal<number | null>(40);
   readonly selected = signal('a');
 }
 
@@ -67,6 +67,7 @@ describe('shared pixel primitives', () => {
     expect(title.textContent).toBe('Export');
     expect(section.classList).toContain('ns-window--primary');
     expect(section.textContent).toContain('Body');
+    expect(element.querySelector('ns-window')?.hasAttribute('title')).toBe(false);
   });
 
   it('draws an icon from the sprite and hides it from assistive technology', () => {
@@ -97,6 +98,15 @@ describe('shared pixel primitives', () => {
     fixture.componentInstance.percent.set(100);
     fixture.detectChanges();
     expect(read().filled).toBe(10);
+  });
+
+  it('draws an unknown value as a striped track without cells', () => {
+    const fixture = render();
+    fixture.componentInstance.percent.set(null);
+    fixture.detectChanges();
+    const gauge = (fixture.nativeElement as HTMLElement).querySelector('.ns-gauge') as HTMLElement;
+    expect(gauge.classList.contains('ns-gauge--unknown')).toBe(true);
+    expect(gauge.querySelectorAll('.ns-gauge__segment').length).toBe(0);
   });
 
   it('rounds the gauge down and handles out-of-range values', () => {

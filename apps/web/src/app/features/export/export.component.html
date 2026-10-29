@@ -1,91 +1,97 @@
-<section class="page export-page">
+<section class="page">
   <header class="page-header">
     <div>
-      <p class="eyebrow">Portable local package</p>
-      <h1>Export {{ project()?.name || 'project' }}</h1>
-      <p class="muted">
-        Generate an immutable ZIP containing reviewed evidence and evidence-only LLM input.
-      </p>
+      <h1>Export</h1>
+      <p>{{ project()?.name || 'Loading project…' }}</p>
     </div>
-    <a class="button button--quiet" [routerLink]="['/projects', projectId(), 'review']">
-      Back to review
-    </a>
+    <a class="ns-button" [routerLink]="['/projects', projectId(), 'review']">Back to review</a>
   </header>
 
   @if (errorMessage(); as message) {
-    <div class="notice notice--error export-notice" role="alert">{{ message }}</div>
+    <div class="ns-notice ns-notice--error page-error" role="alert">{{ message }}</div>
   }
 
   @if (loading()) {
-    <div class="export-layout" aria-busy="true">
-      <span class="visually-hidden">Loading exports…</span>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
+    <div class="loading" aria-label="Loading packages" aria-busy="true">
+      <span class="visually-hidden">Loading packages…</span>
+      <ns-activity-line label="Loading packages" />
+      <div class="ns-placeholder"></div>
+      <div class="ns-placeholder"></div>
     </div>
   } @else {
     <div class="export-layout">
-      <section class="panel export-options" aria-labelledby="options-heading">
-        <p class="eyebrow">New export</p>
-        <h2 id="options-heading">Narrastep ZIP</h2>
+      <ns-window class="options-window" title="New package" [primary]="true">
         <p class="muted">
-          The package preserves reviewed transcript order, every distinct primary screenshot, source
-          metadata, and reusable prompts that prohibit unsupported invention.
+          A package holds the reviewed transcript, the screenshots, the source details and prompts
+          that tell a language model to use only this evidence.
         </p>
 
-        <h3>Included files</h3>
-        <ul class="file-list">
+        <h3>Contents</h3>
+        <ul class="file-list mono">
           @for (file of standardFiles; track file) {
-            <li>
-              <span aria-hidden="true">
-                <svg
-                  class="icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </span>
-              {{ file }}
-            </li>
+            <li>{{ file }}</li>
           }
         </ul>
 
         <p class="muted">
-          Long recordings are also organized into chronological ChatGPT batches. Each batch is ready
-          to attach in one message using the configured limit: one evidence file and up to 19 images
-          by default.
+          Long recordings are also split into ChatGPT batches in time order. Each batch fits in one
+          message: one evidence file and up to 19 images by default.
         </p>
 
         <label class="video-option">
           <input
+            id="include-original-video"
             type="checkbox"
+            aria-describedby="include-original-video-help"
             [checked]="includeOriginalVideo()"
             (change)="setIncludeOriginalVideo($event)"
           />
-          <span>
-            <strong>Include the original video</strong>
-            <small>
-              Off by default. Enabling it can make the ZIP much larger and duplicates the source
-              evidence.
-            </small>
+          <span class="video-option__text">
+            <span class="ns-label">Include the original video</span>
+            <span class="ns-help" id="include-original-video-help">
+              Off by default. The video can make the package much larger.
+            </span>
           </span>
         </label>
 
-        @if (estimate(); as exportEstimate) {
-          <section class="export-estimate" aria-labelledby="estimate-heading" aria-live="polite">
-            <div class="estimate-heading">
-              <h3 id="estimate-heading">Export estimate</h3>
-              @if (exportEstimate.isApproximate) {
-                <span>Approximate</span>
-              }
+        <button
+          class="ns-button ns-button--primary create-action"
+          type="button"
+          [disabled]="creating() || !!currentExport()"
+          (click)="createExport()"
+        >
+          <ns-pixel-icon name="export" />{{
+            currentExport() || creating() ? 'Creating package…' : 'Create package'
+          }}
+        </button>
+
+        @if (currentExport(); as activeExport) {
+          <div class="current-export" aria-live="polite">
+            <div class="current-export__heading">
+              <h3>Current package</h3>
+              <ns-status-pill
+                [label]="statusLabel(activeExport).label"
+                [tone]="statusLabel(activeExport).tone"
+              />
             </div>
-            <dl>
+            <p class="muted">{{ stageLabel(activeExport) }}</p>
+            <ns-activity-line label="Creating package" />
+          </div>
+        }
+      </ns-window>
+
+      <ns-window class="estimate-window" title="Size estimate">
+        <div aria-live="polite">
+          @if (estimate(); as exportEstimate) {
+            <dl class="estimate">
+              <div class="estimate__size">
+                <dt>Estimated size</dt>
+                <dd class="estimate__number">
+                  {{ formatFileSize(exportEstimate.estimatedZipBytes) }}
+                </dd>
+              </div>
               <div>
-                <dt>Canonical images</dt>
+                <dt>Screenshots</dt>
                 <dd>{{ exportEstimate.canonicalImageCount }}</dd>
               </div>
               <div>
@@ -93,106 +99,108 @@
                 <dd>{{ exportEstimate.batchCount }}</dd>
               </div>
               <div>
-                <dt>Batch image copies</dt>
+                <dt>Screenshot copies in batches</dt>
                 <dd>{{ exportEstimate.batchImageCopyCount }}</dd>
               </div>
-              <div>
-                <dt>Estimated ZIP</dt>
-                <dd>{{ formatFileSize(exportEstimate.estimatedZipBytes) }}</dd>
+            </dl>
+            @if (exportEstimate.isApproximate) {
+              <p class="ns-help estimate__note">Approximate: the final size can differ.</p>
+            }
+            @if (exportEstimate.redundancyWarning) {
+              <p class="ns-notice ns-notice--wait estimate__warning" role="status">
+                Some screenshots are copied into several batches. The screenshots folder keeps each
+                one once.
+              </p>
+            }
+          } @else {
+            <dl class="estimate">
+              <div class="estimate__size">
+                <dt>Estimated size</dt>
+                <dd class="estimate__number">Unknown</dd>
               </div>
             </dl>
-            @if (exportEstimate.redundancyWarning) {
-              <p class="estimate-warning" role="status">
-                Reused evidence will be copied into several attachment batches. The canonical image
-                is stored once.
-              </p>
-            }
-          </section>
-        }
-
-        <button
-          class="button button--primary create-button"
-          type="button"
-          [disabled]="creating() || !!currentExport()"
-          (click)="createExport()"
-        >
-          {{ currentExport() || creating() ? 'Generating export…' : 'Generate ZIP export' }}
-        </button>
-      </section>
-
-      <section class="history" aria-labelledby="history-heading">
-        @if (currentExport(); as activeExport) {
-          <article class="panel current-export" aria-live="polite">
-            <div class="current-export__heading">
-              <div>
-                <p class="eyebrow">Current export</p>
-                <h2>{{ activeExport.currentStage || 'Preparing package' }}</h2>
-              </div>
-              <strong>{{ activeExport.progressPercent }}%</strong>
-            </div>
-            <progress max="100" [value]="activeExport.progressPercent">
-              {{ activeExport.progressPercent }}%
-            </progress>
-            <p class="muted">
-              ZIP generation is asynchronous. This view follows persisted state rather than
-              simulated time.
-            </p>
-          </article>
-        }
-
-        <div class="history-heading">
-          <h2 id="history-heading">Previous exports</h2>
-          <span class="muted">{{ completedExports().length }} records</span>
-        </div>
-
-        @for (item of completedExports(); track item.id) {
-          <article class="panel history-card">
-            <div>
-              <span class="status-badge" [attr.data-status]="item.status">{{ item.status }}</span>
-              <h3 class="export-name">{{ item.downloadName }}</h3>
-              <p class="muted">
-                Created {{ item.createdAt | date: 'medium' }} · {{ formatFileSize(item.sizeBytes) }}
-              </p>
-              @if (item.includeOriginalVideo) {
-                <span class="video-included">Original video included</span>
-              }
-              @if (item.metrics) {
-                <dl class="actual-metrics" aria-label="Actual export metrics">
-                  <div>
-                    <dt>Canonical</dt>
-                    <dd>{{ exportMetric(item, 'exportCanonicalImageCount') ?? 0 }}</dd>
-                  </div>
-                  <div>
-                    <dt>Batches</dt>
-                    <dd>{{ exportMetric(item, 'batchCount') ?? 0 }}</dd>
-                  </div>
-                  <div>
-                    <dt>Copies</dt>
-                    <dd>{{ exportMetric(item, 'exportBatchCopyCount') ?? 0 }}</dd>
-                  </div>
-                </dl>
-              }
-            </div>
-            @if (item.status === 'completed') {
-              <a class="button button--secondary" [href]="downloadUrl(item.id)" download>
-                Download ZIP
-              </a>
-            } @else {
-              <div class="history-error" role="alert">
-                <strong>{{ item.errorCode || 'EXPORT_FAILED' }}</strong>
-                <span>{{ item.errorMessage || 'This export did not complete.' }}</span>
-              </div>
-            }
-          </article>
-        } @empty {
-          @if (!currentExport()) {
-            <div class="panel empty-history">
-              <h3>No exports yet</h3>
-              <p class="muted">Generate the first immutable package when the review is ready.</p>
-            </div>
+            <p class="ns-help estimate__note">The estimate is not available for this project.</p>
           }
+        </div>
+      </ns-window>
+
+      <ns-window class="history-window" [title]="'Packages (' + completedExports().length + ')'">
+        @if (completedExports().length > 0) {
+          <ul class="history-list" aria-label="Packages">
+            @for (item of completedExports(); track item.id) {
+              <li class="ns-row history-row">
+                <div class="history-row__main">
+                  <div class="history-row__title">
+                    <h3 class="export-name mono" [id]="'export-name-' + item.id">
+                      {{ item.downloadName }}
+                    </h3>
+                    <ns-status-pill
+                      [label]="statusLabel(item).label"
+                      [tone]="statusLabel(item).tone"
+                    />
+                  </div>
+                  <dl class="history-facts">
+                    <div>
+                      <dt>Created</dt>
+                      <dd>
+                        <time [attr.datetime]="item.createdAt">{{
+                          item.createdAt | date: 'medium'
+                        }}</time>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Size</dt>
+                      <dd>{{ formatFileSize(item.sizeBytes) }}</dd>
+                    </div>
+                    @if (item.metrics) {
+                      <div>
+                        <dt>Screenshots</dt>
+                        <dd>{{ exportMetric(item, 'exportCanonicalImageCount') ?? 'Unknown' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Batches</dt>
+                        <dd>{{ exportMetric(item, 'batchCount') ?? 'Unknown' }}</dd>
+                      </div>
+                      <div>
+                        <dt>Copies</dt>
+                        <dd>{{ exportMetric(item, 'exportBatchCopyCount') ?? 'Unknown' }}</dd>
+                      </div>
+                    }
+                  </dl>
+                  @if (item.includeOriginalVideo) {
+                    <p class="ns-help">Original video included</p>
+                  }
+                </div>
+                @if (item.status === 'completed') {
+                  <a
+                    class="ns-button ns-button--small history-row__download"
+                    [href]="downloadUrl(item.id)"
+                    [attr.aria-describedby]="'export-name-' + item.id"
+                    download
+                  >
+                    <ns-pixel-icon name="download" />Download package
+                  </a>
+                } @else {
+                  <div class="ns-notice ns-notice--error history-error" role="alert">
+                    <span class="mono">{{ item.errorCode || 'EXPORT_FAILED' }}</span>
+                    <span>{{
+                      item.errorMessage || 'This package was not created. Create a new package.'
+                    }}</span>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted empty-history">
+            @if (currentExport()) {
+              The package appears here when it is ready.
+            } @else {
+              No packages yet. Create the first package when the review is ready.
+            }
+          </p>
         }
-      </section>
+      </ns-window>
     </div>
   }
 </section>

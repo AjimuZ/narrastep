@@ -137,6 +137,12 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
     const path = url.pathname;
     const method = request.method();
 
+    if (path === '/api/v1/health') {
+      await route.fulfill({
+        json: { status: 'ok', version: '0.2.0', database: 'ok', redis: 'ok', worker: 'ok' },
+      });
+      return;
+    }
     if (path === '/api/v1/projects' && method === 'GET') {
       await route.fulfill({
         json: { items: projectCreated ? [project()] : [], total: projectCreated ? 1 : 0 },
@@ -351,22 +357,27 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
   });
 
   await page.goto('/projects');
+  await expect(page.getByText('Services ready')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No projects yet' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await page.getByRole('link', { name: 'Create your first project' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'New project' }).first().click();
+  await expect(
+    page.getByRole('navigation', { name: 'Main menu' }).getByRole('link', { name: 'New project' }),
+  ).toHaveAttribute('aria-current', 'page');
   await expectNoHorizontalOverflow(page);
   await page.getByLabel('Project name').fill(projectName);
   await page.getByText('More options', { exact: true }).click();
-  await page.getByLabel('Short description (optional)').fill('Search workflow');
-  await page.getByRole('button', { name: 'Continue to video' }).click();
-  await page.getByLabel('Choose a file').setInputFiles({
+  await page.getByLabel('Description (optional)').fill('Search workflow');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await page.getByLabel('Choose video').setInputFiles({
     name: 'customer-onboarding-recording-with-detailed-workflow.mp4',
     mimeType: 'video/mp4',
     buffer: Buffer.from('deterministic-video'),
   });
-  await page.getByRole('button', { name: 'Upload and validate' }).click();
+  await page.getByRole('button', { name: 'Upload video' }).click();
   await expect(page.getByRole('heading', { name: /Ready to process/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Start local processing' }).click();
-  await page.getByRole('link', { name: 'Open review workspace' }).click();
+  await page.getByRole('button', { name: 'Start processing' }).click();
+  await page.getByRole('link', { name: 'Open review' }).click();
   await expectNoHorizontalOverflow(page);
 
   if (testInfo.project.name === 'chromium') {
@@ -398,21 +409,21 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
   await mergeCheckboxes.nth(1).check();
   await page.getByRole('button', { name: 'Merge adjacent' }).click();
   await page.getByRole('button', { name: 'Merge segments' }).click();
-  await expect(page.getByText('1 segments')).toBeVisible();
+  await expect(page.getByText('1 segment', { exact: true })).toBeVisible();
 
   if (usesWorkspaceTabs) {
     await viewSwitcher.getByRole('radio', { name: 'Screenshot' }).check({ force: true });
   }
   await page.getByRole('button', { name: 'Use as primary' }).click();
   await expect(page.getByText('User selected')).toBeVisible();
-  await page.getByRole('link', { name: 'Export project' }).click();
+  await page.getByRole('link', { name: 'Export', exact: true }).click();
   await expectNoHorizontalOverflow(page);
   await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
   await expect(
-    page.getByText('chatgpt-batches/batch-NNN/batch-input.md + up to 19 images'),
+    page.getByText('04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images'),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Generate ZIP export' }).click();
-  const downloadLink = page.getByRole('link', { name: 'Download ZIP' });
+  await page.getByRole('button', { name: 'Create package' }).click();
+  const downloadLink = page.getByRole('link', { name: 'Download package' });
   await expect(downloadLink).toHaveAttribute('href', '/api/v1/exports/export-1/download');
   await expect(downloadLink).toHaveAttribute('download', '');
 });

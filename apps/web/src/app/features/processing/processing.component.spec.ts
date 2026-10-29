@@ -1,3 +1,4 @@
+// Unit tests for the Processing screen: persisted progress, stage gauges, failure, cancel and retry.
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
@@ -58,10 +59,59 @@ describe('ProcessingComponent', () => {
     fixture.detectChanges();
 
     const content = fixture.nativeElement.textContent as string;
-    const progress = fixture.nativeElement.querySelector('progress') as HTMLProgressElement;
+    const overall = fixture.nativeElement.querySelector(
+      '.overall-gauge [role="img"]',
+    ) as HTMLElement;
     expect(content).toContain('Transcribing speech');
     expect(content).toContain('Transcribing locally.');
-    expect(progress.value).toBe(42);
+    expect(overall.getAttribute('aria-label')).toBe('Overall progress 42%');
+    expect(fixture.nativeElement.querySelector('ns-status-pill')?.textContent).toContain(
+      'Processing',
+    );
+  });
+
+  it('shows gauges only for finished stages and an activity line for the running stage', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ProcessingComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ApiService,
+          useValue: {
+            getProject: () => of(PROJECT),
+            monitorJob: () => of(JOB),
+          },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ProcessingComponent);
+    fixture.componentRef.setInput('projectId', PROJECT.id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll('.stage-list li'),
+    ) as HTMLElement[];
+    const row = (name: string) => rows.find((item) => item.textContent?.includes(name))!;
+
+    const done = row('Extracting audio');
+    expect(done.textContent).toContain('Done');
+    expect(done.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(
+      'Extracting audio 100%',
+    );
+
+    const running = row('Transcribing speech');
+    expect(running.getAttribute('aria-current')).toBe('step');
+    expect(running.textContent).toContain('Running');
+    expect(running.querySelector('ns-segmented-gauge')).toBeNull();
+    expect(running.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).toBe(
+      'Transcribing speech in progress',
+    );
+
+    const waiting = row('Saving results');
+    expect(waiting.textContent).toContain('Waiting');
+    expect(waiting.querySelector('ns-segmented-gauge, ns-activity-line')).toBeNull();
   });
 
   it('presents an interrupted persisted job as retryable failure state', async () => {
@@ -97,7 +147,9 @@ describe('ProcessingComponent', () => {
 
     const content = fixture.nativeElement.textContent as string;
     expect(content).toContain('PROCESSING_INTERRUPTED');
-    expect(content).toContain('Retry from source');
+    expect(content).toContain('Processing was interrupted.');
+    expect(content).toContain('Retry processing');
+    expect(fixture.nativeElement.querySelector('.stage-list [role="progressbar"]')).toBeNull();
   });
 
   it('renders a persisted worker failure code and safe recovery message after refresh', async () => {
@@ -136,8 +188,9 @@ describe('ProcessingComponent', () => {
     expect(alert.textContent).toContain(
       'The local transcription model could not process this recording.',
     );
-    expect(fixture.nativeElement.textContent).toContain('Retry from source');
+    expect(fixture.nativeElement.textContent).toContain('Retry processing');
     expect(fixture.componentInstance.project()?.status).toBe('failed');
+    expect(fixture.nativeElement.querySelector('.overall-gauge .ns-gauge--danger')).not.toBeNull();
   });
 
   it('requests cooperative cancellation and applies the persisted cancelled state', async () => {
@@ -170,7 +223,8 @@ describe('ProcessingComponent', () => {
     expect(cancelJob).toHaveBeenCalledWith(JOB.id);
     expect(fixture.componentInstance.actionPending()).toBe(true);
     expect(
-      (fixture.nativeElement.querySelector('button.button--danger') as HTMLButtonElement).disabled,
+      (fixture.nativeElement.querySelector('button.ns-button--danger') as HTMLButtonElement)
+        .disabled,
     ).toBe(true);
 
     cancellation.next({
@@ -187,8 +241,9 @@ describe('ProcessingComponent', () => {
 
     expect(fixture.componentInstance.actionPending()).toBe(false);
     expect(fixture.componentInstance.project()?.status).toBe('uploaded');
-    expect(fixture.nativeElement.textContent).toContain('original upload is still available');
-    expect(fixture.nativeElement.textContent).toContain('Retry from source');
+    expect(fixture.nativeElement.textContent).toContain('The original video is kept');
+    expect(fixture.nativeElement.textContent).toContain('Retry processing');
+    expect(fixture.nativeElement.textContent).toContain('Not done');
   });
 
   it('enables cancellation as soon as a new job has been queued', async () => {
@@ -221,11 +276,50 @@ describe('ProcessingComponent', () => {
     fixture.detectChanges();
 
     const cancelButton = fixture.nativeElement.querySelector(
-      'button.button--danger',
+      'button.ns-button--danger',
     ) as HTMLButtonElement;
     expect(fixture.componentInstance.actionPending()).toBe(false);
     expect(cancelButton.disabled).toBe(false);
 
     monitoring.complete();
+  });
+
+  it('offers Open review as the only primary action once processing is done', async () => {
+    const completedJob: ProcessingJob = {
+      ...JOB,
+      status: 'completed',
+      currentStage: 'completed',
+      progressPercent: 100,
+      message: 'Ready for review.',
+      completedAt: '2026-07-15T10:05:00Z',
+      version: 9,
+    };
+    await TestBed.configureTestingModule({
+      imports: [ProcessingComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ApiService,
+          useValue: {
+            getProject: () => of(PROJECT),
+            monitorJob: () => of(completedJob),
+          },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ProcessingComponent);
+    fixture.componentRef.setInput('projectId', PROJECT.id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const primary = Array.from(
+      fixture.nativeElement.querySelectorAll('.ns-button--primary'),
+    ) as HTMLAnchorElement[];
+    expect(primary.length).toBe(1);
+    expect(primary[0]?.textContent?.trim()).toBe('Open review');
+    expect(primary[0]?.getAttribute('href')).toBe('/projects/project-1/review');
+    expect(fixture.nativeElement.querySelector('.stage-list [role="progressbar"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('ns-status-pill')?.textContent).toContain('Done');
   });
 });

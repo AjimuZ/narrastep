@@ -17,18 +17,18 @@ test('processes generated media through the real local API and exports reviewed 
   await page.getByLabel('Project name').fill('Full-stack evidence workflow');
   await page.getByText('More options', { exact: true }).click();
   await page
-    .getByLabel('Short description (optional)')
+    .getByLabel('Description (optional)')
     .fill('Deterministic local processing and export verification.');
   await page.getByLabel('Spoken language').fill('en');
-  await page.getByRole('button', { name: 'Continue to video' }).click();
-  await page.getByLabel('Choose a file').setInputFiles(fixturePath);
-  await page.getByRole('button', { name: 'Upload and validate' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await page.getByLabel('Choose video').setInputFiles(fixturePath);
+  await page.getByRole('button', { name: 'Upload video' }).click();
   await expect(page.getByRole('heading', { name: /Ready to process/ })).toBeVisible({
     timeout: 60_000,
   });
 
-  await page.getByRole('button', { name: 'Start local processing' }).click();
-  const reviewLink = page.getByRole('link', { name: 'Open review workspace' });
+  await page.getByRole('button', { name: 'Start processing' }).click();
+  const reviewLink = page.getByRole('link', { name: 'Open review' });
   await expect(reviewLink).toBeVisible({ timeout: 180_000 });
   await reviewLink.click();
   await expect(page.getByText('3 segments')).toBeVisible({ timeout: 30_000 });
@@ -64,16 +64,16 @@ test('processes generated media through the real local API and exports reviewed 
   await expect(page.getByText('User selected')).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove primary' }).click();
-  await page.getByRole('button', { name: 'Remove association' }).click();
+  await page.getByRole('button', { name: 'Remove screenshot' }).click();
   await expect(page.getByRole('heading', { name: 'No primary screenshot' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Use as primary' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Use as primary' }).first().click();
   await expect(page.getByText('User selected')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Export project' }).click();
+  await page.getByRole('link', { name: 'Export', exact: true }).click();
   await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
-  await page.getByRole('button', { name: 'Generate ZIP export' }).click();
-  const downloadLink = page.getByRole('link', { name: 'Download ZIP' });
+  await page.getByRole('button', { name: 'Create package' }).click();
+  const downloadLink = page.getByRole('link', { name: 'Download package' });
   await expect(downloadLink).toBeVisible({ timeout: 120_000 });
   await page.screenshot({ path: testInfo.outputPath('export-history.png'), fullPage: true });
 
@@ -101,10 +101,16 @@ async function assertProductionStylesAreActive(
   await expect(stylesheet).toHaveCount(1);
   await expect(stylesheet).not.toHaveAttribute('media', 'print');
 
-  const primaryNavigationAction = page.getByRole('link', { name: 'New project' });
-  await expect(primaryNavigationAction).toHaveCSS('display', /^(inline-)?flex$/);
-  await expect(primaryNavigationAction).toHaveCSS('text-decoration-line', 'none');
-  await expect(primaryNavigationAction).toHaveCSS('background-image', /linear-gradient/);
+  const currentMenuEntry = page
+    .getByRole('navigation', { name: 'Main menu' })
+    .getByRole('link', { name: 'New project' });
+  await expect(currentMenuEntry).toHaveAttribute('aria-current', 'page');
+  await expect(currentMenuEntry).toHaveCSS('display', 'flex');
+  await expect(currentMenuEntry).toHaveCSS('text-decoration-line', 'none');
+  await expect(page.getByRole('link', { name: 'Narrastep' })).toHaveCSS(
+    'font-family',
+    /Pixelify Sans/,
+  );
   expect(
     contentSecurityPolicyErrors,
     'The production page must not rely on scripts blocked by the container CSP.',

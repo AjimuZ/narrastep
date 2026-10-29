@@ -1,7 +1,9 @@
 # User interface
 
-Status: **planned** (P04 in the [roadmap](ROADMAP.md)). The Version 0.2 interface is still in
-use. Decision: [ADR 0012](decisions/0012-pixel-ui-design-system.md).
+Status: **implemented in English** for the shell and every existing screen (P04.3 in the
+[roadmap](ROADMAP.md)); the Italian catalogs and the language switch are P04.4, the browser
+accessibility pass in both languages is P04.5. Decision:
+[ADR 0012](decisions/0012-pixel-ui-design-system.md).
 
 ## Principles
 
@@ -29,6 +31,32 @@ The interface is available in English and Italian
 - Keep a short glossary of fixed translations in `apps/web/src/locale/GLOSSARY.md` (for example
   package = pacchetto, review = revisione, project type = tipo di progetto).
 - Italian text is often longer: layouts must not truncate it at 320 px.
+
+### Fixed terms
+
+The English copy uses one word per concept since P04.3. The Italian column is the agreed
+translation that P04.4 moves into the catalogs and the glossary.
+
+| Concept | English | Italian |
+| --- | --- | --- |
+| The ZIP made by Export | package | pacchetto |
+| A recording with its metadata | project | progetto |
+| The uploaded recording | video | video |
+| A transcript part | segment | segmento |
+| An image taken from the video | screenshot | screenshot |
+| Checking and editing the result | review | revisione |
+| Transcription and screenshot extraction | processing | elaborazione |
+
+### State words
+
+Every status pill takes its word and tone from `apps/web/src/app/shared/status-labels.ts`.
+
+| Kind | Value → word (tone) |
+| --- | --- |
+| Project | `draft` No video (info), `uploaded` Not processed (info), `queued` Queued (wait), `processing` Processing (wait), `review` Ready for review (ok), `exporting` Creating package (wait), `completed` Package ready (ok), `failed` Failed (error) |
+| Processing job | `queued` Queued, `processing` Processing, `cancelling` Cancelling (wait); `completed` Done (ok); `cancelled` Cancelled (info); `failed` Failed, `interrupted` Interrupted (error) |
+| Package | `queued` Queued, `processing` Creating (wait); `completed` Ready (ok); `failed` Failed (error) |
+| Services (header) | Checking services (info), Services ready (ok), Processing unavailable (wait: Redis or the worker does not answer), Services offline (error: the API does not answer) |
 
 ### Project type labels
 
@@ -92,7 +120,6 @@ roles are defined:
 | Focus ring | `--color-focus-ring` |
 | Success, warning, danger, info | `--color-success`, `--color-warning`, `--color-danger`, `--color-info` |
 | Border and frame | `--color-border`, `--color-border-strong`, `--color-border-accent`, `--color-separator`, `--frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent)` |
-| Shadow (removed with the restyle in P04.3) | `--color-shadow`, `--color-shadow-panel`, `--color-shadow-strong` |
 
 Non-color tokens: `--px: 2px`, `--radius: 2px`, `--quick: 120ms`, `--motion-base: 180ms`,
 `--font-ui`, `--font-mono`, `--font-pixel` (the bundled Pixelify Sans, then `--font-ui`), the text scale `--text-xs` to `--text-2xl`, the spacing scale `--space-1` to
@@ -132,13 +159,27 @@ Angular parts are in `apps/web/src/app/shared/ui/` and are imported from `shared
 | Button | `.ns-button`, `--primary`, `--danger` | 1 px frame; 1 px press offset; no motion under `prefers-reduced-motion` |
 | Field | `.ns-field` on `input`, `select`, `textarea` | Deep surface; `aria-invalid="true"` turns the border to the danger color |
 | Tabs | `<ns-tabs [tabs] [(selected)] label idPrefix>` | `role="tablist"`; roving tabindex; Left, Right, Home and End; the caller renders the `tabpanel` elements |
-| Segmented gauge | `<ns-segmented-gauge [percent] [segments] label>` | Determinate only; at most 40 cells; rounds down and fills every cell only at 100 |
+| Segmented gauge | `<ns-segmented-gauge [percent] [segments] [tone] label>` | Determinate only; at most 40 cells; rounds down and fills every cell only at 100; `percent` `null` draws the neutral striped track (the label then says "Unknown"); `tone="danger"` for a failed stage |
 | Status pill | `<ns-status-pill label tone>` | The label (a word) is required; tones `info`, `ok`, `wait`, `error` |
 | Activity line | `<ns-activity-line label>` | `role="progressbar"` without a value; static under `prefers-reduced-motion` |
 | Pixel icon | `<ns-pixel-icon name="play">` | 16 px, `aria-hidden`, takes the text color; names are `PixelIconName` |
 
-Existing screens still use the Version 0.2 classes (`.button`, `.field`, `.panel` and the
-per-screen markup); P04.3 moves them to these primitives and removes the old classes.
+Since P04.3 every screen uses these primitives and the Version 0.2 classes (`.panel`, `.button`,
+`.field`, `.notice`, `.status-badge`, `.skeleton`, `.eyebrow`) are gone. Helper classes in the same
+stylesheet:
+
+| Class | Use |
+| --- | --- |
+| `.ns-button--small` | Compact buttons in list rows |
+| `.ns-form-row`, `.ns-label`, `.ns-help`, `.ns-error` | A label, its control, one help line and an error, stacked |
+| `.ns-notice`, `--error`, `--ok`, `--wait` | Flat framed message with a colored leading bar |
+| `.ns-placeholder` | Static striped block while content loads |
+| `.ns-row` | Selectable list row or card; the pixel cursor shows on hover, focus within and `aria-current` |
+
+`styles.scss` adds the page layout (`.page`, `.page-header` with the title in the pixel font and
+`.page-header__actions`), `.muted`, `.mono` and the dialog frame (`.ns-dialog`, `__title`, `__body`,
+`__actions`). The page background is flat: the Version 0.2 gradients, shadows and blur were removed,
+and so were the shadow tokens.
 
 ### Icon sprite
 
@@ -163,6 +204,14 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - **Shell:** compact header (product name, health pill, language switch) and a vertical menu on
   the left: Projects, Record, New project, Settings. Below 768 px the menu becomes a top bar with the same
   entries.
+  - Implemented (P04.3, `apps/web/src/app/app.component.ts`): the header shows the product name and
+    the health pill; the menu holds **Projects** and **New project**. Record joins with the recorder
+    (P05.3), Settings with its screen (P06.4) and the language switch with P04.4, because planned
+    screens must not appear as enabled entries.
+  - The current entry has `aria-current="page"`; every project screen counts as Projects except the
+    new-project form.
+  - The health pill asks `GET /api/v1/health` (same origin, no other request) at start and every
+    30 seconds and shows the service words listed under [State words](#state-words).
 - **Content:** one main window per screen; secondary information in side windows.
 - **Density:** dense but legible; tables and lists use the pixel cursor for the current row.
 
@@ -180,6 +229,19 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled |
 | Settings | `/settings` | Local generation: install, enable, delete, model size and license; storage use per project |
 
+### Implemented screens (P04.3)
+
+The table above is the target. What the English interface does today:
+
+| Screen | Implemented |
+| --- | --- |
+| Projects | Title, **New project**; one primary window with search, type, status and sort filters; rows are a table when the list is at least 68 rem wide and labelled cards below. Status pill, type, duration ("Unknown" without a video), segments, screenshots, last change, Open and Delete. Record and Process are not offered yet (P05) |
+| New project | Three steps (Project, Video, Processing) each in one primary window; type cards are `.ns-row` radio cards; **Create project**, then **Upload video** with a segmented upload gauge fed by the real upload percentage, then **Start processing** or Process later |
+| Processing | Title "Processing" with the project name; the stage list is the primary window. The API reports progress for the whole job only, so one overall gauge shows that value, finished stages show a full gauge, the running stage an activity line and pending stages only a word. **Open review**, Cancel processing, Retry processing; Project, Processing settings and Counters windows beside it |
+| Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen |
+| Export | Title "Export" with the project name; New package (primary: contents, original-video option, **Create package**, the current package with an activity line, because the worker writes fixed stage values rather than a measured percentage), Size estimate, and Packages titled with each stored ZIP name and **Download package** |
+| Not found | "Page not found" with **Open projects** |
+
 ## Verification
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
@@ -188,3 +250,5 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - Every action works with the keyboard in a logical order, with a visible focus ring.
 - No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px, and at 200% zoom.
 - The existing Playwright browser-contract journey passes after the restyle.
+- Screens lay out against the content column, not the viewport, where they can: list rows use
+  container queries, because the menu takes 13 rem of the width from 768 px up.

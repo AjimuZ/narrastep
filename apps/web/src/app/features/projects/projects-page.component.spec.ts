@@ -1,3 +1,4 @@
+// Projects screen tests: deletion, loading, errors, search, sort, type filter and state words.
 import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -133,11 +134,11 @@ describe('ProjectsPageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[aria-busy="true"]')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('Your project library is empty');
+    expect(fixture.nativeElement.textContent).toContain('No projects yet');
     expect(
       (fixture.nativeElement.querySelector('a[href="/projects/new"]') as HTMLAnchorElement)
         .textContent,
-    ).toContain('Create project');
+    ).toContain('New project');
   });
 
   it('exposes collection failures as a retryable alert', async () => {
@@ -202,5 +203,31 @@ describe('ProjectsPageComponent', () => {
     expect(component.modeLabel('general')).toBe('Generic');
     const typeCell = (fixture.nativeElement as HTMLElement).querySelector('[data-label="Type"]');
     expect(typeCell?.textContent?.trim()).toBe('Task briefing');
+  });
+
+  it('shows the status as a word in a pill and filters by type', async () => {
+    const meeting: Project = {
+      ...PROJECT,
+      id: 'project-3',
+      name: 'Sprint review',
+      mode: 'meeting',
+    };
+    const { fixture } = await setup(
+      vi.fn(() => of(undefined)),
+      vi.fn(() => of({ items: [PROJECT, meeting], total: 2 })),
+    );
+    const component = fixture.componentInstance;
+    const element: HTMLElement = fixture.nativeElement;
+
+    expect(element.querySelector('[data-label="Status"] .ns-pill')?.textContent?.trim()).toBe(
+      'Ready for review',
+    );
+    expect(element.querySelector('.ns-pill--ok')).not.toBeNull();
+
+    component.updateTypeFilter({ target: { value: 'meeting' } } as unknown as Event);
+    fixture.detectChanges();
+    expect(component.visibleProjects()).toEqual([meeting]);
+    expect(element.querySelectorAll('.project-row').length).toBe(1);
+    expect(element.textContent).toContain('1 of 2 shown');
   });
 });

@@ -1,3 +1,4 @@
+// Processing screen: one project's persisted job, its stage list, real progress, cancel and retry.
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -16,10 +17,30 @@ import { EMPTY, Subscription, catchError, finalize, interval, of, switchMap, tap
 import { ProcessingJob, ProcessingStage, Project } from '../../core/api.models';
 import { NarrastepApiError } from '../../core/services/api-error.interceptor';
 import { ApiService } from '../../core/services/api.service';
+import { projectTypeLabel } from '../../shared/project-types';
+import { StatusLabel, jobStatusLabel, projectStatusLabel } from '../../shared/status-labels';
+import {
+  ActivityLineComponent,
+  PixelIconComponent,
+  SegmentedGaugeComponent,
+  StatusPillComponent,
+  WindowComponent,
+} from '../../shared/ui';
+
+/** Position of one timeline stage relative to the worker's persisted current stage. */
+export type StageState = 'pending' | 'active' | 'completed';
 
 @Component({
   selector: 'ns-processing',
-  imports: [DatePipe, RouterLink],
+  imports: [
+    ActivityLineComponent,
+    DatePipe,
+    PixelIconComponent,
+    RouterLink,
+    SegmentedGaugeComponent,
+    StatusPillComponent,
+    WindowComponent,
+  ],
   templateUrl: './processing.component.html',
   styleUrl: './processing.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +62,11 @@ export class ProcessingComponent implements OnInit {
       status === 'cancelled' ||
       status === 'interrupted'
     );
+  });
+  /** True when the job ended without results (failed or interrupted), so retry is offered. */
+  readonly hasFailed = computed(() => {
+    const status = this.job()?.status;
+    return status === 'failed' || status === 'interrupted';
   });
   readonly canCancel = computed(() => {
     const status = this.job()?.status;
@@ -94,7 +120,12 @@ export class ProcessingComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false)),
         catchError((error: unknown) => {
-          this.errorMessage.set(this.errorText(error, 'Narrastep could not load this project.'));
+          this.errorMessage.set(
+            this.errorText(
+              error,
+              'The project could not be loaded. Check that Narrastep is running, then try again.',
+            ),
+          );
           return EMPTY;
         }),
       )
@@ -126,7 +157,10 @@ export class ProcessingComponent implements OnInit {
         finalize(() => this.actionPending.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'Narrastep could not start or monitor processing.'),
+            this.errorText(
+              error,
+              'Processing could not be started or followed. Try again to reload the project.',
+            ),
           );
           return EMPTY;
         }),
@@ -149,7 +183,7 @@ export class ProcessingComponent implements OnInit {
         finalize(() => this.actionPending.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'Narrastep could not request processing cancellation.'),
+            this.errorText(error, 'Processing could not be cancelled. Try again in a moment.'),
           );
           return EMPTY;
         }),
@@ -160,19 +194,19 @@ export class ProcessingComponent implements OnInit {
   /** Maps backend stage identifiers to concise operational language. */
   stageLabel(stage: ProcessingStage): string {
     const labels: Record<ProcessingStage, string> = {
-      queued: 'Waiting for the local worker',
-      validating: 'Validating video',
-      reading_metadata: 'Reading video metadata',
+      queued: 'Waiting for the worker',
+      validating: 'Checking the video',
+      reading_metadata: 'Reading video details',
       extracting_audio: 'Extracting audio',
       transcribing: 'Transcribing speech',
-      extracting_frames: 'Extracting screenshot candidates',
-      scanning_frames: 'Scanning visual changes',
-      global_clustering: 'Clustering shared evidence',
-      coverage_selection: 'Selecting evidence coverage',
-      thumbnail_persistence: 'Saving review thumbnails',
-      deduplicating_frames: 'Removing near-duplicate frames',
-      associating_frames: 'Associating screenshots',
-      saving_results: 'Saving review data',
+      extracting_frames: 'Finding screenshot candidates',
+      scanning_frames: 'Scanning screen changes',
+      global_clustering: 'Grouping similar screens',
+      coverage_selection: 'Choosing screenshots',
+      thumbnail_persistence: 'Saving screenshot previews',
+      deduplicating_frames: 'Removing duplicate screenshots',
+      associating_frames: 'Linking screenshots to segments',
+      saving_results: 'Saving results',
       completed: 'Ready for review',
       failed: 'Processing failed',
       cancelled: 'Processing cancelled',
@@ -181,7 +215,7 @@ export class ProcessingComponent implements OnInit {
   }
 
   /** Marks a stage relative to the current persisted worker position for the visual timeline. */
-  stageState(stage: ProcessingStage): 'pending' | 'active' | 'completed' {
+  stageState(stage: ProcessingStage): StageState {
     const job = this.job();
     if (!job) {
       return 'pending';
@@ -195,6 +229,61 @@ export class ProcessingComponent implements OnInit {
       return 'active';
     }
     return currentIndex >= 0 && stageIndex < currentIndex ? 'completed' : 'pending';
+  }
+
+  /**
+   * State word for a stage row. Stages after the worker's position read "Waiting" while the job
+   * runs and "Not done" once it stopped without results; the job does not report where it stopped.
+   */
+  stageStateLabel(stage: ProcessingStage): string {
+    const state = this.stageState(stage);
+    if (state === 'completed') {
+      return 'Done';
+    }
+    if (state === 'active') {
+      return this.isTerminal() ? 'Stopped' : 'Running';
+    }
+    return this.isTerminal() ? 'Not done' : 'Waiting';
+  }
+
+  /**
+   * Real percentage for a stage gauge, or null when none exists. Only finished stages have one
+   * (100); the API reports progress for the whole job, never for the running stage.
+   */
+  stagePercent(stage: ProcessingStage): number | null {
+    return stage !== 'completed' && this.stageState(stage) === 'completed' ? 100 : null;
+  }
+
+  /** Word and tone of the project state for the status pill. */
+  projectStatus(project: Project): StatusLabel {
+    return projectStatusLabel(project.status);
+  }
+
+  /** Word and tone of the job state for the status pill. */
+  jobStatus(job: ProcessingJob): StatusLabel {
+    return jobStatusLabel(job.status);
+  }
+
+  /** Label of the project type. */
+  typeLabel(project: Project): string {
+    return projectTypeLabel(project.mode);
+  }
+
+  /** Video length as m:ss, or "Unknown" when the API has no duration. */
+  durationLabel(project: Project): string {
+    const durationSeconds = project.videoAsset?.durationSeconds;
+    if (durationSeconds === null || durationSeconds === undefined) {
+      return 'Unknown';
+    }
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = Math.floor(durationSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  /** Detected spoken-language code, else the chosen one; "auto" before detection reads "Automatic". */
+  languageLabel(project: Project): string {
+    const code = project.detectedLanguage ?? project.sourceLanguage;
+    return code === 'auto' ? 'Automatic' : code;
   }
 
   /** Reads one safe numeric worker metric without assuming a particular diagnostics version. */
@@ -212,9 +301,12 @@ export class ProcessingComponent implements OnInit {
     return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
   }
 
-  /** Returns a safe filename label even when legacy project responses omit expanded media details. */
+  /** Video file name; "Unknown" when the response omits media details, "No video" before upload. */
   videoFilename(project: Project): string {
-    return project.videoAsset?.originalFilename ?? 'Uploaded source video';
+    if (project.videoAsset?.originalFilename) {
+      return project.videoAsset.originalFilename;
+    }
+    return project.videoAssetId ? 'Unknown' : 'No video';
   }
 
   /** Applies one monotonic worker snapshot and mirrors terminal lifecycle state in the route view. */

@@ -135,6 +135,7 @@
   background: var(--color-bg-raised);
   color: var(--color-text);
   font: 600 0.875rem/1.2 var(--font-ui);
+  text-decoration: none;
   cursor: pointer;
   transition:
     background var(--quick) steps(2),
@@ -195,6 +196,112 @@
   border-color: var(--color-danger);
 }
 
+.ns-button--small {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+// Form row: label, control, one line of help and an error, stacked. The control keeps `.ns-field`.
+.ns-form-row {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ns-label {
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ns-help {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.ns-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+textarea.ns-field {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+// Notice: a flat framed message; the modifier colors the frame and the leading bar.
+.ns-notice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--frame);
+  border-left: var(--px) solid var(--color-info);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+  color: var(--color-text);
+}
+
+.ns-notice > :last-child {
+  margin-bottom: 0;
+}
+
+.ns-notice--error {
+  border-color: color-mix(in srgb, var(--color-danger) 55%, transparent);
+  border-left-color: var(--color-danger);
+}
+
+.ns-notice--ok {
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+  border-left-color: var(--color-success);
+}
+
+.ns-notice--wait {
+  border-color: color-mix(in srgb, var(--color-warning) 55%, transparent);
+  border-left-color: var(--color-warning);
+}
+
+// Placeholder: neutral striped block for content that is loading or unknown; never animated.
+.ns-placeholder {
+  min-height: 4rem;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-bg-raised) 0 6px,
+    var(--color-bg-panel) 6px 8px
+  );
+}
+
+// Current row: list rows and cards show the menu cursor on hover, focus within and `aria-current`.
+.ns-row {
+  position: relative;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-panel);
+}
+
+.ns-row:hover,
+.ns-row:focus-within {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-raised);
+}
+
+// A row that wraps a radio or checkbox (a choice card) counts as current while it is checked.
+.ns-row[aria-current]:not([aria-current='false']),
+.ns-row:has(input:checked) {
+  border-color: var(--color-border-accent);
+  background: var(--color-bg-raised);
+}
+
+.ns-row:hover::before,
+.ns-row:focus-within::before,
+.ns-row[aria-current]:not([aria-current='false'])::before,
+.ns-row:has(input:checked)::before {
+  @extend %pixel-cursor;
+  left: 0.375rem;
+}
+
 // Tabs: a tab list; the selected tab carries the cursor.
 .ns-tabs {
   display: flex;
@@ -246,6 +353,19 @@
 
 .ns-gauge__segment--filled {
   background: var(--color-success);
+}
+
+// Unknown value: a neutral striped track without cells, never an invented number.
+.ns-gauge--unknown {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-bg-raised) 0 6px,
+    var(--color-bg-deep) 6px 8px
+  );
+}
+
+.ns-gauge--danger .ns-gauge__segment--filled {
+  background: var(--color-danger);
 }
 
 // Status pill: a state always shown with a word next to the colored square.

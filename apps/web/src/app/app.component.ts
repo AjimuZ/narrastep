@@ -1,154 +1,218 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+// Application shell: compact header with the product name and service health, a vertical menu and the routed screen.
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { catchError, filter, map, of, startWith, switchMap, timer } from 'rxjs';
+
+import { ApiService } from './core/services/api.service';
+import { StatusLabel } from './shared/status-labels';
+import { PixelIconComponent, PixelIconName, StatusPillComponent } from './shared/ui';
+
+/** How often the header asks the local API for its health. */
+export const HEALTH_INTERVAL_MS = 30_000;
+
+/** Health pill states; `checking` is shown only until the first answer. */
+export type ShellHealth = 'checking' | 'ok' | 'degraded' | 'offline';
+
+const HEALTH_LABELS: Record<ShellHealth, StatusLabel> = {
+  checking: { label: 'Checking services', tone: 'info' },
+  ok: { label: 'Services ready', tone: 'ok' },
+  degraded: { label: 'Processing unavailable', tone: 'wait' },
+  offline: { label: 'Services offline', tone: 'error' },
+};
+
+interface MenuEntry {
+  label: string;
+  path: string;
+  icon: PixelIconName;
+  /** Whether a router URL (without query or fragment) belongs to this entry. */
+  matches: (url: string) => boolean;
+}
+
+/**
+ * Menu entries of the shell. Record (P05) and Settings (P06) are added by their packages: the
+ * roadmap forbids enabled entries for screens that do not exist yet.
+ */
+export const MENU_ENTRIES: readonly MenuEntry[] = [
+  {
+    label: 'Projects',
+    path: '/projects',
+    icon: 'folder',
+    // Every project screen belongs to Projects except the new-project form.
+    matches: (url) => url === '/projects' || (url.startsWith('/projects/') && !isNewProject(url)),
+  },
+  { label: 'New project', path: '/projects/new', icon: 'plus', matches: isNewProject },
+];
+
+function isNewProject(url: string): boolean {
+  return url === '/projects/new';
+}
 
 @Component({
   selector: 'ns-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [PixelIconComponent, RouterLink, RouterOutlet, StatusPillComponent],
   template: `
     <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="app-header">
-      <div class="app-header__inner">
-        <a class="brand" routerLink="/projects" aria-label="Narrastep project list">
-          <span class="brand__mark" aria-hidden="true">N</span>
-          <span>
-            <strong>Narrastep</strong>
-            <small>Local-first documentation</small>
-          </span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a routerLink="/projects" routerLinkActive="active">Projects</a>
-          <a class="button button--primary button--small" routerLink="/projects/new">
-            New project
-          </a>
-        </nav>
-      </div>
+    <header class="shell-header">
+      <a class="shell-brand" routerLink="/projects">Narrastep</a>
+      <ns-status-pill
+        class="shell-health"
+        role="status"
+        [label]="healthLabel().label"
+        [tone]="healthLabel().tone"
+      />
     </header>
-    <main id="main-content" tabindex="-1">
-      <router-outlet />
-    </main>
+    <div class="shell-body">
+      <nav class="shell-menu" aria-label="Main menu">
+        <ul>
+          @for (entry of menu; track entry.path) {
+            <li>
+              <a
+                class="ns-menu-entry"
+                [routerLink]="entry.path"
+                [attr.aria-current]="entry.matches(currentPath()) ? 'page' : null"
+              >
+                <ns-pixel-icon [name]="entry.icon" />
+                <span>{{ entry.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+      <main id="main-content" class="shell-content" tabindex="-1">
+        <router-outlet />
+      </main>
+    </div>
   `,
   styles: `
     :host {
-      display: block;
+      display: flex;
       min-height: 100vh;
+      flex-direction: column;
     }
 
     .skip-link {
       position: fixed;
       z-index: 1100;
-      top: 0.5rem;
-      left: 0.5rem;
-      padding: 0.75rem;
+      top: var(--space-2);
+      left: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--frame);
       border-radius: var(--radius);
-      background: var(--color-text-strong);
-      color: var(--color-bg);
-      transform: translateY(-150%);
+      background: var(--color-bg-panel);
+      color: var(--color-text-strong);
+      transform: translateY(-200%);
     }
 
     .skip-link:focus {
-      transform: translateY(0);
+      transform: none;
     }
 
-    .app-header {
+    .shell-header {
       position: sticky;
       z-index: 20;
       top: 0;
-      min-height: 4.5rem;
-      border-bottom: 1px solid var(--color-border);
-      background: color-mix(in srgb, var(--color-bg) 88%, transparent);
-      box-shadow: 0 8px 28px color-mix(in srgb, var(--color-media-bg) 12%, transparent);
-      backdrop-filter: blur(16px);
-    }
-
-    .app-header__inner {
       display: flex;
-      width: min(100%, var(--content-width));
-      min-height: 4.5rem;
+      min-height: 3rem;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: var(--space-4);
-      margin-inline: auto;
-      padding: 0.75rem var(--page-gutter);
+      gap: var(--space-2) var(--space-4);
+      padding: var(--space-2) var(--page-gutter);
+      border-bottom: 1px solid var(--frame);
+      background: var(--color-bg-deep);
     }
 
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-3);
+    .shell-brand {
       color: var(--color-text-strong);
+      font: 600 var(--text-xl) / 1.2 var(--font-pixel);
       text-decoration: none;
     }
 
-    .brand__mark {
+    .shell-body {
       display: grid;
-      width: 2.5rem;
-      height: 2.5rem;
-      place-items: center;
-      border: 1px solid var(--color-border-accent);
-      border-radius: var(--radius);
-      background: linear-gradient(145deg, var(--color-brand), var(--color-brand-strong));
-      color: var(--color-on-accent);
-      font-weight: 800;
-      box-shadow:
-        inset 0 1px color-mix(in srgb, var(--color-text-strong) 24%, transparent),
-        0 6px 16px color-mix(in srgb, var(--color-brand-strong) 34%, transparent);
+      flex: 1;
+      grid-template-columns: 13rem minmax(0, 1fr);
     }
 
-    .brand strong,
-    .brand small {
-      display: block;
+    .shell-menu {
+      border-right: 1px solid var(--frame);
+      background: var(--color-bg-elevated);
     }
 
-    .brand small {
-      color: var(--color-text-muted);
-      font-size: 0.68rem;
-      letter-spacing: 0.01em;
+    .shell-menu ul {
+      position: sticky;
+      top: 3rem;
+      display: grid;
+      gap: var(--space-1);
+      margin: 0;
+      padding: var(--space-3) var(--space-2);
+      list-style: none;
     }
 
-    nav {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
+    .shell-content {
+      min-width: 0;
+      outline: none;
     }
 
-    nav > a:not(.button) {
-      padding: 0.65rem 0.25rem;
-      color: var(--color-text-muted);
-      font-size: 0.9rem;
-      font-weight: 650;
-      text-decoration: none;
-    }
-
-    nav > a.active:not(.button) {
-      color: var(--color-text-strong);
-      box-shadow: 0 2px var(--color-brand);
-    }
-
-    @media (max-width: 34rem) {
-      .app-header,
-      .app-header__inner {
-        min-height: 4rem;
+    /* Below 768 px the vertical menu becomes a bar under the header with the same entries. */
+    @media (max-width: 47.99rem) {
+      .shell-body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
       }
 
-      .app-header__inner {
-        padding-block: var(--space-2);
+      .shell-menu {
+        border-right: 0;
+        border-bottom: 1px solid var(--frame);
       }
 
-      .brand__mark {
-        width: 2.25rem;
-        height: 2.25rem;
-      }
-
-      .brand small,
-      nav > a:not(.button) {
-        display: none;
-      }
-
-      nav {
-        gap: var(--space-2);
+      .shell-menu ul {
+        position: static;
+        display: flex;
+        flex-wrap: wrap;
+        padding: var(--space-2) var(--page-gutter);
       }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppComponent {}
+export class AppComponent {
+  private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
+
+  protected readonly menu = MENU_ENTRIES;
+
+  /** Current route path without query string or fragment, used for `aria-current`. */
+  protected readonly currentPath = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => pathOf(event.urlAfterRedirects)),
+      startWith(pathOf(this.router.url)),
+    ),
+    { initialValue: '/' },
+  );
+
+  /**
+   * Local service health, asked at start and every `HEALTH_INTERVAL_MS`. A failed request means the
+   * API cannot be reached and shows "Services offline"; the next tick tries again.
+   */
+  private readonly health = toSignal(
+    timer(0, HEALTH_INTERVAL_MS).pipe(
+      switchMap(() =>
+        this.api.health().pipe(
+          map((response): ShellHealth => (response.status === 'ok' ? 'ok' : 'degraded')),
+          catchError(() => of<ShellHealth>('offline')),
+        ),
+      ),
+    ),
+    { initialValue: 'checking' as ShellHealth },
+  );
+
+  protected readonly healthLabel = computed(() => HEALTH_LABELS[this.health()]);
+}
+
+/** Path part of a router URL: `/projects/1?x=2#y` becomes `/projects/1`. */
+function pathOf(url: string): string {
+  return url.split(/[?#]/, 1)[0] || '/';
+}

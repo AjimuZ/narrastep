@@ -37,15 +37,12 @@
   --color-danger: #e08696;
   --color-info: #97b7ff;
 
-  // Borders and shadows
+  // Borders and frame
   --color-border: rgba(247, 230, 234, 0.12);
   --color-border-strong: rgba(247, 230, 234, 0.22);
   --color-border-accent: rgba(246, 121, 140, 0.56);
   --color-separator: rgba(247, 230, 234, 0.08);
   --frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent);
-  --color-shadow: rgba(5, 8, 15, 0.3);
-  --color-shadow-panel: rgba(5, 8, 15, 0.22);
-  --color-shadow-strong: rgba(5, 8, 15, 0.58);
 
   // Pixel unit, corners and motion
   --px: 2px;

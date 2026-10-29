@@ -23,7 +23,13 @@ export function filledSegments(percent: number, segments: number): number {
   selector: 'ns-segmented-gauge',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="ns-gauge" role="img" [attr.aria-label]="label()">
+    <div
+      class="ns-gauge"
+      role="img"
+      [class.ns-gauge--unknown]="percent() === null"
+      [class.ns-gauge--danger]="tone() === 'danger'"
+      [attr.aria-label]="label()"
+    >
       @for (filled of cells(); track $index) {
         <span class="ns-gauge__segment" [class.ns-gauge__segment--filled]="filled"></span>
       }
@@ -31,14 +37,21 @@ export function filledSegments(percent: number, segments: number): number {
   `,
 })
 export class SegmentedGaugeComponent {
-  /** Completed share from 0 to 100. */
-  readonly percent = input.required<number>();
+  /**
+   * Completed share from 0 to 100, or `null` when the API reports no value: the gauge then draws
+   * the neutral striped track without cells, and the label should say "Unknown".
+   */
+  readonly percent = input.required<number | null>();
   readonly segments = input(20);
+  /** `danger` fills the cells with the danger color, for a failed stage. */
+  readonly tone = input<'ok' | 'danger'>('ok');
   /** Translated text that includes the value, for example "Transcription 40%". */
   readonly label = input.required<string>();
   protected readonly cells = computed(() => {
+    const percent = this.percent();
+    if (percent === null) return [];
     const total = Math.min(MAX_GAUGE_SEGMENTS, Math.max(1, Math.floor(this.segments())));
-    const filled = filledSegments(this.percent(), total);
+    const filled = filledSegments(percent, total);
     return Array.from({ length: total }, (_, index) => index < filled);
   });
 }

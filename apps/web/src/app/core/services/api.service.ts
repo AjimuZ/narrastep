@@ -1,3 +1,4 @@
+// Typed client for the local Narrastep API: projects, uploads, jobs, review data and packages.
 import {
   HttpClient,
   HttpEvent,
@@ -24,6 +25,7 @@ import {
   CreateExportRequest,
   CreateProjectRequest,
   ExportEstimate,
+  HealthResponse,
   MediaAsset,
   MergeSegmentsRequest,
   ProcessingJob,
@@ -46,6 +48,14 @@ const TERMINAL_JOB_STATES = new Set(['completed', 'failed', 'cancelled', 'interr
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+
+  /**
+   * Reads the local stack health (API, database, Redis, worker) for the shell's status pill. The
+   * request goes only to the same-origin API; HTTP or network errors reach the subscriber.
+   */
+  health(): Observable<HealthResponse> {
+    return this.http.get<HealthResponse>(`${API_ROOT}/health`);
+  }
 
   /** Loads the project collection for the local dashboard. */
   listProjects(): Observable<ProjectListResponse> {

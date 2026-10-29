@@ -1,199 +1,255 @@
-<section class="page processing-page">
+<section class="page">
   <header class="page-header">
     <div>
-      <p class="eyebrow">Local processing</p>
-      <h1>{{ project()?.name || 'Loading project…' }}</h1>
-      <p class="muted">Real progress is persisted by the worker and survives browser refreshes.</p>
+      <h1>Processing</h1>
+      <p>{{ project()?.name || 'Loading project…' }}</p>
     </div>
-    <a class="button button--quiet" routerLink="/projects">Back to projects</a>
+    <div class="page-header__actions">
+      <a class="ns-button" routerLink="/projects">Back to projects</a>
+    </div>
   </header>
 
   @if (errorMessage(); as message) {
-    <div class="notice notice--error error-box" role="alert">
-      <p>{{ message }}</p>
-      <button class="button button--quiet button--small" type="button" (click)="loadProject()">
-        Reload project
+    <div class="ns-notice ns-notice--error error-row" role="alert">
+      <span>{{ message }}</span>
+      <button class="ns-button ns-button--small" type="button" (click)="loadProject()">
+        <ns-pixel-icon name="refresh" />Try again
       </button>
     </div>
   }
 
   @if (loading()) {
-    <div class="panel processing-card" aria-busy="true">
+    <div class="loading" aria-busy="true">
       <span class="visually-hidden">Loading processing state…</span>
-      <div class="skeleton"></div>
+      <ns-activity-line label="Loading processing state" />
+      <div class="ns-placeholder"></div>
     </div>
   } @else if (project(); as currentProject) {
-    <article class="panel processing-card">
-      <div class="video-summary">
-        <span class="video-summary__icon" aria-hidden="true">
-          <svg
-            class="icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polygon points="6 3 20 12 6 21 6 3" />
-          </svg>
-        </span>
-        <div>
-          <span class="muted">Source video</span>
-          <strong>{{ videoFilename(currentProject) }}</strong>
-        </div>
-        <span class="status-badge" [attr.data-status]="currentProject.status">
-          {{ currentProject.status }}
-        </span>
-      </div>
-
-      @if (job(); as activeJob) {
-        <section class="job" aria-labelledby="job-stage">
+    <div class="processing-layout">
+      <ns-window title="Processing" [primary]="true">
+        @if (job(); as activeJob) {
           <p class="visually-hidden" role="status" aria-atomic="true">
             {{ stageLabel(activeJob.currentStage) }}. {{ activeJob.progressPercent }} percent.
             {{ activeJob.message }}
           </p>
-          <div class="stage-heading">
-            <div>
-              <p class="eyebrow">Current stage</p>
-              <h2 id="job-stage">{{ stageLabel(activeJob.currentStage) }}</h2>
-            </div>
+
+          <div class="job-summary">
+            <ns-status-pill
+              [label]="jobStatus(activeJob).label"
+              [tone]="jobStatus(activeJob).tone"
+            />
+            <span class="current-stage">{{ stageLabel(activeJob.currentStage) }}</span>
             <strong class="progress-number">{{ activeJob.progressPercent }}%</strong>
           </div>
 
-          <progress
-            max="100"
-            [value]="activeJob.progressPercent"
-            [attr.aria-label]="'Processing progress: ' + activeJob.progressPercent + ' percent'"
-          >
-            {{ activeJob.progressPercent }}%
-          </progress>
+          <ns-segmented-gauge
+            class="overall-gauge"
+            [percent]="activeJob.progressPercent"
+            [segments]="40"
+            [tone]="hasFailed() ? 'danger' : 'ok'"
+            [label]="'Overall progress ' + activeJob.progressPercent + '%'"
+          />
 
-          <div class="job-meta">
-            <span>{{ activeJob.message }}</span>
-            <span>Elapsed: {{ elapsedLabel(activeJob) }}</span>
-          </div>
+          <p class="job-message">
+            <span class="muted">{{ activeJob.message }}</span>
+            <span class="muted"
+              >Elapsed time <span class="mono">{{ elapsedLabel(activeJob) }}</span></span
+            >
+          </p>
 
-          <div class="runtime-profile" aria-label="Active processing configuration">
-            <span>Strategy: {{ activeJob.selectionStrategy || 'legacy' }}</span>
-            <span>OCR: {{ activeJob.ocrMode || 'off' }}</span>
-            <span>Budget: {{ activeJob.imageBudgetProfile || 'balanced' }}</span>
-          </div>
-
-          <ol class="stage-timeline" aria-label="Processing stages">
+          <ol class="stage-list" aria-label="Processing stages">
             @for (stage of timelineStages(); track stage) {
-              <li [attr.data-state]="stageState(stage)">
-                <span class="stage-marker" aria-hidden="true"></span>
-                <span>{{ stageLabel(stage) }}</span>
+              <li
+                class="stage"
+                [attr.data-state]="stageState(stage)"
+                [attr.aria-current]="stageState(stage) === 'active' ? 'step' : null"
+              >
+                <span class="stage__name">{{ stageLabel(stage) }}</span>
+                <span class="stage__state">{{ stageStateLabel(stage) }}</span>
+                <span class="stage__progress">
+                  @if (stagePercent(stage); as percent) {
+                    <ns-segmented-gauge
+                      [percent]="percent"
+                      [segments]="10"
+                      [label]="stageLabel(stage) + ' ' + percent + '%'"
+                    />
+                  } @else if (stageState(stage) === 'active' && !isTerminal()) {
+                    <ns-activity-line [label]="stageLabel(stage) + ' in progress'" />
+                  }
+                </span>
               </li>
             }
           </ol>
 
-          @if (activeJob.metrics) {
-            <dl class="live-metrics" aria-label="Processing counters">
-              <div>
-                <dt>Candidate timestamps</dt>
-                <dd>{{ metricValue(activeJob, 'candidateTimestampCount') ?? 0 }}</dd>
-              </div>
-              <div>
-                <dt>Decoded frames</dt>
-                <dd>{{ metricValue(activeJob, 'decodedFrameCount') ?? 0 }}</dd>
-              </div>
-              <div>
-                <dt>OCR calls</dt>
-                <dd>{{ metricValue(activeJob, 'ocrTriggeredCount') ?? 0 }}</dd>
-              </div>
-              <div>
-                <dt>Review images</dt>
-                <dd>{{ metricValue(activeJob, 'persistedThumbnailCount') ?? 0 }}</dd>
-              </div>
-            </dl>
-          }
-
-          @if (activeJob.status === 'failed' || activeJob.status === 'interrupted') {
-            <div class="notice notice--error" role="alert">
-              <strong>{{ activeJob.errorCode || 'PROCESSING_FAILED' }}</strong>
-              <p>{{ activeJob.errorMessage || 'Local processing did not complete.' }}</p>
+          @if (hasFailed()) {
+            <div class="ns-notice ns-notice--error" role="alert">
+              <p>
+                <strong>{{
+                  activeJob.status === 'interrupted'
+                    ? 'Processing was interrupted.'
+                    : 'Processing failed.'
+                }}</strong>
+                {{
+                  activeJob.errorMessage ||
+                    'Processing did not finish. Retry processing to start again from the original video.'
+                }}
+              </p>
+              <p class="mono error-code">Code: {{ activeJob.errorCode || 'PROCESSING_FAILED' }}</p>
             </div>
           }
 
           @if (activeJob.status === 'cancelled') {
-            <div class="notice">
-              Processing was cancelled. The original upload is still available for a clean retry.
+            <div class="ns-notice" role="status">
+              Processing was cancelled. The original video is kept, so you can retry processing.
             </div>
           }
 
           <div class="actions">
             @if (canCancel()) {
               <button
-                class="button button--danger"
+                class="ns-button ns-button--danger"
                 type="button"
                 [disabled]="actionPending() || activeJob.status === 'cancelling'"
                 (click)="cancelProcessing()"
               >
-                {{ activeJob.status === 'cancelling' ? 'Cancelling…' : 'Cancel processing' }}
+                <ns-pixel-icon name="stop" />{{
+                  activeJob.status === 'cancelling' ? 'Cancelling…' : 'Cancel processing'
+                }}
               </button>
             }
-            @if (
-              activeJob.status === 'failed' ||
-              activeJob.status === 'cancelled' ||
-              activeJob.status === 'interrupted'
-            ) {
+            @if (hasFailed() || activeJob.status === 'cancelled') {
               <button
-                class="button button--primary"
+                class="ns-button ns-button--primary"
                 type="button"
                 [disabled]="actionPending()"
                 (click)="startProcessing()"
               >
-                Retry from source
+                <ns-pixel-icon name="refresh" />Retry processing
               </button>
             }
             @if (activeJob.status === 'completed') {
               <a
-                class="button button--primary"
+                class="ns-button ns-button--primary"
                 [routerLink]="['/projects', currentProject.id, 'review']"
               >
-                Open review workspace
+                <ns-pixel-icon name="chevron-right" />Open review
               </a>
             }
           </div>
-        </section>
-      } @else {
-        <section class="start-state">
-          @if (currentProject.status === 'review' || currentProject.status === 'completed') {
-            <h2>This project is ready for review</h2>
-            <p class="muted">Open the transcript and screenshot workspace to continue.</p>
+        } @else if (currentProject.status === 'review' || currentProject.status === 'completed') {
+          <p>Processing is done. Open the review to check segments and screenshots.</p>
+          <div class="actions">
             <a
-              class="button button--primary"
+              class="ns-button ns-button--primary"
               [routerLink]="['/projects', currentProject.id, 'review']"
             >
-              Open review workspace
+              <ns-pixel-icon name="chevron-right" />Open review
             </a>
-          } @else {
-            <h2>Processing has not started</h2>
-            <p class="muted">
-              Start the CPU-compatible local pipeline when you are ready. Progress will reflect
-              completed work.
+          </div>
+        } @else {
+          <p>This project has not been processed yet. Processing runs on this computer.</p>
+          @if (currentProject.status === 'draft') {
+            <p class="ns-error" id="processing-draft-error">
+              This project has no video. Upload a video before processing.
             </p>
+          }
+          <div class="actions">
             <button
-              class="button button--primary"
+              class="ns-button ns-button--primary"
               type="button"
               [disabled]="actionPending() || currentProject.status === 'draft'"
+              [attr.aria-describedby]="
+                currentProject.status === 'draft' ? 'processing-draft-error' : null
+              "
               (click)="startProcessing()"
             >
-              {{ actionPending() ? 'Queuing…' : 'Start local processing' }}
+              <ns-pixel-icon name="play" />{{ actionPending() ? 'Starting…' : 'Start processing' }}
             </button>
-            @if (currentProject.status === 'draft') {
-              <p class="field-error">Upload a source video before processing.</p>
-            }
-          }
-        </section>
-      }
+          </div>
+        }
+      </ns-window>
 
-      <footer>
-        <span class="muted">Project created {{ currentProject.createdAt | date: 'medium' }}</span>
-        <span class="privacy-note">No cloud upload or external AI service</span>
-      </footer>
-    </article>
+      <div class="processing-side">
+        <ns-window title="Project">
+          <dl class="facts">
+            <div>
+              <dt>Status</dt>
+              <dd>
+                <ns-status-pill
+                  [label]="projectStatus(currentProject).label"
+                  [tone]="projectStatus(currentProject).tone"
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Video</dt>
+              <dd class="mono file-name">{{ videoFilename(currentProject) }}</dd>
+            </div>
+            <div>
+              <dt>Duration</dt>
+              <dd class="mono">{{ durationLabel(currentProject) }}</dd>
+            </div>
+            <div>
+              <dt>Spoken language</dt>
+              <dd class="mono">{{ languageLabel(currentProject) }}</dd>
+            </div>
+            <div>
+              <dt>Project type</dt>
+              <dd>{{ typeLabel(currentProject) }}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>
+                <time [attr.datetime]="currentProject.createdAt">{{
+                  currentProject.createdAt | date: 'medium'
+                }}</time>
+              </dd>
+            </div>
+          </dl>
+        </ns-window>
+
+        @if (job(); as activeJob) {
+          <ns-window title="Processing settings">
+            <dl class="facts">
+              <div>
+                <dt>Screenshot selection</dt>
+                <dd class="mono">{{ activeJob.selectionStrategy || 'legacy' }}</dd>
+              </div>
+              <div>
+                <dt>Text recognition</dt>
+                <dd class="mono">{{ activeJob.ocrMode || 'off' }}</dd>
+              </div>
+              <div>
+                <dt>Image budget</dt>
+                <dd class="mono">{{ activeJob.imageBudgetProfile || 'balanced' }}</dd>
+              </div>
+            </dl>
+          </ns-window>
+
+          @if (activeJob.metrics) {
+            <ns-window title="Counters">
+              <dl class="facts">
+                <div>
+                  <dt>Candidate times</dt>
+                  <dd class="mono">{{ metricValue(activeJob, 'candidateTimestampCount') ?? 0 }}</dd>
+                </div>
+                <div>
+                  <dt>Decoded frames</dt>
+                  <dd class="mono">{{ metricValue(activeJob, 'decodedFrameCount') ?? 0 }}</dd>
+                </div>
+                <div>
+                  <dt>Text recognition calls</dt>
+                  <dd class="mono">{{ metricValue(activeJob, 'ocrTriggeredCount') ?? 0 }}</dd>
+                </div>
+                <div>
+                  <dt>Saved screenshots</dt>
+                  <dd class="mono">{{ metricValue(activeJob, 'persistedThumbnailCount') ?? 0 }}</dd>
+                </div>
+              </dl>
+            </ns-window>
+          }
+        }
+      </div>
+    </div>
   }
 </section>

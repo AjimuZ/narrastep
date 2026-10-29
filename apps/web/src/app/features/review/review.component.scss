@@ -1,38 +1,30 @@
+// Review screen layout: four pane windows on wide screens, a view switcher on narrower ones.
+// The viewport breakpoints (48rem, 64rem, 76rem) are part of the browser layout contract.
 :host {
   display: block;
 }
 
 .review-page {
   width: min(100%, 100rem);
-  margin-inline: auto;
-  padding: clamp(1rem, 2vw, 1.5rem) var(--page-gutter) var(--space-5);
 }
 
-.review-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-5);
-  margin-bottom: var(--space-4);
+// Header: back link, title and project name; the unsaved count and the Export link on the right.
+.review-title {
+  min-width: 0;
 }
 
-.review-header h1 {
-  max-width: 54rem;
-  margin: 0;
-  font-size: clamp(1.6rem, 2.6vw, 2.25rem);
-}
-
-.review-header .eyebrow {
-  margin-top: var(--space-3);
+.review-title p {
+  overflow-wrap: anywhere;
 }
 
 .back-link {
   display: inline-flex;
-  min-height: 2.25rem;
+  min-height: 2rem;
   align-items: center;
+  gap: var(--space-1);
   color: var(--color-text-muted);
-  font-size: 0.85rem;
-  font-weight: 650;
+  font-size: var(--text-sm);
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -40,132 +32,169 @@
   color: var(--color-text-strong);
 }
 
-.review-header__actions,
-.workspace-notice,
-.panel-heading,
-.video-controls,
-.selected-time,
-.merge-toolbar,
-.segment > header,
-.segment footer,
-.primary-shot figcaption,
-.screenshot-actions,
-.candidate > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.review-header__actions {
-  flex: 0 0 auto;
-}
-
-.unsaved,
-.dirty-label {
-  color: var(--color-warning);
-  font-size: 0.8rem;
-  font-weight: 700;
+// The sprite has no left chevron; the right one is mirrored.
+.back-link__icon {
+  transform: scaleX(-1);
 }
 
 .unsaved {
-  padding: 0.35rem 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-warning) 7%, transparent);
+  display: inline-flex;
+  align-items: center;
+}
+
+.page-header__actions {
+  align-items: center;
 }
 
 .workspace-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
+// View switcher: a segmented pixel control, hidden when every pane fits (76rem and wider).
 .workspace-switcher {
   display: none;
 }
 
+.workspace-switcher__option {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.workspace-switcher__option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workspace-switcher__option span {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.workspace-switcher__option:hover span {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.workspace-switcher__option input:checked + span {
+  border-color: var(--color-border-accent);
+  border-bottom-width: var(--px);
+  background: var(--color-bg-raised);
+  color: var(--color-text-strong);
+}
+
+.workspace-switcher__option input:focus-visible + span {
+  outline: var(--px) solid var(--color-focus-ring);
+  outline-offset: var(--px);
+}
+
+// Pane grid. The transcript column width comes from the persisted "Editor width" setting.
 .review-grid {
   display: grid;
-  height: calc(100dvh - 12.5rem);
+  height: calc(100dvh - 13rem);
   min-height: 32rem;
   grid-template-columns:
-    minmax(16rem, 0.75fr) minmax(26rem, var(--editor-pane-width, 1.35fr))
-    minmax(20rem, 0.95fr);
+    minmax(12rem, 0.75fr) minmax(20rem, var(--editor-pane-width, 1.35fr))
+    minmax(15rem, 0.95fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-.structure-panel {
+.review-pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+// Each pane window fills its grid cell and scrolls its body, so the frame and title stay put.
+.review-pane ::ng-deep .ns-window {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.review-pane ::ng-deep .ns-window__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-color: var(--color-bg-raised) transparent;
+  scrollbar-width: thin;
+}
+
+.structure-pane {
   grid-row: 1 / 3;
   grid-column: 1;
 }
 
-.transcript-panel {
+.transcript-pane {
   grid-row: 1 / 3;
   grid-column: 2;
 }
 
-.video-panel {
+.video-pane {
   grid-row: 1;
   grid-column: 3;
 }
 
-.screenshot-panel {
+.screenshot-pane {
   grid-row: 2;
   grid-column: 3;
 }
 
+.loading-grid {
+  height: auto;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  grid-template-rows: auto;
+}
+
+.loading-line {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+.loading-grid > .ns-placeholder {
+  min-height: 50vh;
+}
+
+// Segments pane: filters and merge bar stay on top while the list scrolls.
+.structure-pane ::ng-deep .ns-window__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .review-filters {
-  position: sticky;
-  z-index: 2;
-  top: 4.65rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
-  backdrop-filter: blur(12px);
-}
-
-.segment-rail {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-}
-
-.segment-rail__item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-deep);
-}
-
-.segment-rail__item.selected {
-  border-color: var(--color-accent);
-  box-shadow: inset 3px 0 var(--color-brand);
-}
-
-.segment-rail__item.dirty {
-  border-bottom-color: var(--color-warning);
-}
-
-.review-filters input,
-.review-filters select {
-  width: 100%;
-  min-height: 2.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--space-2) var(--space-3);
 }
 
 .pane-resizer {
   display: none;
-  grid-column: 1;
-  align-items: center;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+  grid-column: 1 / -1;
+}
+
+.pane-resizer input {
+  width: 100%;
+  accent-color: var(--color-brand);
 }
 
 @media (min-width: 80rem) {
@@ -174,156 +203,48 @@
   }
 }
 
-.evidence-metadata {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin: 0 var(--space-4) var(--space-4);
-}
-
-.evidence-metadata div {
-  min-width: 0;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-panel);
-}
-
-.evidence-metadata dt {
-  color: var(--color-text-muted);
-  font-size: 0.68rem;
-}
-
-.evidence-metadata dd {
-  overflow: hidden;
+.segment-count {
   margin: 0;
-  color: var(--color-text-strong);
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-}
-
-.loading-grid > .skeleton {
-  min-height: 60vh;
-}
-
-.review-grid > .panel {
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  border-color: var(--color-border);
-  box-shadow: 0 10px 30px var(--color-shadow-panel);
-  contain: paint;
-  scrollbar-color: var(--color-bg-raised) transparent;
-  scrollbar-width: thin;
-}
-
-.review-grid > .panel:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 34%, transparent);
-}
-
-.panel-heading {
-  position: sticky;
-  z-index: 3;
-  top: 0;
-  min-height: 4.65rem;
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
-  backdrop-filter: blur(14px);
-}
-
-.panel-heading h2,
-.panel-heading .eyebrow {
-  margin-bottom: 0;
-}
-
-.panel-heading h2 {
-  font-size: 1.15rem;
-}
-
-.video-panel video {
-  display: block;
-  width: calc(100% - 2rem);
-  max-height: 52vh;
-  margin: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-media-bg);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-media-bg) 28%, transparent);
-}
-
-.video-controls {
-  align-items: flex-end;
-  flex-wrap: wrap;
-  padding: 0 var(--space-4) var(--space-4);
-}
-
-.video-controls > .button {
-  flex: 1 1 11rem;
-}
-
-.playback-field {
-  max-width: 8rem;
-  flex: 0 0 8rem;
-}
-
-.selected-time {
-  align-items: flex-start;
-  flex-direction: column;
-  margin: 0 var(--space-4) var(--space-4);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-deep);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .merge-toolbar {
-  position: sticky;
-  z-index: 2;
-  top: 4.65rem;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-panel) 94%, transparent);
-  color: var(--color-text-strong);
-  font-size: 0.85rem;
-  backdrop-filter: blur(12px);
-}
-
-.segment-list {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-3);
-}
-
-.segment {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--color-media-bg) 62%, transparent);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-media-bg) 12%, transparent);
+  background: var(--color-bg-deep);
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
 }
 
-.segment:hover {
-  border-color: color-mix(in srgb, var(--color-text-muted) 30%, transparent);
+.segment-rail {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 6rem;
+  align-content: start;
+  gap: var(--space-2);
+  overflow: auto;
 }
 
-.segment.selected {
-  border-color: var(--color-accent);
-  background:
-    linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--color-accent) 6%, transparent),
-      transparent 35%
-    ),
-    var(--color-bg-deep);
-  box-shadow:
-    inset 3px 0 var(--color-brand),
-    0 10px 24px color-mix(in srgb, var(--color-media-bg) 18%, transparent);
+.segment-rail__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) 1.25rem;
 }
 
-.segment.dirty {
+.segment-rail__item.dirty {
   border-bottom-color: var(--color-warning);
+}
+
+.segment-rail__state {
+  grid-column: 1 / -1;
 }
 
 .segment-select {
@@ -332,12 +253,9 @@
   border: 0;
   background: transparent;
   color: var(--color-text-strong);
+  font: inherit;
   text-align: left;
   cursor: pointer;
-}
-
-.segment-select:hover strong {
-  color: var(--color-accent);
 }
 
 .segment-select strong,
@@ -345,19 +263,20 @@
   display: block;
 }
 
-.segment-select span,
-.segment-meta {
+.segment-select span {
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
 }
 
 .merge-check {
   display: flex;
-  min-height: 2.25rem;
+  min-height: 2rem;
   align-items: center;
   gap: var(--space-1);
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
+  cursor: pointer;
 }
 
 .merge-check input {
@@ -366,43 +285,48 @@
   accent-color: var(--color-brand);
 }
 
+// Transcript pane: the selected segment's editor.
+.segment__header,
+.segment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.segment__header strong {
+  color: var(--color-text-strong);
+}
+
+.segment__header span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .segment-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   margin-block: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .segment textarea {
-  width: 100%;
-  min-height: 7.5rem;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-elevated);
-  color: var(--color-text-strong);
+  min-height: 10rem;
   line-height: 1.55;
-  resize: vertical;
 }
 
-.segment textarea:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--color-text-muted) 36%, transparent);
-}
-
-.segment textarea:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
-}
-
-.segment textarea:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
+.segment.dirty textarea {
+  border-color: var(--color-warning);
 }
 
 details {
   margin-block: var(--space-3);
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 summary {
@@ -413,216 +337,230 @@ summary {
 details p {
   margin: var(--space-2) 0 0;
   padding: var(--space-3);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--color-text-muted) 5%, transparent);
+  background: var(--color-bg-deep);
   white-space: pre-wrap;
 }
 
-.screenshot-loading,
-.empty-panel {
-  padding: var(--space-5);
+.empty-state h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+// Video pane: the media backdrop stays dark behind the native player.
+.video-pane video {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-media-bg);
+}
+
+.video-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.video-controls > .ns-button {
+  flex: 1 1 11rem;
+}
+
+.playback-speed {
+  flex: 0 1 8rem;
+}
+
+.selected-time {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+  font-size: var(--text-sm);
+}
+
+// Screenshot pane: primary image, its details and the alternatives.
+.screenshot-loading > .ns-placeholder {
+  aspect-ratio: 16 / 9;
 }
 
 .primary-shot {
-  margin: var(--space-4);
+  margin: 0;
 }
 
-.primary-shot > button,
-.candidate__preview {
+.media-frame {
   display: block;
   width: 100%;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
   background: var(--color-media-bg);
   cursor: zoom-in;
 }
 
-.primary-shot > button:hover,
-.candidate__preview:hover {
+.media-frame:hover {
   border-color: var(--color-border-accent);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
 }
 
-.primary-shot img,
-.candidate img {
+.media-frame img {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: contain;
 }
 
-.primary-shot figcaption {
-  margin-top: var(--space-3);
-  font-size: 0.8rem;
+.primary-shot figcaption,
+.candidate__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
 }
 
-.primary-shot figcaption > div {
+.pills {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.user-choice {
-  color: var(--color-success);
-}
-
-.screenshot-actions {
-  flex-wrap: wrap;
-  padding: 0 var(--space-4) var(--space-4);
-}
-
-.no-primary {
-  margin: var(--space-4);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--color-text-muted) 3%, transparent);
-  text-align: center;
-}
-
-.candidates {
-  padding: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.candidates h3 {
-  font-size: 0.95rem;
-}
-
-.candidate-grid {
+.evidence-metadata {
   display: grid;
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
 }
 
-.candidate {
+.evidence-metadata div {
+  min-width: 0;
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
   background: var(--color-bg-deep);
 }
 
-.candidate > div {
-  margin-top: var(--space-2);
+.evidence-metadata dt {
   color: var(--color-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
+}
+
+.evidence-metadata dd {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.screenshot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.no-primary {
+  padding: var(--space-4);
+  border: 1px dashed var(--frame);
+  border-radius: var(--radius);
+}
+
+.candidates {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-separator);
+}
+
+.candidates h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+}
+
+.candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-3);
+}
+
+.candidate {
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+}
+
+.candidate__footer {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 .candidate-empty {
-  padding: var(--space-4);
-  text-align: center;
+  margin: var(--space-3) 0 0;
 }
 
+// 64rem to 76rem: two columns; video or screenshot (chosen in the switcher) beside the editor.
 @media (min-width: 64rem) and (max-width: 75.999rem) {
   .review-grid {
-    grid-template-columns: minmax(24rem, 1.35fr) minmax(18rem, 0.85fr);
+    height: calc(100dvh - 16.5rem);
+    grid-template-columns: minmax(20rem, 1.35fr) minmax(16rem, 0.85fr);
     grid-template-rows: minmax(12rem, 0.65fr) minmax(18rem, 1.35fr);
   }
 
-  .structure-panel {
+  .loading-grid {
+    height: auto;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    grid-template-rows: auto;
+  }
+
+  .review-grid > .structure-pane {
     grid-row: 1;
     grid-column: 1;
   }
 
-  .transcript-panel {
+  .review-grid > .transcript-pane {
     grid-row: 2;
     grid-column: 1;
   }
 
-  .video-panel {
+  .review-grid > .video-pane,
+  .review-grid > .screenshot-pane {
     grid-row: 1 / 3;
     grid-column: 2;
   }
 
-  .screenshot-panel {
-    grid-row: 1 / 3;
-    grid-column: 2;
-  }
-
-  .video-panel video {
+  .video-pane video {
     max-height: 36vh;
   }
 }
 
+// Below 64rem the panes grow with their content; the page scrolls instead of each pane.
 @media (max-width: 63.999rem) {
-  .review-page {
-    padding: var(--space-4);
-  }
-
-  .review-header,
-  .review-header__actions,
-  .video-controls,
-  .segment footer,
-  .screenshot-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .review-header {
-    align-items: stretch;
-  }
-
-  .review-header__actions .button,
-  .video-controls .button,
-  .segment footer .button,
-  .screenshot-actions .button {
-    width: 100%;
-  }
-
   .workspace-switcher {
     position: sticky;
     z-index: 10;
-    top: 4.25rem;
+    top: 3rem;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-1);
+    gap: 2px;
     margin-bottom: var(--space-4);
-    padding: var(--space-1);
-    border: 1px solid var(--color-border);
+    padding: 2px;
+    border: 1px solid var(--frame);
     border-radius: var(--radius);
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
-    backdrop-filter: blur(14px);
-  }
-
-  .workspace-switcher label {
-    position: relative;
-    min-width: 0;
-    cursor: pointer;
-  }
-
-  .workspace-switcher input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .workspace-switcher span {
-    display: flex;
-    min-height: 2.75rem;
-    align-items: center;
-    justify-content: center;
-    padding: 0.55rem var(--space-2);
-    border: 1px solid transparent;
-    border-radius: calc(var(--radius) - 0.2rem);
-    color: var(--color-text-muted);
-    font-size: 0.78rem;
-    font-weight: 750;
-    text-align: center;
-  }
-
-  .workspace-switcher input:checked + span {
-    border-color: var(--color-border-accent);
-    background: var(--color-bg-raised);
-    color: var(--color-text-strong);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-media-bg) 20%, transparent);
-  }
-
-  .workspace-switcher input:focus-visible + span {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 2px;
+    background: var(--color-bg-deep);
   }
 
   .review-grid {
@@ -631,27 +569,33 @@ details p {
     min-height: 0;
   }
 
-  .review-grid > .panel {
+  .review-grid > .review-pane {
     display: none;
-    max-height: none;
-    overflow: visible;
-    contain: none;
   }
 
-  .review-grid > .structure-panel,
-  .review-grid > .transcript-panel {
+  .review-pane ::ng-deep .ns-window__body,
+  .segment-rail {
+    overflow: visible;
+  }
+
+  .review-grid > .structure-pane,
+  .review-grid > .transcript-pane {
     display: block;
   }
 
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid .transcript-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid .transcript-panel,
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid .structure-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid .structure-panel {
+  .review-grid > .structure-pane {
+    margin-bottom: var(--space-3);
+  }
+
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .transcript-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .transcript-pane,
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .structure-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .structure-pane {
     display: none;
   }
 
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid .video-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid .screenshot-panel {
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .video-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .screenshot-pane {
     display: block;
   }
 
@@ -659,114 +603,68 @@ details p {
     display: grid;
   }
 
-  .loading-grid > .skeleton:not(:first-of-type) {
+  .loading-grid > .ns-placeholder:not(:nth-of-type(1)) {
     display: none;
   }
 
-  .panel-heading,
-  .merge-toolbar,
-  .review-filters {
-    position: static;
-  }
-
-  .video-panel video {
+  .video-pane video {
     max-height: none;
   }
 
-  .playback-field {
-    max-width: none;
-    flex-basis: auto;
-  }
-
-  .segment footer {
-    gap: var(--space-2);
-  }
-
-  .candidate-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  .playback-speed {
+    flex-basis: 100%;
   }
 }
 
+// 48rem to 76rem: structure and transcript always show; the switcher picks video or screenshot.
 @media (min-width: 48rem) and (max-width: 75.999rem) {
   .workspace-switcher {
     position: sticky;
     z-index: 10;
-    top: 4.25rem;
+    top: 3rem;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-1);
+    gap: 2px;
     margin-bottom: var(--space-4);
-    padding: var(--space-1);
-    border: 1px solid var(--color-border);
+    padding: 2px;
+    border: 1px solid var(--frame);
     border-radius: var(--radius);
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
-    backdrop-filter: blur(14px);
+    background: var(--color-bg-deep);
   }
 
-  .workspace-switcher label {
-    position: relative;
-    min-width: 0;
-    cursor: pointer;
-  }
-
-  .workspace-switcher label:has(#review-view-transcript) {
+  .workspace-switcher__option:has(#review-view-transcript) {
     display: none;
   }
 
-  .workspace-switcher input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .workspace-switcher span {
-    display: flex;
-    min-height: 2.75rem;
-    align-items: center;
-    justify-content: center;
-    padding: 0.55rem var(--space-2);
-    border: 1px solid transparent;
-    border-radius: calc(var(--radius) - 0.2rem);
-    color: var(--color-text-muted);
-    font-size: 0.78rem;
-    font-weight: 750;
-    text-align: center;
-  }
-
-  .workspace-switcher input:checked + span,
-  .workspace-switcher:has(#review-view-transcript:checked) label:has(#review-view-video) span {
+  // The transcript is the default choice; here it means "video beside the transcript".
+  .workspace-switcher:has(#review-view-transcript:checked)
+    .workspace-switcher__option:has(#review-view-video)
+    span {
     border-color: var(--color-border-accent);
+    border-bottom-width: var(--px);
     background: var(--color-bg-raised);
     color: var(--color-text-strong);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-media-bg) 20%, transparent);
   }
 
-  .workspace-switcher input:focus-visible + span {
-    outline: 3px solid var(--color-focus-ring);
-    outline-offset: 2px;
-  }
-
-  .review-grid > .video-panel,
-  .review-grid > .screenshot-panel {
+  .review-grid > .video-pane,
+  .review-grid > .screenshot-pane {
     display: none;
   }
 
-  .review-grid > .structure-panel,
-  .review-grid > .transcript-panel,
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .structure-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .structure-panel,
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .transcript-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .transcript-panel,
-  .workspace-switcher:has(#review-view-transcript:checked) ~ .review-grid > .video-panel,
-  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .video-panel,
-  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .screenshot-panel {
+  .review-grid > .structure-pane,
+  .review-grid > .transcript-pane,
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .structure-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .structure-pane,
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .transcript-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .transcript-pane,
+  .workspace-switcher:has(#review-view-transcript:checked) ~ .review-grid > .video-pane,
+  .workspace-switcher:has(#review-view-video:checked) ~ .review-grid > .video-pane,
+  .workspace-switcher:has(#review-view-screenshot:checked) ~ .review-grid > .screenshot-pane {
     display: block;
   }
 }
 
+// 48rem to 64rem: one column; structure, transcript, then video or screenshot.
 @media (min-width: 48rem) and (max-width: 63.999rem) {
   .review-grid {
     display: grid;
@@ -775,83 +673,44 @@ details p {
     gap: var(--space-4);
   }
 
-  .review-grid > .structure-panel {
+  .review-grid > .structure-pane {
     grid-row: 1;
+    grid-column: 1;
+    margin-bottom: 0;
   }
 
-  .review-grid > .transcript-panel {
+  .review-grid > .transcript-pane {
     grid-row: 2;
+    grid-column: 1;
   }
 
-  .review-grid > .video-panel,
-  .review-grid > .screenshot-panel {
+  .review-grid > .video-pane,
+  .review-grid > .screenshot-pane {
     grid-row: 3;
-  }
-}
-
-@media (min-width: 64rem) and (max-width: 75.999rem) {
-  .review-grid {
-    height: calc(100dvh - 16.5rem);
-    grid-template-columns: minmax(24rem, 1.35fr) minmax(18rem, 0.85fr);
-    grid-template-rows: minmax(12rem, 0.65fr) minmax(18rem, 1.35fr);
-  }
-
-  .review-grid > .structure-panel {
-    grid-row: 1;
     grid-column: 1;
   }
 
-  .review-grid > .transcript-panel {
-    grid-row: 2;
-    grid-column: 1;
-  }
-
-  .review-grid > .video-panel,
-  .review-grid > .screenshot-panel {
-    grid-row: 1 / 3;
-    grid-column: 2;
+  .loading-grid {
+    grid-template-rows: auto;
   }
 }
 
 @media (max-width: 34rem) {
-  .review-page {
-    padding-inline: var(--space-3);
-  }
-
-  .review-header h1 {
-    font-size: 1.55rem;
-  }
-
-  .workspace-notice,
-  .segment > header,
-  .primary-shot figcaption,
-  .candidate > div {
-    align-items: flex-start;
-  }
-
   .workspace-notice {
+    align-items: stretch;
     flex-direction: column;
   }
 
-  .workspace-notice .button {
+  .segment__actions,
+  .screenshot-actions,
+  .page-header__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segment__actions .ns-button,
+  .screenshot-actions .ns-button,
+  .page-header__actions .ns-button {
     width: 100%;
-  }
-
-  .segment,
-  .panel-heading,
-  .candidates {
-    padding: var(--space-3);
-  }
-
-  .segment-list {
-    padding: var(--space-2);
-  }
-
-  .primary-shot {
-    margin: var(--space-3);
-  }
-
-  .screenshot-actions {
-    padding-inline: var(--space-3);
   }
 }

@@ -1,3 +1,4 @@
+// Split dialog: confirms the two text halves of a transcript segment and the split time.
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormsModule } from '@angular/forms';
@@ -9,53 +10,63 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
   maxSeconds: number;
 }
 
+/**
+ * Modal split confirmation. Closes with a `SplitSegmentRequest` when the time lies strictly inside
+ * the segment and the user confirms; Cancel closes with no value.
+ */
 @Component({
   selector: 'ns-split-segment-dialog',
   imports: [FormsModule],
   template: `
-    <section class="dialog" aria-labelledby="split-title" aria-describedby="split-description">
-      <p class="eyebrow">Structural edit</p>
-      <h2 id="split-title">Split transcript segment</h2>
-      <p id="split-description" class="muted">
-        Confirm the exact text portions and choose where the new timestamp boundary belongs.
-      </p>
+    <section
+      class="ns-dialog split-dialog"
+      aria-labelledby="split-title"
+      aria-describedby="split-description"
+    >
+      <h2 id="split-title" class="ns-dialog__title">Split transcript segment</h2>
+      <div class="ns-dialog__body">
+        <p id="split-description" class="muted">Check the two parts and the split time.</p>
 
-      <div class="split-copy">
-        <article>
-          <h3>First segment</h3>
-          <p>{{ data.leftReviewedText }}</p>
-        </article>
-        <article>
-          <h3>Second segment</h3>
-          <p>{{ data.rightReviewedText }}</p>
-        </article>
+        <div class="split-copy">
+          <article>
+            <h3>First segment</h3>
+            <p>{{ data.leftReviewedText }}</p>
+          </article>
+          <article>
+            <h3>Second segment</h3>
+            <p>{{ data.rightReviewedText }}</p>
+          </article>
+        </div>
+
+        <div class="ns-form-row">
+          <label class="ns-label" for="split-seconds">Split time (seconds)</label>
+          <input
+            id="split-seconds"
+            class="ns-field mono"
+            type="number"
+            step="0.001"
+            [min]="data.minSeconds"
+            [max]="data.maxSeconds"
+            [ngModel]="splitSeconds()"
+            (ngModelChange)="setSplitSeconds($event)"
+            [attr.aria-invalid]="isValid() ? null : 'true'"
+            aria-describedby="split-range"
+          />
+          <p id="split-range" class="ns-help">
+            Between {{ data.minSeconds.toFixed(3) }} and {{ data.maxSeconds.toFixed(3) }} seconds.
+          </p>
+          @if (!isValid()) {
+            <p class="ns-error" role="alert">
+              The time is outside the segment. Enter a time between its start and end.
+            </p>
+          }
+        </div>
       </div>
 
-      <div class="field">
-        <label for="split-seconds">Split timestamp in seconds</label>
-        <input
-          id="split-seconds"
-          type="number"
-          step="0.001"
-          [min]="data.minSeconds"
-          [max]="data.maxSeconds"
-          [ngModel]="splitSeconds()"
-          (ngModelChange)="setSplitSeconds($event)"
-          aria-describedby="split-range"
-        />
-        <small id="split-range" class="muted">
-          Allowed range: {{ data.minSeconds.toFixed(3) }}–{{ data.maxSeconds.toFixed(3) }}
-          seconds
-        </small>
-        @if (!isValid()) {
-          <p class="field-error" role="alert">Choose a timestamp strictly inside the segment.</p>
-        }
-      </div>
-
-      <div class="dialog__actions">
-        <button class="button button--quiet" type="button" (click)="cancel()">Cancel</button>
+      <div class="ns-dialog__actions">
+        <button class="ns-button" type="button" (click)="cancel()">Cancel</button>
         <button
-          class="button button--primary"
+          class="ns-button ns-button--primary"
           type="button"
           [disabled]="!isValid()"
           (click)="confirm()"
@@ -66,64 +77,40 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
     </section>
   `,
   styles: `
-    .dialog {
+    .split-dialog {
       width: min(44rem, calc(100vw - 2rem));
-      max-height: calc(100dvh - 2rem);
-      overflow: auto;
-      padding: var(--space-5);
-      border: 1px solid var(--color-border-accent);
-      border-radius: var(--radius);
-      background: var(--color-bg-elevated);
-      box-shadow: 0 24px 80px var(--color-shadow-strong);
+    }
+
+    .split-dialog .muted {
+      margin: 0;
     }
 
     .split-copy {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
       gap: var(--space-3);
-      margin-block: var(--space-5);
+      margin-block: var(--space-4);
     }
 
     article {
-      min-height: 8rem;
-      padding: var(--space-4);
-      border: 1px solid var(--color-border);
+      min-width: 0;
+      min-height: 6rem;
+      padding: var(--space-3);
+      border: 1px solid var(--frame);
       border-radius: var(--radius);
       background: var(--color-bg-deep);
+      overflow-wrap: anywhere;
       white-space: pre-wrap;
     }
 
     article h3 {
-      font-size: 0.8rem;
-      text-transform: uppercase;
+      margin: 0 0 var(--space-2);
       color: var(--color-text-muted);
+      font-size: var(--text-sm);
     }
 
-    .dialog__actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: var(--space-3);
-      margin-top: var(--space-5);
-    }
-
-    @media (max-width: 38rem) {
-      .dialog {
-        width: min(100%, calc(100vw - 1rem));
-        padding: var(--space-4);
-      }
-
-      .split-copy {
-        grid-template-columns: 1fr;
-      }
-
-      .dialog__actions {
-        align-items: stretch;
-        flex-direction: column-reverse;
-      }
-
-      .dialog__actions .button {
-        width: 100%;
-      }
+    article p {
+      margin: 0;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,3 +1,4 @@
+// Types of the local API payloads (camelCase JSON) used by the web client.
 /** Project type (ADR 0009); the API keeps the historical field name `mode`. */
 export type ProjectMode = 'task_briefing' | 'meeting' | 'tutorial' | 'general';
 
@@ -19,6 +20,15 @@ export interface Project {
   videoAsset?: MediaAsset | null;
   activeSegmentCount?: number;
   screenshotCount?: number;
+}
+
+/** `GET /health`: `status` is `ok` when every part answers and `degraded` otherwise. */
+export interface HealthResponse {
+  status: 'ok' | 'degraded';
+  version: string;
+  database: string;
+  redis: string;
+  worker: string;
 }
 
 export interface ProjectListResponse {

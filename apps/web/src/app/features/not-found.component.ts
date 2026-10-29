@@ -1,24 +1,25 @@
+// Fallback screen for an unknown route.
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { WindowComponent } from '../shared/ui';
+
+/** Says that the address does not exist and links back to the project list. */
 @Component({
   selector: 'ns-not-found',
-  imports: [RouterLink],
+  imports: [RouterLink, WindowComponent],
   template: `
-    <section class="page panel not-found">
-      <p class="eyebrow">404</p>
-      <h1>That page is not available</h1>
-      <p class="muted">The address may be incorrect, or the project may have been removed.</p>
-      <a class="button button--primary" routerLink="/projects">Return to projects</a>
+    <section class="page not-found">
+      <header class="page-header"><h1>Page not found</h1></header>
+      <ns-window title="This address does not exist" [primary]="true">
+        <p class="muted">The link may be wrong, or the project was deleted.</p>
+        <a class="ns-button ns-button--primary" routerLink="/projects">Open projects</a>
+      </ns-window>
     </section>
   `,
   styles: `
     .not-found {
       max-width: 42rem;
-      margin-top: clamp(2rem, 10vh, 7rem);
-      padding: clamp(2rem, 7vw, 4rem);
-      border-color: var(--color-border-accent);
-      text-align: center;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

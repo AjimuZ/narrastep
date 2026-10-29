@@ -1,3 +1,4 @@
+// Review screen: video, transcript segments and screenshot inspector with keyboard shortcuts.
 import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import {
   ChangeDetectionStrategy,
@@ -46,10 +47,28 @@ import {
   SplitSegmentDialogComponent,
   SplitSegmentDialogData,
 } from '../../shared/dialogs/split-segment-dialog.component';
+import {
+  ActivityLineComponent,
+  PixelIconComponent,
+  StatusPillComponent,
+  WindowComponent,
+} from '../../shared/ui';
 
+/**
+ * Review workspace for one project. Edits stay local until saved; leaving with unsaved edits asks
+ * for confirmation through `canDeactivate`. Shortcuts: J/K segment, Space play, [ ] seek, / search,
+ * M merge selection, R recover frame, Ctrl/Cmd+S save.
+ */
 @Component({
   selector: 'ns-review',
-  imports: [DialogModule, RouterLink],
+  imports: [
+    ActivityLineComponent,
+    DialogModule,
+    PixelIconComponent,
+    RouterLink,
+    StatusPillComponent,
+    WindowComponent,
+  ],
   templateUrl: './review.component.html',
   styleUrl: './review.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -160,7 +179,9 @@ export class ReviewComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false)),
         catchError((error: unknown) => {
-          this.errorMessage.set(this.errorText(error, 'Narrastep could not load review data.'));
+          this.errorMessage.set(
+            this.errorText(error, 'The review could not be loaded. Reload the page to try again.'),
+          );
           return EMPTY;
         }),
       )
@@ -232,8 +253,8 @@ export class ReviewComponent implements OnInit {
       return true;
     }
     const data: ConfirmDialogData = {
-      title: 'Discard unsaved transcript edits?',
-      message: `${this.dirtyCount()} segment edit${this.dirtyCount() === 1 ? '' : 's'} will be lost if you leave this workspace.`,
+      title: 'Discard unsaved edits?',
+      message: `${this.dirtyCount()} segment edit${this.dirtyCount() === 1 ? '' : 's'} will be lost if you leave the review.`,
       confirmLabel: 'Discard edits',
       danger: true,
     };
@@ -382,7 +403,9 @@ export class ReviewComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.setSegmentSaving(segment.id, false)),
         catchError((error: unknown) => {
-          this.errorMessage.set(this.errorText(error, 'Narrastep could not save this segment.'));
+          this.errorMessage.set(
+            this.errorText(error, 'The segment could not be saved. Try again.'),
+          );
           return EMPTY;
         }),
       )
@@ -437,7 +460,7 @@ export class ReviewComponent implements OnInit {
             finalize(() => this.structuralPending.set(false)),
             catchError((error: unknown) => {
               this.errorMessage.set(
-                this.errorText(error, 'Narrastep could not split this segment.'),
+                this.errorText(error, 'The segment could not be split. Try again.'),
               );
               return EMPTY;
             }),
@@ -491,9 +514,8 @@ export class ReviewComponent implements OnInit {
       return;
     }
     const data: ConfirmDialogData = {
-      title: `Merge ${selected.length} transcript segments?`,
-      message:
-        'The reviewed text will be joined in order. Source segments remain archived in lineage history.',
+      title: `Merge ${selected.length} segments?`,
+      message: 'Their text is joined in order. The original segments stay in the project history.',
       confirmLabel: 'Merge segments',
     };
 
@@ -517,7 +539,7 @@ export class ReviewComponent implements OnInit {
             finalize(() => this.structuralPending.set(false)),
             catchError((error: unknown) => {
               this.errorMessage.set(
-                this.errorText(error, 'Narrastep could not merge these segments.'),
+                this.errorText(error, 'The segments could not be merged. Try again.'),
               );
               return EMPTY;
             }),
@@ -550,7 +572,7 @@ export class ReviewComponent implements OnInit {
         finalize(() => this.screenshotPending.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'Narrastep could not change the primary screenshot.'),
+            this.errorText(error, 'The primary screenshot could not be changed. Try again.'),
           );
           return EMPTY;
         }),
@@ -580,7 +602,7 @@ export class ReviewComponent implements OnInit {
         finalize(() => this.screenshotPending.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'Narrastep could not recover the current video frame.'),
+            this.errorText(error, 'The current video frame could not be saved. Try again.'),
           );
           return EMPTY;
         }),
@@ -601,9 +623,8 @@ export class ReviewComponent implements OnInit {
     }
     const data: ConfirmDialogData = {
       title: 'Remove the primary screenshot?',
-      message:
-        'The segment will remain exportable without an image. Generated candidates are not deleted.',
-      confirmLabel: 'Remove association',
+      message: 'The segment stays in the package without an image. The alternatives are kept.',
+      confirmLabel: 'Remove screenshot',
       danger: true,
     };
     this.dialog
@@ -621,7 +642,7 @@ export class ReviewComponent implements OnInit {
             finalize(() => this.screenshotPending.set(false)),
             catchError((error: unknown) => {
               this.errorMessage.set(
-                this.errorText(error, 'Narrastep could not remove the screenshot association.'),
+                this.errorText(error, 'The screenshot could not be removed. Try again.'),
               );
               return EMPTY;
             }),
@@ -673,7 +694,9 @@ export class ReviewComponent implements OnInit {
 
   /** Converts an optional confidence ratio into a compact review hint. */
   confidenceLabel(confidence: number | null): string {
-    return confidence === null ? 'Not available' : `${Math.round(confidence * 100)}% confidence`;
+    return confidence === null
+      ? 'Confidence unknown'
+      : `${Math.round(confidence * 100)}% confidence`;
   }
 
   /** Reloads screenshot associations whenever transcript selection changes. */
@@ -698,7 +721,7 @@ export class ReviewComponent implements OnInit {
       catchError((error: unknown) => {
         if (requestVersion === this.screenshotRequestVersion) {
           this.errorMessage.set(
-            this.errorText(error, 'Narrastep could not load screenshot candidates.'),
+            this.errorText(error, 'The screenshots could not be loaded. Select the segment again.'),
           );
         }
         return EMPTY;

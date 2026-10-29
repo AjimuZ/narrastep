@@ -1,5 +1,8 @@
+// Image preview dialog: one full-size local screenshot over the page, closed with a button or Escape.
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+
+import { PixelIconComponent } from '../ui';
 
 export interface ImagePreviewDialogData {
   imageUrl: string;
@@ -7,68 +10,38 @@ export interface ImagePreviewDialogData {
   timestampLabel: string;
 }
 
+/** Full-size screenshot preview titled with its video time; closes with no value. */
 @Component({
   selector: 'ns-image-preview-dialog',
+  imports: [PixelIconComponent],
   template: `
-    <section class="preview" aria-labelledby="preview-title">
-      <header>
-        <div>
-          <p class="eyebrow">Screenshot preview</p>
-          <h2 id="preview-title">{{ data.timestampLabel }}</h2>
-        </div>
-        <button class="button button--quiet button--small" type="button" (click)="close()">
-          Close
+    <section class="ns-dialog preview" aria-labelledby="preview-title">
+      <h2 id="preview-title" class="ns-dialog__title">
+        Screenshot at <span class="mono">{{ data.timestampLabel }}</span>
+      </h2>
+      <div class="ns-dialog__body">
+        <img [src]="data.imageUrl" [alt]="data.alt" />
+      </div>
+      <div class="ns-dialog__actions">
+        <button class="ns-button" type="button" (click)="close()">
+          <ns-pixel-icon name="close" />Close
         </button>
-      </header>
-      <img [src]="data.imageUrl" [alt]="data.alt" />
+      </div>
     </section>
   `,
   styles: `
     .preview {
       width: min(72rem, calc(100vw - 2rem));
-      max-height: calc(100dvh - 2rem);
-      overflow: auto;
-      padding: var(--space-4);
-      border: 1px solid var(--color-border-accent);
-      border-radius: var(--radius);
-      background: var(--color-bg-elevated);
-      box-shadow: 0 24px 80px var(--color-shadow-strong);
-    }
-
-    header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-4);
     }
 
     img {
       display: block;
       width: 100%;
-      max-height: calc(100vh - 9rem);
+      max-height: calc(100dvh - 11rem);
+      border: 1px solid var(--frame);
       border-radius: var(--radius);
       object-fit: contain;
       background: var(--color-media-bg);
-    }
-
-    @media (max-width: 34rem) {
-      .preview {
-        width: min(100%, calc(100vw - 1rem));
-        padding: var(--space-3);
-      }
-
-      header {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      header .button {
-        width: 100%;
-      }
-
-      img {
-        max-height: calc(100dvh - 13rem);
-      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

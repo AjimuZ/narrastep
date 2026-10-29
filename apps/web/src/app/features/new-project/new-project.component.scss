@@ -1,202 +1,217 @@
-.wizard-page {
-  max-width: 68rem;
+// New project screen layout: step indicator, type cards, options, drop zone and upload progress.
+// Grids use minmax and container queries because the shell menu narrows the content column.
+:host {
+  display: block;
 }
 
+.wizard-page {
+  max-width: 60rem;
+  container-type: inline-size;
+}
+
+// Step indicator: three framed cells; the current one is raised with the accent frame.
 .steps {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-4);
   padding: 0;
   list-style: none;
 }
 
-.steps li {
+.step {
   display: flex;
   min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--color-bg-deep) 60%, transparent);
+  background: var(--color-bg-deep);
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
-.step-number {
-  display: grid;
-  width: 1.75rem;
-  height: 1.75rem;
+.step__mark {
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  font-size: 0.75rem;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  font: 600 var(--text-xs) / 1 var(--font-mono);
 }
 
-.step-label {
+.step__label {
   min-width: 0;
-  font-weight: 650;
+  font-weight: 600;
 }
 
-.steps li.active {
+.step--current {
   border-color: var(--color-border-accent);
-  background: var(--color-bg-panel);
+  background: var(--color-bg-raised);
   color: var(--color-text-strong);
-  box-shadow: inset 0 -2px var(--color-brand);
 }
 
-.steps li.complete {
-  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+.step--current .step__mark {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.step--done {
+  color: var(--color-text);
+}
+
+.step--done .step__mark {
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
   color: var(--color-success);
 }
 
-.steps li.active .step-number {
-  border-color: var(--color-brand);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-}
-
-.steps li.complete .step-number {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 8%, transparent);
-}
-
-.wizard-page > .notice {
+.request-error {
   margin-bottom: var(--space-4);
 }
 
-.wizard-panel {
-  overflow: hidden;
-  padding: clamp(1.25rem, 4vw, 2rem);
-}
-
-.form-grid {
+.wizard-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5);
 }
 
-.field--wide {
-  grid-column: 1 / -1;
-}
-
-fieldset {
-  margin: 0 0 var(--space-6);
+// Project type cards: radio inputs inside labels, drawn like selectable rows.
+.type-fieldset {
+  min-width: 0;
+  margin: 0;
   padding: 0;
   border: 0;
 }
 
-legend {
-  margin-bottom: var(--space-3);
-  color: var(--color-text-strong);
-  font-weight: 700;
+.type-fieldset legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
 }
 
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-2);
+}
+
+.type-card {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) 1.25rem;
+  cursor: pointer;
+}
+
+// Keyboard focus rings the whole card instead of the small radio square.
+.type-card:has(input:focus-visible) {
+  outline: var(--px) solid var(--color-focus-ring);
+  outline-offset: var(--px);
+}
+
+.type-card input {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0.15rem 0 0;
+  padding: 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0;
+  background: var(--color-bg-deep);
+  background-clip: content-box;
+  appearance: none;
+  cursor: pointer;
+}
+
+.type-card input:checked {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+.type-card input:focus-visible {
+  outline: none;
+}
+
+.type-card__text {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.type-card__text strong {
+  color: var(--color-text-strong);
+}
+
+.type-card__text small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+// More options: a flat framed disclosure.
 .more-options {
-  margin: var(--space-6) 0 0;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--frame);
   border-radius: var(--radius);
+  background: var(--color-bg-deep);
 }
 
 .more-options summary {
   color: var(--color-text-strong);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .more-options[open] summary {
   margin-bottom: var(--space-4);
 }
 
-.mode-grid {
+.options-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
 }
 
-.mode-card {
+.language-field {
+  max-width: 12rem;
+}
+
+.wizard-actions {
   display: flex;
-  min-height: 6.5rem;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-deep);
-  cursor: pointer;
-}
-
-.mode-card:hover {
-  border-color: color-mix(in srgb, var(--color-text-muted) 36%, transparent);
-  background: color-mix(in srgb, var(--color-bg-deep) 82%, var(--color-bg-raised));
-}
-
-.mode-card.selected {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
-}
-
-.mode-card input {
-  width: 1.1rem;
-  height: 1.1rem;
-  margin-top: 0.1rem;
-  accent-color: var(--color-brand);
-}
-
-.mode-card strong,
-.mode-card small {
-  display: block;
-}
-
-.mode-card small {
-  margin-top: var(--space-2);
-  color: var(--color-text-muted);
-}
-
-.more-options + footer {
-  margin-top: var(--space-6);
-}
-
-footer {
-  display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: var(--space-3);
-  margin-top: var(--space-6);
+  gap: var(--space-2);
+  margin-top: var(--space-5);
 }
 
+.wizard-form .wizard-actions {
+  margin-top: 0;
+}
+
+// Drop zone: flat, dashed frame on the deep surface; accent frame while a file is dragged over it.
 .drop-zone {
   display: grid;
-  min-height: 19rem;
-  margin-block: var(--space-5);
+  min-height: 14rem;
   place-items: center;
   align-content: center;
   gap: var(--space-2);
-  padding: var(--space-6);
-  border: 2px dashed var(--color-border);
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius);
-  background:
-    linear-gradient(
-      color-mix(in srgb, var(--color-media-bg) 88%, transparent),
-      color-mix(in srgb, var(--color-media-bg) 88%, transparent)
-    ),
-    radial-gradient(
-      circle at center,
-      color-mix(in srgb, var(--color-accent) 18%, transparent),
-      transparent 55%
-    );
+  background: var(--color-bg-deep);
   text-align: center;
 }
 
 .drop-zone:hover:not(.drop-zone--disabled) {
-  border-color: color-mix(in srgb, var(--color-accent) 54%, transparent);
+  border-color: var(--color-border-accent);
 }
 
-.drop-zone.dragging {
+.drop-zone--dragging {
+  border-style: solid;
   border-color: var(--color-accent);
-  background: var(--color-bg-panel);
+  background: var(--color-bg-raised);
 }
 
 .drop-zone--disabled {
@@ -204,9 +219,24 @@ footer {
   cursor: wait;
 }
 
+.drop-zone__mark,
+.selected-file__mark,
+.confirmation__mark {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-raised);
+  color: var(--color-accent);
+}
+
+// The visually hidden input keeps the focus; the ring is drawn on the visible picker button.
 .file-input:focus-visible ~ .file-picker-label {
-  outline: 3px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--px) solid var(--color-focus-ring);
+  outline-offset: var(--px);
 }
 
 .file-picker-label--disabled {
@@ -214,162 +244,75 @@ footer {
   opacity: 0.55;
 }
 
-.drop-zone__icon {
-  display: grid;
-  width: 3.25rem;
-  height: 3.25rem;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
-  color: var(--color-accent);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-accent) 5%, transparent);
-}
-
-.drop-zone__icon .icon {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.selected-file__icon {
-  display: grid;
-  place-items: center;
-  color: var(--color-accent);
-}
-
-.selected-file__icon .icon {
-  width: 1.4rem;
-  height: 1.4rem;
-}
-
-.selected-file,
-.upload-progress > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+.file-error {
+  margin-top: var(--space-2);
 }
 
 .selected-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin-top: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--color-success);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-success) 55%, transparent);
   border-radius: var(--radius);
   background: var(--color-bg-deep);
 }
 
-.selected-file div,
-.selected-file strong,
-.selected-file small {
-  display: block;
+.selected-file__mark {
+  width: 2rem;
+  height: 2rem;
+}
+
+.selected-file__text {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
 }
 
 .upload-progress {
   display: grid;
   gap: var(--space-2);
-  margin-top: var(--space-5);
+  margin-top: var(--space-4);
 }
 
-progress {
-  width: 100%;
-  height: 0.75rem;
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--color-bg);
-  accent-color: var(--color-brand);
-}
-
-progress::-webkit-progress-bar {
-  background: var(--color-bg);
-}
-
-progress::-webkit-progress-value {
-  background:
-    linear-gradient(
-        90deg,
-        transparent,
-        color-mix(in srgb, var(--color-text-strong) 22%, transparent),
-        transparent
-      )
-      0 0 / 40% 100% no-repeat,
-    var(--color-brand);
-  animation: progress-sheen 1.8s linear infinite;
+.upload-progress__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .confirmation {
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .confirmation__mark {
-  display: grid;
-  width: 4rem;
-  height: 4rem;
-  margin: 0 auto var(--space-4);
-  place-items: center;
-  border: 1px solid var(--color-success);
-  border-radius: 50%;
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
   color: var(--color-success);
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-success) 6%, transparent);
 }
 
-.confirmation__mark .icon {
-  width: 1.9rem;
-  height: 1.9rem;
+.confirmation p {
+  margin: 0;
 }
 
-.confirmation .notice {
-  max-width: 38rem;
-  margin: var(--space-5) auto 0;
-}
-
-.confirmation .notice p {
-  margin: var(--space-2) 0 0;
-}
-
-@media (max-width: 42rem) {
-  .form-grid,
-  .mode-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .field--wide {
-    grid-column: auto;
-  }
-
-  .drop-zone {
-    min-height: 14rem;
-    margin-block: var(--space-4);
-    padding: var(--space-5) var(--space-4);
-  }
-
-  footer {
-    align-items: stretch;
-    flex-direction: column-reverse;
-  }
-
-  footer .button {
-    width: 100%;
-  }
-}
-
-@media (max-width: 34rem) {
-  .steps {
-    margin-bottom: var(--space-4);
-  }
-
-  .steps li {
+// Narrow content column: stack the step cells' text and stretch the actions to full width.
+@container (max-width: 30rem) {
+  .step {
     flex-direction: column;
-    justify-content: flex-start;
+    align-items: flex-start;
     padding: var(--space-2);
-    text-align: center;
   }
 
-  .step-label {
-    font-size: 0.7rem;
-    line-height: 1.25;
+  .step__label {
+    font-size: var(--text-xs);
   }
 
-  .wizard-panel {
-    padding: var(--space-4);
+  .wizard-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 }
