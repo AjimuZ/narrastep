@@ -189,7 +189,8 @@ flowchart LR
   `/api/v1/health` through the web container, installs the pinned Electron into
   `desktop/node_modules` on the first launch with isolated npm settings (the one moment the
   desktop part uses the Internet: the npm registry and GitHub releases), then runs the shell and
-  exits when the window closes. A launcher problem never stops the stack
+  exits when the window closes. A launcher problem never stops the stack, and the window never
+  outlives it: when Compose exits, the watcher stops the launcher, which first closes the window
   ([Development](DEVELOPMENT.md#launcher-p072)).
 
 ## Planned boundaries

@@ -96,10 +96,14 @@ uses the host Node.js 22.12 or newer and keeps Electron inside `desktop/node_mod
    launch, or after a version bump), it prints what will be downloaded and runs, in `desktop/`,
    `npm ci --ignore-scripts --no-audit --no-fund` and then `node node_modules/electron/install.js`.
    These run with isolated npm settings: the user and global `.npmrc` files are replaced by empty
-   ones, every `npm_config_*` variable and the Electron mirror variables (`ELECTRON_MIRROR`,
-   `ELECTRON_CUSTOM_DIR`, `ELECTRON_CUSTOM_FILENAME`, `ELECTRON_SKIP_BINARY_DOWNLOAD`,
-   `ELECTRON_OVERRIDE_DIST_PATH`) are dropped, the registry is `https://registry.npmjs.org/`, and
-   audit, fund and update checks are off. `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` are kept.
+   ones, every `npm_config_*` variable and every `ELECTRON_*` variable (any case) is dropped except
+   `ELECTRON_GET_USE_PROXY`, `ELECTRON_GET_NO_PROGRESS` and `ELECTRON_CONFIG_CACHE`, the registry is
+   `https://registry.npmjs.org/`, and audit, fund and update checks are off. The dropped variables
+   are the ones Electron's install script reads to change the mirror, folder, file name, version,
+   platform, architecture or checksum source of the binary, or to skip it; the kept cache folder is
+   safe because a cached file is checked against the same sums. `HTTP_PROXY`, `HTTPS_PROXY` and
+   `NO_PROXY` are kept. On Windows `npm` is a `.cmd` file, so it runs through `cmd.exe` with one
+   fixed command line.
    Requests: the locked packages from the npm registry and the Electron binary from GitHub releases,
    checked against the SHA-256 sums in the package's `checksums.json`; nothing else.
 4. It runs the Electron binary on `desktop/` (without `ELECTRON_RUN_AS_NODE`) and exits when the
@@ -107,8 +111,14 @@ uses the host Node.js 22.12 or newer and keeps Electron inside `desktop/node_mod
    problem never stops the stack; the launcher prints the cause and the browser address, and
    `./start.sh --headless` is the way to run without a window.
 
-Closing the window leaves the containers running. `Ctrl+C` in the terminal stops Compose; a
-launcher that is still waiting for health is then stopped by the watcher within a few seconds.
+Closing the window leaves the containers running. The window never outlives the stack: when
+Compose ends (`Ctrl+C` in the terminal, or `docker compose down` from another terminal), the
+watcher stops the launcher within about two seconds, and a launcher that receives `SIGTERM`,
+`SIGINT` or `SIGHUP` while the window is open asks the window to quit with `SIGTERM`, waits for it
+and prints `The stack is stopping, so the Narrastep window was closed.` A launcher that is still
+waiting for health or installing simply stops. This was checked on Linux; on Windows Node.js ends
+the window process at once, and whether Git Bash delivers a signal the launcher can handle is not
+checked yet.
 
 To run the shell alone against an already running stack:
 
@@ -147,11 +157,14 @@ npm test
 `test/policy.test.cjs`, `test/guards.test.cjs` and `test/shell.test.cjs` run the rules and the
 lifecycle against in-memory Electron stand-ins (`test/support/fake-electron.cjs`).
 `test/launcher.test.cjs` covers the launcher with injected stand-ins (`.env` port, health states,
-timeout, isolated install environment, install steps and failures, exit codes) and a real local
-HTTP server for the health request. `test/start-script.test.cjs` runs the real `start.sh` with a
-fake `docker` and a fake `desktop/launch.cjs` on a POSIX shell: `--headless`, `-r`, `-h`, unknown
-options, missing Compose, missing Node.js or npm, the Compose exit code, and the watcher stopping
-the launcher when Compose exits. It creates its fakes in a git-ignored `desktop/test/.start-test-*`
+timeout, isolated install environment, install commands on Windows and elsewhere, install steps
+and failures, stop signals while the window is open, exit codes), a real local HTTP server for the
+health request (including an oversized and a truncated answer), and a real launcher process that
+receives `SIGTERM` and must close a stand-in window process. `test/start-script.test.cjs` runs
+the real `start.sh` with a fake `docker` and a fake `desktop/launch.cjs` on a POSIX shell: that it
+runs directly as `./start.sh` (Git keeps it executable), `--headless`, `-r`, `-h`, unknown options,
+missing Compose, missing Node.js or npm, the Compose exit code, and the watcher stopping the
+launcher when Compose exits. It creates its fakes in a git-ignored `desktop/test/.start-test-*`
 folder because `/tmp` may be mounted `noexec`.
 `test/electron-window.test.cjs` starts the real Electron with `test/support/electron-harness.cjs`,
 which runs the production shell against two local HTTP servers: a stand-in app and a second

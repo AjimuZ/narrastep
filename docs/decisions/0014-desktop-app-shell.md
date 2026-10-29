@@ -90,7 +90,8 @@ The shell in `desktop/` applies this decision with these details:
 
 - `start.sh` keeps Compose as its foreground process (`exec docker compose up`) and, unless
   `--headless` is given, starts a background watcher first. This keeps log output and `Ctrl+C`
-  identical to the headless mode. The watcher stops the launcher when Compose exits.
+  identical to the headless mode. The watcher stops the launcher when Compose exits. Git tracks
+  `start.sh` as executable, so `./start.sh` works on a fresh Linux or macOS clone.
 - "Real health" is `GET http://127.0.0.1:{NARRASTEP_WEB_PORT}/api/v1/health` through the `web`
   container, with `status: "ok"` (database, Redis and worker). `degraded` is accepted after 60
   seconds so the window can show what is missing; one hour without an answer stops the launcher.
@@ -100,16 +101,21 @@ The shell in `desktop/` applies this decision with these details:
 - First-launch install: `npm ci --ignore-scripts --no-audit --no-fund` and then Electron's
   `install.js` in `desktop/`, when the installed `electron` is not exactly the pinned version or has
   no downloaded binary. The environment is isolated: empty user and global npm configuration files
-  (npm rejects one file for both), no `npm_config_*` or Electron mirror variables, the public npm
-  registry, audit, fund and update checks off, proxy variables kept. The launcher announces the
+  (npm rejects one file for both), no `npm_config_*` variables and no `ELECTRON_*` variables except
+  `ELECTRON_GET_USE_PROXY`, `ELECTRON_GET_NO_PROGRESS` and the cache folder `ELECTRON_CONFIG_CACHE`
+  (cached files are checked against the pinned sums), the public npm registry, audit, fund and
+  update checks off, proxy variables kept. The launcher announces the
   download before it starts. A custom registry or mirror is deliberately not supported, so a
   configuration file or variable cannot redirect where executable code is fetched from.
 - Failures (Node.js too old, no `npm`, no display on Linux, no Internet, a shell that exits with an
   error, such as Chromium's sandbox on some Linux systems) leave the stack running; the message
   names the browser address and `./start.sh --headless`. Exit code 2 of the shell means an invalid
   port.
-- Closing the window ends only the launcher. `Ctrl+C` stops Compose; a launcher still waiting for
-  health is stopped by the watcher. What happens to an open window when Compose stops was not
-  tested.
+- Closing the window ends only the launcher. The window never outlives the stack: when Compose
+  ends, the watcher sends `SIGTERM` to the launcher, and a launcher that receives `SIGTERM`,
+  `SIGINT` (`Ctrl+C`) or `SIGHUP` while the window is open asks the shell to quit with `SIGTERM`
+  and waits for it. Before this, a window left behind by a stopped stack kept showing the last
+  service state ("Services ready") with nothing behind it. A launcher still waiting for health or
+  installing simply stops.
 - Not covered: Windows PowerShell (candidate I-01), a Docker-based smoke test on this build worker
   (no Docker), and the Windows and macOS behavior of the launcher.

@@ -27,13 +27,23 @@ const HEALTH_POLL_MS = 1000;
 /** Socket timeout of one health request. */
 const HEALTH_REQUEST_TIMEOUT_MS = 3000;
 
-/** Environment variables that redirect where Electron or its binary would be fetched from. */
-const ELECTRON_SOURCE_VARIABLES = Object.freeze([
-  'ELECTRON_MIRROR',
-  'ELECTRON_CUSTOM_DIR',
-  'ELECTRON_CUSTOM_FILENAME',
-  'ELECTRON_SKIP_BINARY_DOWNLOAD',
-  'ELECTRON_OVERRIDE_DIST_PATH',
+/** Signals that stop the launcher while the window is open; each also closes the window. */
+const STOP_SIGNALS = Object.freeze(['SIGTERM', 'SIGINT', 'SIGHUP']);
+
+/** Largest health response body read; a longer answer is not Narrastep's health object. */
+const HEALTH_BODY_LIMIT = 65536;
+
+/**
+ * The only `ELECTRON_*` variables (any case) kept for the install: the proxy switch and progress
+ * setting of `@electron/get`, and its cache folder, whose files are checked against the pinned
+ * `checksums.json` before use. Every other one is dropped, because Electron's install script reads
+ * them to change the mirror, folder, file name, version, platform, architecture or checksum source
+ * of the binary, or to skip the download.
+ */
+const KEPT_ELECTRON_VARIABLES = Object.freeze([
+  'ELECTRON_GET_USE_PROXY',
+  'ELECTRON_GET_NO_PROGRESS',
+  'ELECTRON_CONFIG_CACHE',
 ]);
 
 /** Raised for a problem the user can fix; its English message is printed as is, with a headless hint. */
@@ -151,7 +161,9 @@ function requestHealth(origin, timeoutMs = HEALTH_REQUEST_TIMEOUT_MS) {
       response.setEncoding('utf8');
       response.on('data', (chunk) => {
         body += chunk;
-        if (body.length > 65536) {
+        if (body.length > HEALTH_BODY_LIMIT) {
+          // A destroyed response emits neither 'end' nor 'error', so settle before destroying it.
+          resolve('unhealthy');
           response.destroy();
         }
       });
@@ -164,6 +176,8 @@ function requestHealth(origin, timeoutMs = HEALTH_REQUEST_TIMEOUT_MS) {
           resolve('unhealthy');
         }
       });
+      // 'close' follows 'end' or 'error'; on its own it means the answer stopped early.
+      response.on('close', () => resolve('unreachable'));
     });
     request.on('timeout', () => request.destroy());
     request.on('error', () => resolve('unreachable'));
@@ -219,11 +233,12 @@ async function waitForHealth({
 /**
  * Returns the environment of the install commands: the caller's environment without any npm
  * setting (user and global `.npmrc` files, tokens, registries and `npm_config_*` variables) and
- * without the variables that redirect the Electron download. npm reads the empty files
- * `userConfigFile` and `globalConfigFile` (they must be two different paths) as its user and global
- * configuration, uses the public npm registry only and neither audits nor checks for updates,
- * so the install makes no request beyond fetching the locked packages and the Electron binary.
- * Proxy variables such as `HTTPS_PROXY` are kept.
+ * without the `ELECTRON_*` variables that change the Electron download (all but
+ * `KEPT_ELECTRON_VARIABLES`). npm reads the empty files `userConfigFile` and `globalConfigFile`
+ * (they must be two different paths) as its user and global configuration, uses the public npm
+ * registry only and neither audits nor checks for updates, so the install makes no request beyond
+ * fetching the locked packages and the Electron binary. Proxy variables such as `HTTPS_PROXY` are
+ * kept.
  */
 function isolatedInstallEnvironment(env, userConfigFile, globalConfigFile) {
   const clean = {};
@@ -232,7 +247,7 @@ function isolatedInstallEnvironment(env, userConfigFile, globalConfigFile) {
     if (lower.startsWith('npm_config_') || lower.startsWith('npm_package_')) {
       continue;
     }
-    if (ELECTRON_SOURCE_VARIABLES.includes(name.toUpperCase())) {
+    if (lower.startsWith('electron_') && !KEPT_ELECTRON_VARIABLES.includes(name.toUpperCase())) {
       continue;
     }
     clean[name] = value;
@@ -297,8 +312,9 @@ function findInstalledElectron(desktopDirectory, pinnedVersion) {
 /**
  * Runs `command` with `args` in `cwd`, showing its output, and resolves with the exit code
  * (null when a signal ended it). Rejects with a `LauncherError` when it cannot start, for
- * example when `npm` is not installed. `.cmd` shims on Windows are started through a shell, with
- * only fixed arguments.
+ * example when `npm` is not installed. On Windows `npm` is a `.cmd` shim, which Node.js starts
+ * only through a shell; it gets one command line joined from the fixed arguments, because Node.js
+ * 24 warns (DEP0190) when an argument list is passed with a shell.
  */
 function runCommand({
   command,
@@ -309,12 +325,11 @@ function runCommand({
   spawn = childProcess.spawn,
 }) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      env,
-      stdio: 'inherit',
-      shell: platform === 'win32' && command === 'npm',
-    });
+    const options = { cwd, env, stdio: 'inherit' };
+    const child =
+      platform === 'win32' && command === 'npm'
+        ? spawn([command, ...args].join(' '), { ...options, shell: true })
+        : spawn(command, args, options);
     child.on('error', (error) => {
       reject(
         new LauncherError(
@@ -401,16 +416,38 @@ async function ensureElectron({
 }
 
 /**
- * Starts the shell `executable` on `desktopDirectory` with `env` and resolves with its exit code
- * (null for a signal) once the window closes. `spawn` is injectable for tests.
+ * Starts the shell `executable` on `desktopDirectory` with `env` and resolves once it has exited
+ * with `{ code, stoppedBy }`: its exit code (null for a signal) and the stop signal the launcher
+ * received meanwhile, or null. While the shell runs, a `STOP_SIGNALS` signal for the launcher (the
+ * start.sh watcher after Compose exited, or Ctrl+C) asks the shell to quit with SIGTERM instead of
+ * ending the launcher at once, so the window never outlives the stack it shows; the launcher exits
+ * after the shell. Rejects with a `LauncherError` when the shell cannot start. `spawn` and
+ * `signals` (the emitter of process signals) are injectable for tests.
  */
-function runShell({ executable, desktopDirectory, env, spawn = childProcess.spawn }) {
+function runShell({
+  executable,
+  desktopDirectory,
+  env,
+  spawn = childProcess.spawn,
+  signals = process,
+}) {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [desktopDirectory], { env, stdio: 'inherit' });
+    let stoppedBy = null;
+    const stop = (signal) => {
+      stoppedBy ??= signal;
+      child.kill('SIGTERM');
+    };
+    const release = () => STOP_SIGNALS.forEach((signal) => signals.off(signal, stop));
+    STOP_SIGNALS.forEach((signal) => signals.on(signal, stop));
     child.on('error', (error) => {
+      release();
       reject(new LauncherError(`The Electron shell could not start (${error.code ?? 'error'}).`));
     });
-    child.on('exit', (code) => resolve(code));
+    child.on('exit', (code) => {
+      release();
+      resolve({ code, stoppedBy });
+    });
   });
 }
 
@@ -418,10 +455,10 @@ function runShell({ executable, desktopDirectory, env, spawn = childProcess.spaw
  * Opens the Narrastep window for the stack that Compose runs in `projectDirectory`, in order:
  * checks Node.js and the display, validates the web port, waits for health, makes sure Electron
  * is installed, runs the shell and waits for the window to close. Returns the exit code of
- * `launch.cjs`: 0 after a normal close, 2 for an invalid `NARRASTEP_WEB_PORT`, 1 for every
- * problem that leaves the stack usable in a browser; each problem is explained on `log`.
- * Closing the window never stops containers. Everything outside `env`, `platform` and the
- * directories is injectable for tests.
+ * `launch.cjs`: 0 after a normal close or after a stop signal closed the window, 2 for an invalid
+ * `NARRASTEP_WEB_PORT`, 1 for every problem that leaves the stack usable in a browser; each
+ * problem is explained on `log`. Closing the window never stops containers. Everything outside
+ * `env`, `platform` and the directories is injectable for tests.
  */
 async function launchDesktopWindow({
   projectDirectory,
@@ -464,7 +501,11 @@ async function launchDesktopWindow({
         ? `Opening the Narrastep window on ${origin}.`
         : `Opening the Narrastep window on ${origin}; the worker is not ready yet.`,
     );
-    const code = await shell({ executable, desktopDirectory, env: shellEnv });
+    const { code, stoppedBy } = await shell({ executable, desktopDirectory, env: shellEnv });
+    if (stoppedBy) {
+      log('The stack is stopping, so the Narrastep window was closed.');
+      return EXIT.OK;
+    }
     if (code === EXIT.CONFIGURATION) {
       throw new LauncherError(
         'The desktop window refused its configuration (NARRASTEP_WEB_PORT).',

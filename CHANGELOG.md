@@ -90,6 +90,9 @@ All notable changes to Narrastep are documented in this file.
   registry and GitHub releases, once, no administrator rights). `./start.sh --headless` starts only
   the Docker stack, as before. If the window cannot open (no Node.js, no display, no Internet),
   Narrastep keeps running and the script says how to use it in a browser.
+  When the stack stops (`Ctrl+C`, or `docker compose down` from another terminal), the window
+  closes too instead of staying open on a stack that is gone. `./start.sh` now runs directly on a
+  fresh Linux or macOS clone; before, Git stored it without the executable bit.
 
 ### Changed
 

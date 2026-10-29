@@ -10,7 +10,8 @@ Usage: ./start.sh [-r] [--headless] [-h]
 Start the complete Narrastep Docker Compose stack in the foreground and, once it is healthy,
 open Narrastep in its own desktop window. The window needs Node.js 22.12 or newer with npm on
 this computer; its first launch installs the pinned Electron into desktop/node_modules and
-needs Internet access once. Closing the window never stops the stack; press Ctrl+C here.
+needs Internet access once. Closing the window never stops the stack; Ctrl+C here stops the
+stack and closes the window.
 
 Options:
   -r          Reuse existing images and never build them.
@@ -79,9 +80,10 @@ fi
 # Open the desktop window in the background once the stack answers its health check.
 # The watcher runs next to Compose, which stays the foreground process of this script (the
 # 'exec' below keeps this shell's PID), so Compose output and Ctrl+C behave as in headless mode.
-# The watcher gives up when Compose has exited, for example after a failed build, and a failed
-# window never stops the stack: the launcher explains the problem and the stack stays usable in a
-# browser.
+# The watcher stops the launcher when Compose has exited, for example after a failed build or
+# 'docker compose down' from another terminal; the launcher then closes an open window, so the
+# window never outlives the stack. A failed window never stops the stack: the launcher explains
+# the problem and the stack stays usable in a browser.
 open_desktop_window() {
   if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
     printf 'Narrastep: Node.js with npm was not found, so no desktop window will open.\n' >&2

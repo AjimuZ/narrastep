@@ -2,11 +2,14 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
+const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { afterEach, beforeEach, describe, it } = require('node:test');
+const { setTimeout: delay } = require('node:timers/promises');
 
 const {
   EXIT,
@@ -21,6 +24,8 @@ const {
   readEnvFileValue,
   requestHealth,
   resolveShellEnvironment,
+  runCommand,
+  runShell,
   waitForHealth,
 } = require('../src/launcher.cjs');
 
@@ -191,6 +196,27 @@ describe('requestHealth', () => {
       server.close();
     }
   });
+
+  // The timeout turns a request that never settles into a failure instead of a stuck suite.
+  it('settles on an oversized answer and on an answer cut short', { timeout: 10000 }, async () => {
+    const mode = { current: 'large' };
+    const server = await serve((request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      if (mode.current === 'large') {
+        response.end(`{"status":"ok","padding":"${'x'.repeat(200000)}"}`);
+      } else {
+        response.write('{"status":');
+        setTimeout(() => response.socket.destroy(), 50);
+      }
+    });
+    try {
+      assert.equal(await requestHealth(server.origin), 'unhealthy');
+      mode.current = 'cut';
+      assert.equal(await requestHealth(server.origin), 'unreachable');
+    } finally {
+      server.close();
+    }
+  });
 });
 
 describe('waitForHealth', () => {
@@ -265,6 +291,16 @@ describe('isolatedInstallEnvironment', () => {
         electron_custom_dir: 'x',
         ELECTRON_RUN_AS_NODE: '1',
         electron_config_cache: '/cache',
+        ELECTRON_GET_USE_PROXY: '1',
+        ELECTRON_GET_NO_PROGRESS: '1',
+        ELECTRON_NIGHTLY_MIRROR: 'https://mirror.example/',
+        ELECTRON_CUSTOM_VERSION: '44.0.0',
+        ELECTRON_CUSTOM_FILENAME: 'other.zip',
+        electron_use_remote_checksums: '1',
+        ELECTRON_INSTALL_PLATFORM: 'win32',
+        ELECTRON_INSTALL_ARCH: 'ia32',
+        ELECTRON_SKIP_BINARY_DOWNLOAD: '1',
+        ELECTRON_OVERRIDE_DIST_PATH: '/elsewhere',
       },
       '/tmp/user-npmrc',
       '/tmp/global-npmrc',
@@ -272,6 +308,12 @@ describe('isolatedInstallEnvironment', () => {
     assert.equal(result.PATH, '/bin');
     assert.equal(result.HTTPS_PROXY, 'http://proxy:3128');
     assert.equal(result.electron_config_cache, '/cache');
+    assert.equal(result.ELECTRON_GET_USE_PROXY, '1');
+    assert.equal(result.ELECTRON_GET_NO_PROGRESS, '1');
+    assert.deepEqual(
+      Object.keys(result).filter((name) => /^electron_/i.test(name)),
+      ['electron_config_cache', 'ELECTRON_GET_USE_PROXY', 'ELECTRON_GET_NO_PROGRESS'],
+    );
     assert.equal(result.NPM_CONFIG_REGISTRY, undefined);
     assert.equal(result.ELECTRON_MIRROR, undefined);
     assert.equal(result.electron_custom_dir, undefined);
@@ -316,6 +358,57 @@ describe('pinnedElectronVersion and findInstalledElectron', () => {
     fs.rmSync(path.join(desktop, 'node_modules'), { recursive: true });
     installElectron(desktop, VERSION, { pathTxt: '../package.json' });
     assert.equal(findInstalledElectron(desktop, VERSION), null);
+  });
+});
+
+describe('runCommand', () => {
+  /** Returns a `spawn` stand-in that records its arguments and ends the child with `outcome`. */
+  function fakeSpawn(outcome = { exit: 0 }) {
+    const calls = [];
+    const spawn = (...callArguments) => {
+      calls.push(callArguments);
+      const child = new EventEmitter();
+      setImmediate(() =>
+        outcome.error ? child.emit('error', outcome.error) : child.emit('exit', outcome.exit),
+      );
+      return child;
+    };
+    return { spawn, calls };
+  }
+
+  const npmCall = { command: 'npm', args: ['ci', '--ignore-scripts'], cwd: '/d', env: { A: '1' } };
+
+  it('passes an argument list without a shell outside Windows and resolves the exit code', async () => {
+    const { spawn, calls } = fakeSpawn({ exit: 3 });
+    assert.equal(await runCommand({ ...npmCall, platform: 'linux', spawn }), 3);
+    assert.deepEqual(calls, [
+      ['npm', ['ci', '--ignore-scripts'], { cwd: '/d', env: { A: '1' }, stdio: 'inherit' }],
+    ]);
+  });
+
+  it('starts npm on Windows through a shell with one command line and no argument list', async () => {
+    const { spawn, calls } = fakeSpawn();
+    assert.equal(await runCommand({ ...npmCall, platform: 'win32', spawn }), 0);
+    assert.deepEqual(calls, [
+      ['npm ci --ignore-scripts', { cwd: '/d', env: { A: '1' }, stdio: 'inherit', shell: true }],
+    ]);
+
+    const node = fakeSpawn();
+    await runCommand({
+      command: 'node.exe',
+      args: ['install.js'],
+      platform: 'win32',
+      spawn: node.spawn,
+    });
+    assert.equal(node.calls[0][2].shell, undefined);
+  });
+
+  it('rejects with a LauncherError that names a missing command', async () => {
+    const missing = Object.assign(new Error('spawn npm ENOENT'), { code: 'ENOENT' });
+    await assert.rejects(
+      runCommand({ ...npmCall, platform: 'linux', spawn: fakeSpawn({ error: missing }).spawn }),
+      (error) => error instanceof LauncherError && /npm was not found/.test(error.message),
+    );
   });
 });
 
@@ -432,6 +525,140 @@ describe('ensureElectron', () => {
   });
 });
 
+describe('runShell', () => {
+  /** Returns a `spawn` stand-in whose child records `kill` calls and exits when `exit` is called. */
+  function fakeShellSpawn() {
+    const child = new EventEmitter();
+    child.killed = [];
+    child.kill = (signal) => child.killed.push(signal);
+    const calls = [];
+    const spawn = (...callArguments) => {
+      calls.push(callArguments);
+      return child;
+    };
+    return { spawn, child, calls };
+  }
+
+  const shellCall = {
+    executable: '/electron',
+    desktopDirectory: '/project/desktop',
+    env: { A: '1' },
+  };
+
+  /** Returns the number of stop-signal listeners left on `signals`. */
+  function listeners(signals) {
+    return ['SIGTERM', 'SIGINT', 'SIGHUP'].reduce(
+      (sum, name) => sum + signals.listenerCount(name),
+      0,
+    );
+  }
+
+  it('runs the shell on the desktop folder and resolves its exit code after a normal close', async () => {
+    const { spawn, child, calls } = fakeShellSpawn();
+    const signals = new EventEmitter();
+    const result = runShell({ ...shellCall, spawn, signals });
+    assert.deepEqual(calls, [
+      ['/electron', ['/project/desktop'], { env: { A: '1' }, stdio: 'inherit' }],
+    ]);
+    assert.equal(listeners(signals), 3);
+    child.emit('exit', 0);
+    assert.deepEqual(await result, { code: 0, stoppedBy: null });
+    assert.equal(listeners(signals), 0);
+    assert.deepEqual(child.killed, []);
+  });
+
+  it('asks the shell to quit when the launcher gets a stop signal and waits for it', async () => {
+    for (const name of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+      const { spawn, child } = fakeShellSpawn();
+      const signals = new EventEmitter();
+      const result = runShell({ ...shellCall, spawn, signals });
+      signals.emit(name, name);
+      assert.deepEqual(child.killed, ['SIGTERM'], name);
+      child.emit('exit', null);
+      assert.deepEqual(await result, { code: null, stoppedBy: name });
+      assert.equal(listeners(signals), 0, name);
+    }
+  });
+
+  it('rejects with a LauncherError when the shell cannot start and drops its listeners', async () => {
+    const { spawn, child } = fakeShellSpawn();
+    const signals = new EventEmitter();
+    const result = runShell({ ...shellCall, spawn, signals });
+    child.emit('error', Object.assign(new Error('spawn EACCES'), { code: 'EACCES' }));
+    await assert.rejects(
+      result,
+      (error) => error instanceof LauncherError && /could not start \(EACCES\)/.test(error.message),
+    );
+    assert.equal(listeners(signals), 0);
+  });
+
+  // Real processes: a launcher that receives SIGTERM (as from the start.sh watcher) closes the
+  // window process and exits 0 instead of leaving the window behind.
+  it(
+    'closes a real window process when the launcher process is terminated',
+    { skip: process.platform === 'win32' && 'POSIX signals', timeout: 20000 },
+    async () => {
+      const desktop = path.join(root, 'desktop');
+      const marker = path.join(root, 'window.txt');
+      fs.mkdirSync(desktop);
+      // The stand-in window: `node <desktop>` runs index.js, which records its PID and its end. It
+      // ends itself after 15 s so a failing run never leaves it behind.
+      fs.writeFileSync(
+        path.join(desktop, 'index.js'),
+        [
+          "const fs = require('node:fs');",
+          `fs.writeFileSync(${JSON.stringify(marker)}, 'open ' + process.pid + '\\n');`,
+          "process.on('SIGTERM', () => {",
+          `  fs.appendFileSync(${JSON.stringify(marker)}, 'closed\\n');`,
+          '  process.exit(0);',
+          '});',
+          'setTimeout(() => process.exit(3), 15000);',
+        ].join('\n'),
+      );
+      const driver = path.join(root, 'driver.cjs');
+      fs.writeFileSync(
+        driver,
+        [
+          `const { launchDesktopWindow } = require(${JSON.stringify(require.resolve('../src/launcher.cjs'))});`,
+          'launchDesktopWindow({',
+          `  projectDirectory: ${JSON.stringify(root)},`,
+          "  env: { ...process.env, DISPLAY: ':0', NARRASTEP_WEB_PORT: '4200' },",
+          "  platform: 'linux',",
+          "  request: async () => 'ok',",
+          '  ensure: async () => process.execPath,',
+          '}).then((code) => { process.exitCode = code; });',
+        ].join('\n'),
+      );
+      const launcher = childProcess.spawn(process.execPath, [driver], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      let output = '';
+      launcher.stdout.on('data', (chunk) => (output += chunk));
+      const exited = new Promise((resolve) =>
+        launcher.on('exit', (code, signal) => resolve({ code, signal })),
+      );
+      const deadline = Date.now() + 10000;
+      const readMarker = () => (fs.existsSync(marker) ? fs.readFileSync(marker, 'utf8') : '');
+      while (!readMarker().endsWith('\n') && Date.now() < deadline) {
+        await delay(50);
+      }
+      const [opened] = fs.readFileSync(marker, 'utf8').split('\n');
+      try {
+        launcher.kill('SIGTERM');
+        assert.deepEqual(await exited, { code: 0, signal: null });
+        assert.equal(fs.readFileSync(marker, 'utf8'), `${opened}\nclosed\n`);
+        assert.match(output, /the Narrastep window was closed/);
+      } finally {
+        try {
+          process.kill(Number(opened.split(' ')[1]), 'SIGKILL');
+        } catch {
+          // Already closed, as expected.
+        }
+      }
+    },
+  );
+});
+
 describe('launchDesktopWindow', () => {
   /** Runs the launcher with stand-ins; returns the exit code, the log lines and the calls. */
   async function launch(overrides = {}) {
@@ -453,7 +680,7 @@ describe('launchDesktopWindow', () => {
       },
       shell: async (call) => {
         calls.shell.push(call);
-        return 0;
+        return { code: 0, stoppedBy: null };
       },
       ...overrides,
     });
@@ -514,7 +741,7 @@ describe('launchDesktopWindow', () => {
   });
 
   it('maps exit code 2 of the shell to a configuration failure', async () => {
-    const { code, logs } = await launch({ shell: async () => 2 });
+    const { code, logs } = await launch({ shell: async () => ({ code: 2, stoppedBy: null }) });
     assert.equal(code, EXIT.CONFIGURATION);
     assert.match(logs.join('\n'), /refused its configuration/);
   });
@@ -547,14 +774,23 @@ describe('launchDesktopWindow', () => {
     assert.match(install.logs.join('\n'), /install failed/);
     assert.equal(install.calls.shell.length, 0);
 
-    const crashed = await launch({ shell: async () => 1 });
+    const crashed = await launch({ shell: async () => ({ code: 1, stoppedBy: null }) });
     assert.equal(crashed.code, EXIT.FAILED);
     assert.match(crashed.logs.join('\n'), /exit code 1/);
     assert.match(crashed.logs.join('\n'), /sandbox/);
 
-    const killed = await launch({ shell: async () => null });
+    const killed = await launch({ shell: async () => ({ code: null, stoppedBy: null }) });
     assert.equal(killed.code, EXIT.FAILED);
     assert.match(killed.logs.join('\n'), /a signal/);
+  });
+
+  it('exits 0 without a failure hint when a stop signal closed the window', async () => {
+    const { code, logs } = await launch({
+      shell: async () => ({ code: null, stoppedBy: 'SIGTERM' }),
+    });
+    assert.equal(code, EXIT.OK);
+    assert.match(logs.join('\n'), /The stack is stopping, so the Narrastep window was closed\./);
+    assert.doesNotMatch(logs.join('\n'), /sandbox|--headless/);
   });
 
   it('opens the window with a note when the API stays degraded', async () => {

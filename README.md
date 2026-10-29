@@ -64,7 +64,8 @@ The exact state of each capability is in [Status](docs/STATUS.md); the plan is i
    That needs Node.js 22.12 or newer with npm on your computer; the first launch downloads the
    pinned Electron into `desktop/node_modules` (Internet access once, no administrator rights).
    `./start.sh --headless` starts only the Docker stack, for use with a browser. If the window
-   cannot open, the stack keeps running and `start.sh` says why.
+   cannot open, the stack keeps running and `start.sh` says why. Closing the window leaves the
+   stack running; stopping the stack with `Ctrl+C` also closes the window.
 
 3. Use the desktop window, or open `http://127.0.0.1:4200` in a browser.
 

@@ -111,6 +111,13 @@ async function eventually(check, timeoutMs = 8000) {
 }
 
 describe('start.sh', { skip }, () => {
+  it('runs directly as ./start.sh, as the README says, because Git keeps it executable', () => {
+    const result = childProcess.spawnSync(START_SCRIPT, ['--help'], { encoding: 'utf8' });
+    assert.equal(result.error, undefined, 'start.sh must have the executable mode in Git');
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Usage: \.\/start\.sh/);
+  });
+
   it('prints usage for -h and --help and starts nothing', () => {
     for (const flag of ['-h', '--help']) {
       const result = runStart([flag]);
