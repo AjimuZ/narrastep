@@ -1,6 +1,17 @@
 // Global base styles and shared classes; every color, font, space and radius comes from styles/tokens.scss.
 @use './styles/tokens';
+@use './styles/primitives';
 @import '@angular/cdk/overlay-prebuilt.css';
+
+// Bundled Pixelify Sans (SIL OFL 1.1, notice in THIRD_PARTY_NOTICES.md). Variable font, weights 400-700,
+// served from the same origin so no CDN is needed; used for titles and large numbers only.
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('/fonts/PixelifySans.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   color-scheme: dark;

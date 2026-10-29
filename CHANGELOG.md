@@ -16,6 +16,11 @@ All notable changes to Narrastep are documented in this file.
 - Searchable and sortable project library, processing stage timeline, Review Studio filters and shortcuts, persisted desktop pane sizing, and actual export metrics.
 - Foreground `start.sh` launcher with an explicit `-r` mode that reuses images without building.
 
+- Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
+  activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and
+  the Pixelify Sans title font bundled locally (SIL OFL 1.1; notice in `THIRD_PARTY_NOTICES.md`).
+  No screen uses them yet, so the interface looks unchanged until the restyle.
+
 ### Changed
 
 - The interface styles now read every color, font, space and corner from one token file

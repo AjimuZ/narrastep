@@ -35,13 +35,21 @@ inventory inside the containers is roadmap item I-15.
 | RxJS | 7.8.2 | Apache-2.0 | |
 | zone.js, tslib | 0.16.2, 2.8.1 | MIT, 0BSD | |
 
+## Bundled files
+
+Files copied into the repository and shipped unmodified are recorded in
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) with their version, SHA-256 hash and license text.
+
+| File | License | Package | Note |
+| --- | --- | --- | --- |
+| Pixelify Sans font (`apps/web/public/fonts/PixelifySans.ttf`) | SIL OFL 1.1 | P04.2 | Variable TTF, version 1.000, served from the same origin; `OFL.txt` beside it |
+
 ## Planned components
 
 | Component | License | Package | Note |
 | --- | --- | --- | --- |
 | `llama.cpp` server (CPU) | MIT | P06 | Copied from the official image pinned by digest |
 | Gemma 4 E2B and E4B weights | Apache-2.0 | P06 | Downloaded by the user; license shown before download and stored with the files |
-| Pixelify Sans font | SIL OFL 1.1 | P04 | Bundled locally; source revision, file hash and `OFL.txt` recorded in `THIRD_PARTY_NOTICES.md` |
 | `@angular/localize` | MIT | P04 | English and Italian interface |
 | Electron | MIT | P07 | Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)); downloaded into `desktop/node_modules`; unsigned |
 | `@electron/packager` | BSD-2-Clause | P07 | Optional local portable build |

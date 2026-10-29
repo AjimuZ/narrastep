@@ -19,7 +19,7 @@ flowchart LR
 
 ## Containers and boundaries
 
-- `web` serves static Angular assets through Nginx and proxies `/api` to FastAPI. It contains presentation and client orchestration only.
+- `web` serves static Angular assets through Nginx and proxies `/api` to FastAPI. It contains presentation and client orchestration only. Shared pixel primitives live in `apps/web/src/app/shared/ui/` (styles in `apps/web/src/styles/primitives.scss`); the icon sprite and the bundled font are static files under `apps/web/public/`.
 - `api` validates requests and configuration, coordinates transactions, streams local assets, and exposes durable state. Route handlers delegate business behavior to services.
 - `worker` performs media and export work. It is the only service that loads the transcription model and runs with concurrency one.
 - `redis` provides Celery queues, short-lived results, and best-effort progress notifications. It is not persistent business storage and is not published to the host.

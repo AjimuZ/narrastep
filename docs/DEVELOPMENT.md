@@ -247,6 +247,13 @@ the commit-message check in [CLAUDE.md](../CLAUDE.md) run only where the skills 
 
 `scripts/check_docs.py` ignores `.claude/` because skill documents are maintained upstream.
 
+## Pixel icons
+
+Icons are 16×16 `#` and `.` grids in `apps/web/icons/`; the committed sprite
+`apps/web/public/icons/sprite.svg` is generated with `pixel_icons.py` from the `ajimu-pixel-ui`
+skill ([UI](UI.md#icon-sprite) lists the command). Regenerate it in the same change as any grid.
+`npm run test` fails when the grids, the icon name list and the sprite disagree.
+
 ## Formatting and debugging
 
 Use Prettier/ESLint for frontend code and Ruff for Python. Avoid formatter commands that include unrelated user changes. Structured logs include request, project, and job identifiers but intentionally omit transcript content.

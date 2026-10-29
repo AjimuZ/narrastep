@@ -61,9 +61,14 @@ column is the agreed translation that P04.4 moves into `messages.it.json`.
 | Product name, page titles, window titles at 16 px and above, large numbers (durations, counts) | `--font-pixel`: Pixelify Sans |
 
 Pixelify Sans (SIL OFL 1.1, covers Latin and Latin Extended, so Italian accents render) is bundled
-locally as a WOFF2 subset of the upstream variable font, used at weights 500–600. It is never used
-for paragraphs, form labels, tabs or small badges. Its source revision, file hash and `OFL.txt` go
-in `THIRD_PARTY_NOTICES.md` ([Licenses](LICENSES.md)).
+locally at `apps/web/public/fonts/PixelifySans.ttf` and declared with `@font-face` in
+`apps/web/src/styles.scss`. It is the unmodified upstream variable font (weights 400–700), used at
+weights 500–600: it is not subset or converted to WOFF2, because the license asks for the file to
+stay unmodified and no font tooling is part of the build. It is never used for paragraphs, form
+labels, tabs or small badges. Its version, file hash and license text are recorded in the root
+`THIRD_PARTY_NOTICES.md` ([Licenses](LICENSES.md)), with `OFL.txt` shipped beside the font, and a
+unit test fails when the file no longer matches the recorded hash. `font-display: swap` shows the
+UI font first, so titles never block on the font.
 
 ## Tokens
 
@@ -90,8 +95,7 @@ roles are defined:
 | Shadow (removed with the restyle in P04.3) | `--color-shadow`, `--color-shadow-panel`, `--color-shadow-strong` |
 
 Non-color tokens: `--px: 2px`, `--radius: 2px`, `--quick: 120ms`, `--motion-base: 180ms`,
-`--font-ui`, `--font-mono`, `--font-pixel` (falls back to `--font-ui` until Pixelify Sans is
-bundled in P04.2), the text scale `--text-xs` to `--text-2xl`, the spacing scale `--space-1` to
+`--font-ui`, `--font-mono`, `--font-pixel` (the bundled Pixelify Sans, then `--font-ui`), the text scale `--text-xs` to `--text-2xl`, the spacing scale `--space-1` to
 `--space-6`, `--content-width` and `--page-gutter`.
 
 The Version 0.2 radii (0.5 to 1.25 rem) all became `--radius`, and the `Inter` entry left the UI
@@ -115,6 +119,42 @@ Built once under `apps/web/src/app/shared/ui/` and used on every screen:
 
 No shadows, glow, blur or glass effects. Motion is a fade or a 2–8 px slide of about 140 ms in
 steps, and `prefers-reduced-motion` removes it.
+
+### Implementation (P04.2)
+
+All primitive styles are in `apps/web/src/styles/primitives.scss` and use only tokens; the
+Angular parts are in `apps/web/src/app/shared/ui/` and are imported from `shared/ui/index.ts`.
+
+| Primitive | Angular element or class | Contract |
+| --- | --- | --- |
+| Window | `<ns-window title="…" [primary]="true">` | Section named by its title (`h2`); `primary` adds the corner marks |
+| Menu entry | `.ns-menu-entry` on an `a` or `button` | The cursor shows on hover, focus and `aria-current` |
+| Button | `.ns-button`, `--primary`, `--danger` | 1 px frame; 1 px press offset; no motion under `prefers-reduced-motion` |
+| Field | `.ns-field` on `input`, `select`, `textarea` | Deep surface; `aria-invalid="true"` turns the border to the danger color |
+| Tabs | `<ns-tabs [tabs] [(selected)] label idPrefix>` | `role="tablist"`; roving tabindex; Left, Right, Home and End; the caller renders the `tabpanel` elements |
+| Segmented gauge | `<ns-segmented-gauge [percent] [segments] label>` | Determinate only; at most 40 cells; rounds down and fills every cell only at 100 |
+| Status pill | `<ns-status-pill label tone>` | The label (a word) is required; tones `info`, `ok`, `wait`, `error` |
+| Activity line | `<ns-activity-line label>` | `role="progressbar"` without a value; static under `prefers-reduced-motion` |
+| Pixel icon | `<ns-pixel-icon name="play">` | 16 px, `aria-hidden`, takes the text color; names are `PixelIconName` |
+
+Existing screens still use the Version 0.2 classes (`.button`, `.field`, `.panel` and the
+per-screen markup); P04.3 moves them to these primitives and removes the old classes.
+
+### Icon sprite
+
+Each icon is a 16×16 grid of `#` and `.` in `apps/web/icons/{name}.txt`. The sprite
+`apps/web/public/icons/sprite.svg` is generated from them and committed; regenerate it with:
+
+```bash
+python /app/skills/ajimu-pixel-ui/scripts/pixel_icons.py apps/web/icons --out apps/web/public/icons/sprite.svg
+```
+
+(or `.claude/skills/ajimu-pixel-ui/scripts/pixel_icons.py` where the local skill exists). The
+sprite is served from the same origin and referenced as `icons/sprite.svg#i-{name}`. A unit test
+checks that every grid is 16×16, that `PIXEL_ICON_NAMES` and the grids match, and that the sprite
+holds exactly those symbols. The icons are: check, chevron-right, close, copy, download, edit,
+export, folder, info, mic, pause, play, plus, record, refresh, search, settings, stop, trash,
+upload, warning. Add an icon by adding its grid and its name, then regenerating.
 
 ## Layout
 
