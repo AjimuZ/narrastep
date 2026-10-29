@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
       max-width: 42rem;
       margin-top: clamp(2rem, 10vh, 7rem);
       padding: clamp(2rem, 7vw, 4rem);
-      border-color: var(--dk-border-strong);
+      border-color: var(--color-border-accent);
       text-align: center;
     }
   `,

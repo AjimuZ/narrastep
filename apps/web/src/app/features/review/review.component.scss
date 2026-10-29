@@ -5,15 +5,15 @@
 .review-page {
   width: min(100%, 100rem);
   margin-inline: auto;
-  padding: clamp(1rem, 2vw, 1.5rem) var(--dk-page-gutter) var(--dk-space-5);
+  padding: clamp(1rem, 2vw, 1.5rem) var(--page-gutter) var(--space-5);
 }
 
 .review-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: var(--dk-space-5);
-  margin-bottom: var(--dk-space-4);
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .review-header h1 {
@@ -23,21 +23,21 @@
 }
 
 .review-header .eyebrow {
-  margin-top: var(--dk-space-3);
+  margin-top: var(--space-3);
 }
 
 .back-link {
   display: inline-flex;
   min-height: 2.25rem;
   align-items: center;
-  color: var(--dk-muted);
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   font-weight: 650;
   text-decoration: none;
 }
 
 .back-link:hover {
-  color: var(--dk-text-strong);
+  color: var(--color-text-strong);
 }
 
 .review-header__actions,
@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--dk-space-3);
+  gap: var(--space-3);
 }
 
 .review-header__actions {
@@ -63,20 +63,20 @@
 
 .unsaved,
 .dirty-label {
-  color: var(--dk-warning);
+  color: var(--color-warning);
   font-size: 0.8rem;
   font-weight: 700;
 }
 
 .unsaved {
   padding: 0.35rem 0.65rem;
-  border: 1px solid rgba(243, 196, 109, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
   border-radius: 999px;
-  background: rgba(243, 196, 109, 0.07);
+  background: color-mix(in srgb, var(--color-warning) 7%, transparent);
 }
 
 .workspace-notice {
-  margin-bottom: var(--dk-space-4);
+  margin-bottom: var(--space-4);
 }
 
 .workspace-switcher {
@@ -91,7 +91,7 @@
     minmax(16rem, 0.75fr) minmax(26rem, var(--editor-pane-width, 1.35fr))
     minmax(20rem, 0.95fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: var(--dk-space-3);
+  gap: var(--space-3);
 }
 
 .structure-panel {
@@ -120,36 +120,36 @@
   top: 4.65rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--dk-space-2);
-  padding: var(--dk-space-3) var(--dk-space-4);
-  border-bottom: 1px solid var(--dk-border);
-  background: color-mix(in srgb, var(--dk-surface) 94%, transparent);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
   backdrop-filter: blur(12px);
 }
 
 .segment-rail {
   display: grid;
-  gap: var(--dk-space-2);
-  padding: var(--dk-space-3);
+  gap: var(--space-2);
+  padding: var(--space-3);
 }
 
 .segment-rail__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--dk-space-2);
-  padding: var(--dk-space-3);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-sm);
-  background: var(--dk-bg-deep);
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
 }
 
 .segment-rail__item.selected {
-  border-color: var(--dk-accent-hover);
-  box-shadow: inset 3px 0 var(--dk-accent);
+  border-color: var(--color-accent);
+  box-shadow: inset 3px 0 var(--color-brand);
 }
 
 .segment-rail__item.dirty {
-  border-bottom-color: var(--dk-warning);
+  border-bottom-color: var(--color-warning);
 }
 
 .review-filters input,
@@ -163,8 +163,8 @@
   grid-column: 1;
   align-items: center;
   grid-template-columns: auto 1fr;
-  gap: var(--dk-space-2);
-  color: var(--dk-muted);
+  gap: var(--space-2);
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
@@ -177,27 +177,27 @@
 .evidence-metadata {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--dk-space-2);
-  margin: 0 var(--dk-space-4) var(--dk-space-4);
+  gap: var(--space-2);
+  margin: 0 var(--space-4) var(--space-4);
 }
 
 .evidence-metadata div {
   min-width: 0;
-  padding: var(--dk-space-2);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-sm);
-  background: var(--dk-surface-soft);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-panel);
 }
 
 .evidence-metadata dt {
-  color: var(--dk-muted);
+  color: var(--color-text-muted);
   font-size: 0.68rem;
 }
 
 .evidence-metadata dd {
   overflow: hidden;
   margin: 0;
-  color: var(--dk-text-strong);
+  color: var(--color-text-strong);
   font-size: 0.78rem;
   text-overflow: ellipsis;
 }
@@ -210,15 +210,15 @@
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  border-color: var(--dk-border);
-  box-shadow: 0 10px 30px var(--dk-shadow-panel);
+  border-color: var(--color-border);
+  box-shadow: 0 10px 30px var(--color-shadow-panel);
   contain: paint;
-  scrollbar-color: var(--dk-surface-raised) transparent;
+  scrollbar-color: var(--color-bg-raised) transparent;
   scrollbar-width: thin;
 }
 
 .review-grid > .panel:focus-within {
-  border-color: rgba(240, 118, 142, 0.34);
+  border-color: color-mix(in srgb, var(--color-accent) 34%, transparent);
 }
 
 .panel-heading {
@@ -226,9 +226,9 @@
   z-index: 3;
   top: 0;
   min-height: 4.65rem;
-  padding: var(--dk-space-4);
-  border-bottom: 1px solid var(--dk-border);
-  background: color-mix(in srgb, var(--dk-surface) 92%, transparent);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
   backdrop-filter: blur(14px);
 }
 
@@ -245,17 +245,17 @@
   display: block;
   width: calc(100% - 2rem);
   max-height: 52vh;
-  margin: var(--dk-space-4);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius);
-  background: var(--dk-media-bg);
-  box-shadow: 0 12px 28px rgba(5, 8, 15, 0.28);
+  margin: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-media-bg);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-media-bg) 28%, transparent);
 }
 
 .video-controls {
   align-items: flex-end;
   flex-wrap: wrap;
-  padding: 0 var(--dk-space-4) var(--dk-space-4);
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .video-controls > .button {
@@ -270,11 +270,11 @@
 .selected-time {
   align-items: flex-start;
   flex-direction: column;
-  margin: 0 var(--dk-space-4) var(--dk-space-4);
-  padding: var(--dk-space-3);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-sm);
-  background: var(--dk-bg-deep);
+  margin: 0 var(--space-4) var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
   font-size: 0.8rem;
 }
 
@@ -282,43 +282,48 @@
   position: sticky;
   z-index: 2;
   top: 4.65rem;
-  padding: var(--dk-space-3) var(--dk-space-4);
-  border-bottom: 1px solid var(--dk-border);
-  background: color-mix(in srgb, var(--dk-surface-soft) 94%, transparent);
-  color: var(--dk-text-strong);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-panel) 94%, transparent);
+  color: var(--color-text-strong);
   font-size: 0.85rem;
   backdrop-filter: blur(12px);
 }
 
 .segment-list {
   display: grid;
-  gap: var(--dk-space-3);
-  padding: var(--dk-space-3);
+  gap: var(--space-3);
+  padding: var(--space-3);
 }
 
 .segment {
-  padding: var(--dk-space-4);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius);
-  background: rgba(11, 15, 25, 0.62);
-  box-shadow: 0 8px 20px rgba(5, 8, 15, 0.12);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-media-bg) 62%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-media-bg) 12%, transparent);
 }
 
 .segment:hover {
-  border-color: rgba(174, 185, 202, 0.3);
+  border-color: color-mix(in srgb, var(--color-text-muted) 30%, transparent);
 }
 
 .segment.selected {
-  border-color: var(--dk-accent-hover);
+  border-color: var(--color-accent);
   background:
-    linear-gradient(100deg, rgba(240, 118, 142, 0.06), transparent 35%), var(--dk-bg-deep);
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--color-accent) 6%, transparent),
+      transparent 35%
+    ),
+    var(--color-bg-deep);
   box-shadow:
-    inset 3px 0 var(--dk-accent),
-    0 10px 24px rgba(5, 8, 15, 0.18);
+    inset 3px 0 var(--color-brand),
+    0 10px 24px color-mix(in srgb, var(--color-media-bg) 18%, transparent);
 }
 
 .segment.dirty {
-  border-bottom-color: var(--dk-warning);
+  border-bottom-color: var(--color-warning);
 }
 
 .segment-select {
@@ -326,13 +331,13 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--dk-text-strong);
+  color: var(--color-text-strong);
   text-align: left;
   cursor: pointer;
 }
 
 .segment-select:hover strong {
-  color: var(--dk-accent-hover);
+  color: var(--color-accent);
 }
 
 .segment-select strong,
@@ -342,7 +347,7 @@
 
 .segment-select span,
 .segment-meta {
-  color: var(--dk-muted);
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
@@ -350,43 +355,43 @@
   display: flex;
   min-height: 2.25rem;
   align-items: center;
-  gap: var(--dk-space-1);
-  color: var(--dk-muted);
+  gap: var(--space-1);
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
 .merge-check input {
   width: 1rem;
   height: 1rem;
-  accent-color: var(--dk-accent);
+  accent-color: var(--color-brand);
 }
 
 .segment-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--dk-space-3);
-  margin-block: var(--dk-space-3);
+  gap: var(--space-3);
+  margin-block: var(--space-3);
 }
 
 .segment textarea {
   width: 100%;
   min-height: 7.5rem;
-  padding: var(--dk-space-3);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-sm);
-  background: var(--dk-surface);
-  color: var(--dk-text-strong);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-strong);
   line-height: 1.55;
   resize: vertical;
 }
 
 .segment textarea:hover:not(:disabled) {
-  border-color: rgba(174, 185, 202, 0.36);
+  border-color: color-mix(in srgb, var(--color-text-muted) 36%, transparent);
 }
 
 .segment textarea:focus {
-  border-color: var(--dk-accent-hover);
-  box-shadow: 0 0 0 3px rgba(240, 118, 142, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .segment textarea:disabled {
@@ -395,8 +400,8 @@
 }
 
 details {
-  margin-block: var(--dk-space-3);
-  color: var(--dk-muted);
+  margin-block: var(--space-3);
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
@@ -406,20 +411,20 @@ summary {
 }
 
 details p {
-  margin: var(--dk-space-2) 0 0;
-  padding: var(--dk-space-3);
-  border-radius: var(--dk-radius-sm);
-  background: rgba(174, 185, 202, 0.05);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-text-muted) 5%, transparent);
   white-space: pre-wrap;
 }
 
 .screenshot-loading,
 .empty-panel {
-  padding: var(--dk-space-5);
+  padding: var(--space-5);
 }
 
 .primary-shot {
-  margin: var(--dk-space-4);
+  margin: var(--space-4);
 }
 
 .primary-shot > button,
@@ -428,16 +433,16 @@ details p {
   width: 100%;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius);
-  background: var(--dk-media-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-media-bg);
   cursor: zoom-in;
 }
 
 .primary-shot > button:hover,
 .candidate__preview:hover {
-  border-color: var(--dk-border-strong);
-  box-shadow: 0 10px 24px rgba(5, 8, 15, 0.24);
+  border-color: var(--color-border-accent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
 }
 
 .primary-shot img,
@@ -449,36 +454,36 @@ details p {
 }
 
 .primary-shot figcaption {
-  margin-top: var(--dk-space-3);
+  margin-top: var(--space-3);
   font-size: 0.8rem;
 }
 
 .primary-shot figcaption > div {
   display: flex;
   align-items: center;
-  gap: var(--dk-space-2);
+  gap: var(--space-2);
 }
 
 .user-choice {
-  color: var(--dk-success);
+  color: var(--color-success);
 }
 
 .screenshot-actions {
   flex-wrap: wrap;
-  padding: 0 var(--dk-space-4) var(--dk-space-4);
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .no-primary {
-  margin: var(--dk-space-4);
-  border: 1px dashed var(--dk-border);
-  border-radius: var(--dk-radius);
-  background: rgba(174, 185, 202, 0.03);
+  margin: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-text-muted) 3%, transparent);
   text-align: center;
 }
 
 .candidates {
-  padding: var(--dk-space-4);
-  border-top: 1px solid var(--dk-border);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
 .candidates h3 {
@@ -487,24 +492,24 @@ details p {
 
 .candidate-grid {
   display: grid;
-  gap: var(--dk-space-3);
+  gap: var(--space-3);
 }
 
 .candidate {
-  padding: var(--dk-space-2);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius);
-  background: var(--dk-bg-deep);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
 }
 
 .candidate > div {
-  margin-top: var(--dk-space-2);
-  color: var(--dk-muted);
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
 .candidate-empty {
-  padding: var(--dk-space-4);
+  padding: var(--space-4);
   text-align: center;
 }
 
@@ -541,7 +546,7 @@ details p {
 
 @media (max-width: 63.999rem) {
   .review-page {
-    padding: var(--dk-space-4);
+    padding: var(--space-4);
   }
 
   .review-header,
@@ -570,13 +575,13 @@ details p {
     top: 4.25rem;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--dk-space-1);
-    margin-bottom: var(--dk-space-4);
-    padding: var(--dk-space-1);
-    border: 1px solid var(--dk-border);
-    border-radius: var(--dk-radius);
-    background: color-mix(in srgb, var(--dk-bg) 92%, transparent);
-    box-shadow: 0 10px 28px rgba(5, 8, 15, 0.24);
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
     backdrop-filter: blur(14px);
   }
 
@@ -599,24 +604,24 @@ details p {
     min-height: 2.75rem;
     align-items: center;
     justify-content: center;
-    padding: 0.55rem var(--dk-space-2);
+    padding: 0.55rem var(--space-2);
     border: 1px solid transparent;
-    border-radius: calc(var(--dk-radius) - 0.2rem);
-    color: var(--dk-muted);
+    border-radius: calc(var(--radius) - 0.2rem);
+    color: var(--color-text-muted);
     font-size: 0.78rem;
     font-weight: 750;
     text-align: center;
   }
 
   .workspace-switcher input:checked + span {
-    border-color: var(--dk-border-strong);
-    background: var(--dk-surface-raised);
-    color: var(--dk-text-strong);
-    box-shadow: 0 4px 12px rgba(5, 8, 15, 0.2);
+    border-color: var(--color-border-accent);
+    background: var(--color-bg-raised);
+    color: var(--color-text-strong);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-media-bg) 20%, transparent);
   }
 
   .workspace-switcher input:focus-visible + span {
-    outline: 3px solid var(--dk-focus-ring);
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 
@@ -674,7 +679,7 @@ details p {
   }
 
   .segment footer {
-    gap: var(--dk-space-2);
+    gap: var(--space-2);
   }
 
   .candidate-grid {
@@ -689,13 +694,13 @@ details p {
     top: 4.25rem;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--dk-space-1);
-    margin-bottom: var(--dk-space-4);
-    padding: var(--dk-space-1);
-    border: 1px solid var(--dk-border);
-    border-radius: var(--dk-radius);
-    background: color-mix(in srgb, var(--dk-bg) 92%, transparent);
-    box-shadow: 0 10px 28px rgba(5, 8, 15, 0.24);
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-media-bg) 24%, transparent);
     backdrop-filter: blur(14px);
   }
 
@@ -722,10 +727,10 @@ details p {
     min-height: 2.75rem;
     align-items: center;
     justify-content: center;
-    padding: 0.55rem var(--dk-space-2);
+    padding: 0.55rem var(--space-2);
     border: 1px solid transparent;
-    border-radius: calc(var(--dk-radius) - 0.2rem);
-    color: var(--dk-muted);
+    border-radius: calc(var(--radius) - 0.2rem);
+    color: var(--color-text-muted);
     font-size: 0.78rem;
     font-weight: 750;
     text-align: center;
@@ -733,14 +738,14 @@ details p {
 
   .workspace-switcher input:checked + span,
   .workspace-switcher:has(#review-view-transcript:checked) label:has(#review-view-video) span {
-    border-color: var(--dk-border-strong);
-    background: var(--dk-surface-raised);
-    color: var(--dk-text-strong);
-    box-shadow: 0 4px 12px rgba(5, 8, 15, 0.2);
+    border-color: var(--color-border-accent);
+    background: var(--color-bg-raised);
+    color: var(--color-text-strong);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-media-bg) 20%, transparent);
   }
 
   .workspace-switcher input:focus-visible + span {
-    outline: 3px solid var(--dk-focus-ring);
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 
@@ -767,7 +772,7 @@ details p {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto;
-    gap: var(--dk-space-4);
+    gap: var(--space-4);
   }
 
   .review-grid > .structure-panel {
@@ -810,7 +815,7 @@ details p {
 
 @media (max-width: 34rem) {
   .review-page {
-    padding-inline: var(--dk-space-3);
+    padding-inline: var(--space-3);
   }
 
   .review-header h1 {
@@ -835,18 +840,18 @@ details p {
   .segment,
   .panel-heading,
   .candidates {
-    padding: var(--dk-space-3);
+    padding: var(--space-3);
   }
 
   .segment-list {
-    padding: var(--dk-space-2);
+    padding: var(--space-2);
   }
 
   .primary-shot {
-    margin: var(--dk-space-3);
+    margin: var(--space-3);
   }
 
   .screenshot-actions {
-    padding-inline: var(--dk-space-3);
+    padding-inline: var(--space-3);
   }
 }

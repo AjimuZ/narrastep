@@ -70,46 +70,46 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
       width: min(44rem, calc(100vw - 2rem));
       max-height: calc(100dvh - 2rem);
       overflow: auto;
-      padding: var(--dk-space-5);
-      border: 1px solid var(--dk-border-strong);
-      border-radius: var(--dk-radius-lg);
-      background: var(--dk-surface);
-      box-shadow: 0 24px 80px var(--dk-shadow-strong);
+      padding: var(--space-5);
+      border: 1px solid var(--color-border-accent);
+      border-radius: var(--radius);
+      background: var(--color-bg-elevated);
+      box-shadow: 0 24px 80px var(--color-shadow-strong);
     }
 
     .split-copy {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--dk-space-3);
-      margin-block: var(--dk-space-5);
+      gap: var(--space-3);
+      margin-block: var(--space-5);
     }
 
     article {
       min-height: 8rem;
-      padding: var(--dk-space-4);
-      border: 1px solid var(--dk-border);
-      border-radius: var(--dk-radius);
-      background: var(--dk-bg-deep);
+      padding: var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      background: var(--color-bg-deep);
       white-space: pre-wrap;
     }
 
     article h3 {
       font-size: 0.8rem;
       text-transform: uppercase;
-      color: var(--dk-muted);
+      color: var(--color-text-muted);
     }
 
     .dialog__actions {
       display: flex;
       justify-content: flex-end;
-      gap: var(--dk-space-3);
-      margin-top: var(--dk-space-5);
+      gap: var(--space-3);
+      margin-top: var(--space-5);
     }
 
     @media (max-width: 38rem) {
       .dialog {
         width: min(100%, calc(100vw - 1rem));
-        padding: var(--dk-space-4);
+        padding: var(--space-4);
       }
 
       .split-copy {

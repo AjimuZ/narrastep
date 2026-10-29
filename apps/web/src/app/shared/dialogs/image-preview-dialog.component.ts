@@ -28,33 +28,33 @@ export interface ImagePreviewDialogData {
       width: min(72rem, calc(100vw - 2rem));
       max-height: calc(100dvh - 2rem);
       overflow: auto;
-      padding: var(--dk-space-4);
-      border: 1px solid var(--dk-border-strong);
-      border-radius: var(--dk-radius-lg);
-      background: var(--dk-surface);
-      box-shadow: 0 24px 80px var(--dk-shadow-strong);
+      padding: var(--space-4);
+      border: 1px solid var(--color-border-accent);
+      border-radius: var(--radius);
+      background: var(--color-bg-elevated);
+      box-shadow: 0 24px 80px var(--color-shadow-strong);
     }
 
     header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: var(--dk-space-4);
+      gap: var(--space-4);
     }
 
     img {
       display: block;
       width: 100%;
       max-height: calc(100vh - 9rem);
-      border-radius: var(--dk-radius);
+      border-radius: var(--radius);
       object-fit: contain;
-      background: var(--dk-media-bg);
+      background: var(--color-media-bg);
     }
 
     @media (max-width: 34rem) {
       .preview {
         width: min(100%, calc(100vw - 1rem));
-        padding: var(--dk-space-3);
+        padding: var(--space-3);
       }
 
       header {

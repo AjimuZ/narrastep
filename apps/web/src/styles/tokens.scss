@@ -1,0 +1,78 @@
+// Design tokens: the only file that may contain color literals, plus the non-color scales (ADR 0012).
+//
+// Components reference these custom properties with `var(--token)` and never define their own
+// colors. Derived shades (washes, borders, shadows) are built with `color-mix()` from these tokens,
+// so a palette change happens here only. `docs/UI.md` lists the semantic roles.
+:root {
+  // Surfaces
+  --color-bg: #2d2f42;
+  --color-bg-deep: #242637; // inset surface: fields, wells
+  --color-bg-elevated: #34364a;
+  --color-bg-panel: #383b50;
+  --color-bg-raised: #42455c;
+  --color-bg-fade: #12192a; // lower end of the page background
+  --color-bg-overlay: rgba(19, 20, 31, 0.72);
+  --color-surface-hover: #4a4d65;
+  --color-media-bg: #070a11; // behind video and screenshots
+
+  // Text
+  --color-text: #f7e6ea;
+  --color-text-strong: #ffffff;
+  --color-text-muted: #dac8cd;
+  --color-text-subtle: #b9a9ae;
+  --color-text-disabled: #8f8792;
+  --color-on-accent: #ffffff; // text on `--color-brand-strong`
+
+  // Brand and accent
+  --color-brand: #d46c7f;
+  --color-brand-strong: #a84e5f;
+  --color-brand-strong-hover: #964757;
+  --color-accent: #f6798c;
+  --color-accent-soft: #ff9cab;
+  --color-focus-ring: #f6798c;
+
+  // Status
+  --color-success: #7bc6a4;
+  --color-warning: #e2b36a;
+  --color-danger: #e08696;
+  --color-info: #97b7ff;
+
+  // Borders and shadows
+  --color-border: rgba(247, 230, 234, 0.12);
+  --color-border-strong: rgba(247, 230, 234, 0.22);
+  --color-border-accent: rgba(246, 121, 140, 0.56);
+  --color-separator: rgba(247, 230, 234, 0.08);
+  --frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent);
+  --color-shadow: rgba(5, 8, 15, 0.3);
+  --color-shadow-panel: rgba(5, 8, 15, 0.22);
+  --color-shadow-strong: rgba(5, 8, 15, 0.58);
+
+  // Pixel unit, corners and motion
+  --px: 2px;
+  --radius: 2px;
+  --quick: 120ms;
+  --motion-base: 180ms;
+
+  // Fonts. `--font-pixel` is only the fallback until the bundled Pixelify Sans lands (P04.2).
+  --font-ui: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  --font-pixel: 'Pixelify Sans', var(--font-ui);
+
+  // Text scale
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  // Spacing scale and page layout
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --content-width: 90rem;
+  --page-gutter: clamp(1rem, 3vw, 2.5rem);
+}

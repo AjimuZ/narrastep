@@ -84,7 +84,8 @@ Exit: export test checks the ZIP name and every path in the new layout; old expo
 Decisions: [ADR 0012](decisions/0012-pixel-ui-design-system.md),
 [ADR 0015](decisions/0015-english-and-italian-interface.md). Specification: [UI](UI.md).
 
-- [ ] P04.1 Token file and non-color tokens; remove duplicated aliases.
+- [x] P04.1 Token file and non-color tokens; remove duplicated aliases.
+  Evidence (2026-10-29): `apps/web/src/styles/tokens.scss` (loaded by `styles.scss` with `@use`) holds every palette value, the roles of [UI](UI.md#tokens) and the non-color tokens (`--px`, `--radius`, `--quick`, `--font-ui`, `--font-mono`, `--font-pixel`, text and spacing scales); all `--dk-*` and the duplicated `--color-surface*`, `--color-*-text`, `--font-sans`, `--motion-fast` and `--motion-slow` aliases were removed and every component stylesheet and inline style migrated (no `--dk-` left in `src` or in the built CSS); the 64 rgba and hex literals outside the token file became `color-mix()` of tokens. `check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss` (from the pixel-ui skill, run from `/app/skills`): "clean: no color literals outside token definitions" (it reported 45 outside `styles.scss` before). Every `var(--x)` in `src` resolves to a defined token. `npm run build`, `npm run test` (38), `npm run lint`, `npm run typecheck:e2e` and `npx prettier --check .` in `apps/web` passed. Not run: Playwright journeys (no Chromium) and a visual comparison; corners are now 2 px, the shadows and gradients remain until P04.3.
 - [ ] P04.2 Shared primitives, pixel icon sprite and bundled Pixelify Sans title font with its
   notice.
 - [ ] P04.3 Shell with vertical menu; restyle every screen; rewrite copy.

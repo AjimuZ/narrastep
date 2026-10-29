@@ -67,24 +67,35 @@ in `THIRD_PARTY_NOTICES.md` ([Licenses](LICENSES.md)).
 
 ## Tokens
 
-The palette in `apps/web/src/styles.scss` stays as it is. P04 moves it to
-`apps/web/src/styles/tokens.scss`, keeps every value, removes the duplicated `--dk-*` aliases and
-maps these roles:
+All tokens live in `apps/web/src/styles/tokens.scss` (P04.1), loaded by `apps/web/src/styles.scss`
+with `@use`. The file keeps every palette value of the Version 0.2 interface, has no `--dk-*`
+aliases, and is the only place that may hold a color literal. Components use `var(--token)` and
+build washes, borders and shadows with `color-mix(in srgb, var(--token) N%, transparent)`. These
+roles are defined:
 
 | Role | Token |
 | --- | --- |
-| Background | `--color-bg` |
-| Deep or inset surface | `--color-bg-deep` (current value of `--dk-bg-deep`) |
-| Raised surface | `--color-bg-elevated` |
+| Background | `--color-bg` (page fades to `--color-bg-fade`) |
+| Deep or inset surface | `--color-bg-deep` |
+| Raised surface | `--color-bg-elevated`, and `--color-bg-raised` one step above it |
 | Panel | `--color-bg-panel` |
-| Hover surface | `--color-surface-hover` (current value of `--dk-surface-hover`) |
-| Text, muted, subtle, disabled | `--color-text`, `--color-text-muted`, `--color-text-subtle`, `--color-text-disabled` |
-| Brand and accent | `--color-brand`, `--color-accent`, `--color-accent-soft` |
+| Hover surface | `--color-surface-hover` |
+| Media backdrop, overlay | `--color-media-bg`, `--color-bg-overlay` |
+| Text, strong, muted, subtle, disabled | `--color-text`, `--color-text-strong`, `--color-text-muted`, `--color-text-subtle`, `--color-text-disabled` |
+| Text on a brand-strong fill | `--color-on-accent` |
+| Brand and accent | `--color-brand`, `--color-brand-strong`, `--color-brand-strong-hover`, `--color-accent`, `--color-accent-soft` |
+| Focus ring | `--color-focus-ring` |
 | Success, warning, danger, info | `--color-success`, `--color-warning`, `--color-danger`, `--color-info` |
-| Border and frame | `--color-border`, `--frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent)` |
+| Border and frame | `--color-border`, `--color-border-strong`, `--color-border-accent`, `--color-separator`, `--frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent)` |
+| Shadow (removed with the restyle in P04.3) | `--color-shadow`, `--color-shadow-panel`, `--color-shadow-strong` |
 
-Non-color tokens: `--px: 2px`, `--radius: 2px`, `--font-ui`, `--font-mono`, `--font-pixel`,
-`--quick: 120ms`, and the existing spacing and text scales.
+Non-color tokens: `--px: 2px`, `--radius: 2px`, `--quick: 120ms`, `--motion-base: 180ms`,
+`--font-ui`, `--font-mono`, `--font-pixel` (falls back to `--font-ui` until Pixelify Sans is
+bundled in P04.2), the text scale `--text-xs` to `--text-2xl`, the spacing scale `--space-1` to
+`--space-6`, `--content-width` and `--page-gutter`.
+
+The Version 0.2 radii (0.5 to 1.25 rem) all became `--radius`, and the `Inter` entry left the UI
+font stack. Other styles are unchanged until the restyle in P04.3.
 
 ## Shared primitives
 
@@ -132,7 +143,7 @@ steps, and `prefers-reduced-motion` removes it.
 ## Verification
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
-  reports no color literal outside the token file.
+  reports no color literal outside the token file (clean since P04.1).
 - Text contrast is at least 4.5:1; large text, focus rings and control borders at least 3:1.
 - Every action works with the keyboard in a logical order, with a visible focus ring.
 - No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px, and at 200% zoom.

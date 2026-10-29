@@ -34,24 +34,24 @@ export interface ConfirmDialogData {
       width: min(30rem, calc(100vw - 2rem));
       max-height: calc(100dvh - 2rem);
       overflow: auto;
-      padding: var(--dk-space-5);
-      border: 1px solid var(--dk-border-strong);
-      border-radius: var(--dk-radius-lg);
-      background: var(--dk-surface);
-      box-shadow: 0 24px 80px var(--dk-shadow-strong);
+      padding: var(--space-5);
+      border: 1px solid var(--color-border-accent);
+      border-radius: var(--radius);
+      background: var(--color-bg-elevated);
+      box-shadow: 0 24px 80px var(--color-shadow-strong);
     }
 
     .dialog__actions {
       display: flex;
       justify-content: flex-end;
-      gap: var(--dk-space-3);
-      margin-top: var(--dk-space-5);
+      gap: var(--space-3);
+      margin-top: var(--space-5);
     }
 
     @media (max-width: 34rem) {
       .dialog {
         width: min(100%, calc(100vw - 1rem));
-        padding: var(--dk-space-4);
+        padding: var(--space-4);
       }
 
       .dialog__actions {

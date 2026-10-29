@@ -25,6 +25,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | ZIP export | Implemented | Numbered archive layout with a root folder named `{date}_{type}_{slug}_export-{nn}`, manifest schema 0.3.0 (P03.2); the file on disk stays `narrastep-{UUID}.zip`. The number and ZIP name are stored when the export is queued (P03.3, migration `20261029_0004`) and the download and history use them; exports without a stored name download as `narrastep-{UUID}.zip` |
 | Project types | Implemented | `task_briefing`, `meeting`, `tutorial`, `general` (P02.1); migration `20261029_0003` maps `technical_walkthrough` to `task_briefing`. Type-specific screenshot profile, export guide, generation prompt and batch evidence prompts (P02.2); new-project form with type cards, optional default name and "More options" (P02.3) |
 | Export name builders | Implemented | Slug, archive and screenshot names (P03.1); used by the archive layout (P03.2) and the stored download name (P03.3) |
+| Design token file | Implemented | `apps/web/src/styles/tokens.scss` holds every color and the non-color scales; the `--dk-*` aliases are gone and the color check reports no literal outside it (P04.1). The pixel look itself is still planned (P04.2, P04.3) |
 | Docker local stack | Implemented | Web, API, single worker, Redis, named volumes |
 | Automated unit, API and UI tests | Implemented | Last recorded floor (2026-10-29): 148 backend passed, 1 opt-in integration skipped; 38 frontend passed |
 | Browser contract journey | Implemented | Desktop and mobile Chromium, six responsive widths |
@@ -38,7 +39,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 
 | Capability | Status | Package |
 | --- | --- | --- |
-| Pixel interface, pixel title font and plain copy | Planned | P04 |
+| Pixel interface, pixel title font and plain copy | Planned | P04.2 to P04.5 |
 | English and Italian interface with a switch | Planned | P04 |
 | In-browser screen, system-audio and microphone recording, saved without processing | Planned | P05 |
 | You / Others speaker labels for in-app recordings | Planned | P05.5 |

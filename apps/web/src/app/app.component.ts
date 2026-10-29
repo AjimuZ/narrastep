@@ -39,9 +39,9 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       top: 0.5rem;
       left: 0.5rem;
       padding: 0.75rem;
-      border-radius: var(--dk-radius-sm);
-      background: var(--dk-text-strong);
-      color: var(--dk-bg);
+      border-radius: var(--radius);
+      background: var(--color-text-strong);
+      color: var(--color-bg);
       transform: translateY(-150%);
     }
 
@@ -54,28 +54,28 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       z-index: 20;
       top: 0;
       min-height: 4.5rem;
-      border-bottom: 1px solid var(--dk-border);
-      background: color-mix(in srgb, var(--dk-bg) 88%, transparent);
-      box-shadow: 0 8px 28px rgba(5, 8, 15, 0.12);
+      border-bottom: 1px solid var(--color-border);
+      background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+      box-shadow: 0 8px 28px color-mix(in srgb, var(--color-media-bg) 12%, transparent);
       backdrop-filter: blur(16px);
     }
 
     .app-header__inner {
       display: flex;
-      width: min(100%, var(--dk-content-width));
+      width: min(100%, var(--content-width));
       min-height: 4.5rem;
       align-items: center;
       justify-content: space-between;
-      gap: var(--dk-space-4);
+      gap: var(--space-4);
       margin-inline: auto;
-      padding: 0.75rem var(--dk-page-gutter);
+      padding: 0.75rem var(--page-gutter);
     }
 
     .brand {
       display: inline-flex;
       align-items: center;
-      gap: var(--dk-space-3);
-      color: var(--dk-text-strong);
+      gap: var(--space-3);
+      color: var(--color-text-strong);
       text-decoration: none;
     }
 
@@ -84,14 +84,14 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       width: 2.5rem;
       height: 2.5rem;
       place-items: center;
-      border: 1px solid var(--dk-border-strong);
-      border-radius: var(--dk-radius);
-      background: linear-gradient(145deg, var(--dk-accent), var(--dk-accent-strong));
-      color: var(--dk-on-accent);
+      border: 1px solid var(--color-border-accent);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, var(--color-brand), var(--color-brand-strong));
+      color: var(--color-on-accent);
       font-weight: 800;
       box-shadow:
-        inset 0 1px rgba(255, 255, 255, 0.24),
-        0 6px 16px rgba(184, 61, 91, 0.34);
+        inset 0 1px color-mix(in srgb, var(--color-text-strong) 24%, transparent),
+        0 6px 16px color-mix(in srgb, var(--color-brand-strong) 34%, transparent);
     }
 
     .brand strong,
@@ -100,7 +100,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     }
 
     .brand small {
-      color: var(--dk-muted);
+      color: var(--color-text-muted);
       font-size: 0.68rem;
       letter-spacing: 0.01em;
     }
@@ -108,20 +108,20 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     nav {
       display: flex;
       align-items: center;
-      gap: var(--dk-space-4);
+      gap: var(--space-4);
     }
 
     nav > a:not(.button) {
       padding: 0.65rem 0.25rem;
-      color: var(--dk-muted);
+      color: var(--color-text-muted);
       font-size: 0.9rem;
       font-weight: 650;
       text-decoration: none;
     }
 
     nav > a.active:not(.button) {
-      color: var(--dk-text-strong);
-      box-shadow: 0 2px var(--dk-accent);
+      color: var(--color-text-strong);
+      box-shadow: 0 2px var(--color-brand);
     }
 
     @media (max-width: 34rem) {
@@ -131,7 +131,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       }
 
       .app-header__inner {
-        padding-block: var(--dk-space-2);
+        padding-block: var(--space-2);
       }
 
       .brand__mark {
@@ -145,7 +145,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       }
 
       nav {
-        gap: var(--dk-space-2);
+        gap: var(--space-2);
       }
     }
   `,

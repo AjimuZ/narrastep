@@ -18,6 +18,10 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- The interface styles now read every color, font, space and corner from one token file
+  (`apps/web/src/styles/tokens.scss`) instead of two overlapping alias sets. Corners are now
+  squarer (2 px) and the UI font no longer asks for Inter; colors and layout are otherwise the
+  same.
 - Export packages now use a numbered layout inside one root folder named after the date, project
   type, project name and export number (for example
   `2026-10-28_meeting_sprint-planning_export-02`): `README.md`, `01-ai-input`, `02-screenshots`
