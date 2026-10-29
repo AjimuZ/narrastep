@@ -90,14 +90,27 @@ npm run format:check
 npm run lint
 npm test -- --watch=false
 npm run build
+npm run check:i18n
 npm run typecheck:e2e
 npm run e2e
 ```
 
+`npm run build` first runs `node scripts/check-i18n.mjs`, and `npm run check:i18n` adds a comparison
+of `src/locale/messages.en.json` with a fresh `ng extract-i18n`. Both fail when a message ID is
+missing in English or Italian, when a source uses an ID without a catalog entry, when a message has
+no custom ID (`@@id`), an empty text or different placeholders in the two languages. After changing
+or adding English text, run `npm run extract-i18n` (rewrites the English catalog) and write the
+Italian text in `src/locale/messages.it.json` with the terms of `src/locale/GLOSSARY.md`; every new
+interface text needs both languages in the same change.
+
 The browser-contract journey runs on desktop Chromium and a mobile Chromium profile. It verifies
 the complete local workflow on both profiles and checks the review workspace at 320, 390, 768,
 1024, 1280, and 1440 pixel widths for horizontal overflow and the expected single-pane, stacked
-editor/inspector, two-column tabbed-inspector, or three-pane arrangement.
+editor/inspector, two-column tabbed-inspector, or three-pane arrangement. The same journey runs in
+English and in Italian (browser locale `it-IT`), and a separate test switches the language with the
+header buttons, checks that the choice survives a reload and that nothing overflows horizontally.
+Unit tests run in English; Italian rendering is covered by `core/i18n/italian.spec.ts`, which loads
+the Italian catalog for that file only.
 
 The responsive Review Studio contract covers 320, 390, 768, 1024, 1280, and 1440 pixels. The
 desktop editor width is stored only in browser local storage. Keyboard checks cover save, segment

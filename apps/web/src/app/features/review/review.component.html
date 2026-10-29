@@ -2,19 +2,22 @@
   <header class="page-header">
     <div class="review-title">
       <a class="back-link" routerLink="/projects">
-        <ns-pixel-icon class="back-link__icon" name="chevron-right" />Back to projects
+        <ns-pixel-icon class="back-link__icon" name="chevron-right" /><span
+          i18n="@@common.back_to_projects"
+          >Back to projects</span
+        >
       </a>
-      <h1>Review</h1>
-      <p>{{ project()?.name || 'Loading project…' }}</p>
+      <h1 i18n="@@review.title">Review</h1>
+      <p>{{ project()?.name || loadingProjectLabel }}</p>
     </div>
     <div class="page-header__actions">
       @if (dirtyCount() > 0) {
         <span class="unsaved" role="status">
-          <ns-status-pill [label]="dirtyCount() + ' unsaved'" tone="wait" />
+          <ns-status-pill [label]="unsavedCountLabel()" tone="wait" />
         </span>
       }
       <a class="ns-button" [routerLink]="['/projects', projectId(), 'export']">
-        <ns-pixel-icon name="export" />Export
+        <ns-pixel-icon name="export" /><span i18n="@@review.export">Export</span>
       </a>
     </div>
   </header>
@@ -23,14 +26,19 @@
     <div class="ns-notice ns-notice--error workspace-notice" role="alert">
       <span>{{ message }}</span>
       <button class="ns-button ns-button--small" type="button" (click)="errorMessage.set(null)">
-        <ns-pixel-icon name="close" />Dismiss
+        <ns-pixel-icon name="close" /><span i18n="@@common.dismiss">Dismiss</span>
       </button>
     </div>
   }
   <p class="visually-hidden" aria-live="polite">{{ statusMessage() }}</p>
 
   @if (!loading()) {
-    <div class="workspace-switcher" role="radiogroup" aria-label="Review workspace view">
+    <div
+      class="workspace-switcher"
+      role="radiogroup"
+      aria-label="Review workspace view"
+      i18n-aria-label="@@review.view_label"
+    >
       <label class="workspace-switcher__option">
         <input
           id="review-view-video"
@@ -38,7 +46,7 @@
           name="review-workspace-view"
           aria-controls="review-video-panel"
         />
-        <span>Video</span>
+        <span i18n="@@processing.video">Video</span>
       </label>
       <label class="workspace-switcher__option">
         <input
@@ -48,7 +56,7 @@
           aria-controls="review-transcript-panel"
           checked
         />
-        <span>Transcript</span>
+        <span i18n="@@review.transcript">Transcript</span>
       </label>
       <label class="workspace-switcher__option">
         <input
@@ -57,28 +65,35 @@
           name="review-workspace-view"
           aria-controls="review-screenshot-panel"
         />
-        <span>Screenshot</span>
+        <span i18n="@@review.screenshot">Screenshot</span>
       </label>
     </div>
   }
 
   @if (loading()) {
     <div class="review-grid loading-grid" aria-busy="true">
-      <span class="visually-hidden">Loading review…</span>
-      <ns-activity-line class="loading-line" label="Loading review" />
+      <span class="visually-hidden" i18n="@@review.loading_text">Loading review…</span>
+      <ns-activity-line class="loading-line" label="Loading review" i18n-label="@@review.loading" />
       <div class="ns-placeholder"></div>
       <div class="ns-placeholder"></div>
       <div class="ns-placeholder"></div>
     </div>
   } @else {
     <div class="review-grid" [style.--editor-pane-width]="editorPaneWidth()">
-      <ns-window id="review-video-panel" class="review-pane video-pane" [title]="'Video'">
+      <ns-window
+        id="review-video-panel"
+        class="review-pane video-pane"
+        title="Video"
+        i18n-title="@@processing.video"
+      >
         <video #videoPlayer controls preload="metadata" [src]="videoUrl()">
-          This browser cannot play the video.
+          <ng-container i18n="@@review.no_video_support"
+            >This browser cannot play the video.</ng-container
+          >
         </video>
         <div class="video-controls">
           <div class="ns-form-row playback-speed">
-            <label class="ns-label" for="playback-rate">Playback speed</label>
+            <label class="ns-label" for="playback-rate" i18n="@@review.speed">Playback speed</label>
             <select id="playback-rate" class="ns-field" (change)="setPlaybackRate($event)">
               <option value="0.5">0.5×</option>
               <option value="0.75">0.75×</option>
@@ -94,21 +109,24 @@
             [disabled]="!selectedSegment()"
             (click)="jumpToSelectedSegment()"
           >
-            <ns-pixel-icon name="play" />Jump to selected segment
+            <ns-pixel-icon name="play" /><span i18n="@@review.jump">Jump to selected segment</span>
           </button>
           <button
             class="ns-button ns-button--small"
             type="button"
             [disabled]="!selectedSegment() || screenshotPending()"
             title="Recover current frame (R)"
+            i18n-title="@@review.recover_title"
             (click)="recoverCurrentFrame()"
           >
-            <ns-pixel-icon name="refresh" />Recover current frame
+            <ns-pixel-icon name="refresh" /><span i18n="@@review.recover"
+              >Recover current frame</span
+            >
           </button>
         </div>
         @if (selectedSegment(); as segment) {
           <p class="selected-time">
-            <span class="muted">Segment time</span>
+            <span class="muted" i18n="@@review.segment_time">Segment time</span>
             <span class="mono"
               >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
             >
@@ -119,38 +137,42 @@
       <ns-window
         id="review-structure-panel"
         class="review-pane structure-pane"
-        [title]="'Segments'"
+        title="Segments"
+        i18n-title="@@review.segments"
       >
         <div class="review-filters">
           <label class="ns-form-row">
-            <span class="ns-label">Search</span>
+            <span class="ns-label" i18n="@@projects.search">Search</span>
             <input
               #segmentSearchInput
               class="ns-field"
               type="search"
               placeholder="Segment text"
+              i18n-placeholder="@@review.search_placeholder"
               aria-keyshortcuts="/"
               [value]="segmentSearch()"
               (input)="updateSegmentSearch($event)"
             />
           </label>
           <label class="ns-form-row">
-            <span class="ns-label">Show</span>
+            <span class="ns-label" i18n="@@review.show">Show</span>
             <select
               class="ns-field"
               [value]="evidenceFilter()"
               (change)="updateEvidenceFilter($event)"
             >
-              <option value="all">All segments</option>
-              <option value="missing">No screenshot</option>
-              <option value="duplicate">Shared screenshot</option>
-              <option value="low_confidence">Low confidence</option>
-              <option value="manual">Screenshot chosen by hand</option>
-              <option value="problems">Needs attention</option>
+              <option value="all" i18n="@@review.filter.all">All segments</option>
+              <option value="missing" i18n="@@review.filter.missing">No screenshot</option>
+              <option value="duplicate" i18n="@@review.filter.duplicate">Shared screenshot</option>
+              <option value="low_confidence" i18n="@@review.filter.low">Low confidence</option>
+              <option value="manual" i18n="@@review.filter.manual">
+                Screenshot chosen by hand
+              </option>
+              <option value="problems" i18n="@@review.filter.problems">Needs attention</option>
             </select>
           </label>
           <label class="ns-form-row pane-resizer">
-            <span class="ns-label">Editor width</span>
+            <span class="ns-label" i18n="@@review.editor_width">Editor width</span>
             <input
               type="range"
               min="1"
@@ -163,24 +185,30 @@
         </div>
 
         <p class="muted segment-count">
-          {{ segments().length }} {{ segments().length === 1 ? 'segment' : 'segments' }}
+          {{ segmentCountLabel() }}
         </p>
 
         @if (selectedForMergeCount() > 0) {
           <div class="merge-toolbar">
-            <span>{{ selectedForMergeCount() }} selected for merge</span>
+            <span i18n="@@review.selected_merge"
+              >{{ selectedForMergeCount() }} selected for merge</span
+            >
             <button
               class="ns-button ns-button--small"
               type="button"
               [disabled]="selectedForMergeCount() < 2 || structuralPending()"
               (click)="mergeSelectedSegments()"
             >
-              {{ structuralPending() ? 'Updating…' : 'Merge adjacent' }}
+              @if (structuralPending()) {
+                <ng-container i18n="@@review.updating">Updating…</ng-container>
+              } @else {
+                <ng-container i18n="@@review.merge_adjacent">Merge adjacent</ng-container>
+              }
             </button>
           </div>
         }
 
-        <nav class="segment-rail" aria-label="Segments">
+        <nav class="segment-rail" aria-label="Segments" i18n-aria-label="@@review.segments">
           @for (segment of filteredSegments(); track segment.id) {
             <div
               class="ns-row segment-rail__item"
@@ -194,7 +222,7 @@
                 [attr.aria-current]="selectedSegmentId() === segment.id ? 'true' : null"
                 (click)="selectSegment(segment)"
               >
-                <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
+                <strong i18n="@@review.segment_n">Segment {{ segment.segmentIndex + 1 }}</strong>
                 <span class="mono"
                   >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
                 >
@@ -204,23 +232,30 @@
                   type="checkbox"
                   [checked]="mergeSelection().has(segment.id)"
                   [disabled]="structuralPending()"
-                  [attr.aria-label]="'Merge segment ' + (segment.segmentIndex + 1)"
+                  [attr.aria-label]="mergeLabel(segment)"
                   (change)="onMergeCheckbox(segment.id, $event)"
                 />
-                Merge
+                <ng-container i18n="@@review.merge">Merge</ng-container>
               </label>
               @if (isDirty(segment)) {
-                <ns-status-pill class="segment-rail__state" label="Unsaved" tone="wait" />
+                <ns-status-pill
+                  class="segment-rail__state"
+                  label="Unsaved"
+                  i18n-label="@@review.unsaved"
+                  tone="wait"
+                />
               }
             </div>
           } @empty {
             <div class="empty-state">
               @if (segments().length === 0) {
-                <h3>No transcript segments</h3>
-                <p class="muted">This project has no segments to review.</p>
+                <h3 i18n="@@review.no_segments">No transcript segments</h3>
+                <p class="muted" i18n="@@review.no_segments_help">
+                  This project has no segments to review.
+                </p>
               } @else {
-                <h3>No segments match</h3>
-                <p class="muted">Change the search or the filter.</p>
+                <h3 i18n="@@review.no_match">No segments match</h3>
+                <p class="muted" i18n="@@review.no_match_help">Change the search or the filter.</p>
               }
             </div>
           }
@@ -230,14 +265,15 @@
       <ns-window
         id="review-transcript-panel"
         class="review-pane transcript-pane"
-        [title]="'Transcript'"
+        title="Transcript"
+        i18n-title="@@review.transcript"
         [primary]="true"
         [attr.aria-busy]="structuralPending()"
       >
         @if (selectedSegment(); as segment) {
           <article class="segment" [class.dirty]="isDirty(segment)">
             <header class="segment__header">
-              <strong>Segment {{ segment.segmentIndex + 1 }}</strong>
+              <strong i18n="@@review.segment_n">Segment {{ segment.segmentIndex + 1 }}</strong>
               <span class="mono"
                 >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
               >
@@ -249,11 +285,19 @@
                 <span>{{ segment.speakerLabel }}</span>
               }
               @if (isDirty(segment)) {
-                <ns-status-pill label="Unsaved edit" tone="wait" />
+                <ns-status-pill
+                  label="Unsaved edit"
+                  i18n-label="@@review.unsaved_edit"
+                  tone="wait"
+                />
               }
             </div>
 
-            <label class="visually-hidden" [for]="'reviewed-' + segment.id">
+            <label
+              class="visually-hidden"
+              [for]="'reviewed-' + segment.id"
+              i18n="@@review.reviewed_text"
+            >
               Reviewed text for segment {{ segment.segmentIndex + 1 }}
             </label>
             <textarea
@@ -268,7 +312,7 @@
             ></textarea>
 
             <details>
-              <summary>Original transcription</summary>
+              <summary i18n="@@review.original">Original transcription</summary>
               <p>{{ segment.rawText }}</p>
             </details>
 
@@ -278,6 +322,7 @@
                 type="button"
                 [disabled]="structuralPending() || isDirty(segment)"
                 (click)="splitSegment(segment)"
+                i18n="@@review.split"
               >
                 Split at caret
               </button>
@@ -290,16 +335,21 @@
                 "
                 (click)="saveSegment(segment)"
               >
-                <ns-pixel-icon name="check" />{{
-                  savingSegmentIds().has(segment.id) ? 'Saving…' : 'Save text'
-                }}
+                <ns-pixel-icon name="check" />
+                @if (savingSegmentIds().has(segment.id)) {
+                  <span i18n="@@review.saving">Saving…</span>
+                } @else {
+                  <span i18n="@@review.save">Save text</span>
+                }
               </button>
             </footer>
           </article>
         } @else {
           <div class="empty-state">
-            <h3>No transcript segments</h3>
-            <p class="muted">This project has no segments to review.</p>
+            <h3 i18n="@@review.no_segments">No transcript segments</h3>
+            <p class="muted" i18n="@@review.no_segments_help">
+              This project has no segments to review.
+            </p>
           </div>
         }
       </ns-window>
@@ -307,16 +357,19 @@
       <ns-window
         id="review-screenshot-panel"
         class="review-pane screenshot-pane"
-        [title]="'Screenshot'"
+        title="Screenshot"
+        i18n-title="@@review.screenshot"
       >
         @if (!selectedSegment()) {
           <div class="empty-state">
-            <h3>Select a transcript segment</h3>
-            <p class="muted">Its screenshots appear here.</p>
+            <h3 i18n="@@review.select_segment">Select a transcript segment</h3>
+            <p class="muted" i18n="@@review.select_segment_help">Its screenshots appear here.</p>
           </div>
         } @else if (screenshotLoading()) {
           <div class="screenshot-loading" aria-busy="true">
-            <span class="visually-hidden">Loading screenshots…</span>
+            <span class="visually-hidden" i18n="@@review.loading_screenshots"
+              >Loading screenshots…</span
+            >
             <div class="ns-placeholder"></div>
           </div>
         } @else {
@@ -327,17 +380,19 @@
                 type="button"
                 (click)="previewScreenshot(primary)"
                 aria-label="Open full-size primary screenshot"
+                i18n-aria-label="@@review.open_primary"
               >
-                <img
-                  [src]="screenshotUrl(primary.id)"
-                  [alt]="'Primary screenshot at ' + timeLabel(primary.timestampSeconds)"
-                />
+                <img [src]="screenshotUrl(primary.id)" [alt]="primaryAlt(primary)" />
               </button>
               <figcaption>
                 <span class="pills">
-                  <ns-status-pill label="Primary" tone="info" />
+                  <ns-status-pill label="Primary" i18n-label="@@review.primary" tone="info" />
                   @if (primary.isUserSelected) {
-                    <ns-status-pill label="User selected" tone="ok" />
+                    <ns-status-pill
+                      label="User selected"
+                      i18n-label="@@review.user_selected"
+                      tone="ok"
+                    />
                   }
                 </span>
                 <span class="mono">{{ timeLabel(primary.timestampSeconds) }}</span>
@@ -345,28 +400,28 @@
             </figure>
             <dl class="evidence-metadata">
               <div>
-                <dt>Selection</dt>
-                <dd>{{ primary.selectionReason || 'Legacy' }}</dd>
+                <dt i18n="@@review.selection">Selection</dt>
+                <dd>{{ selectionReasonLabel(primary.selectionReason) }}</dd>
               </div>
               <div>
-                <dt>Visual change</dt>
+                <dt i18n="@@review.visual_change">Visual change</dt>
                 <dd class="mono">{{ primary.visualChangeScore ?? '—' }}</dd>
               </div>
               <div>
-                <dt>Text change</dt>
+                <dt i18n="@@review.text_change">Text change</dt>
                 <dd class="mono">{{ primary.textChangeScore ?? '—' }}</dd>
               </div>
               <div>
-                <dt>Coverage</dt>
+                <dt i18n="@@review.coverage">Coverage</dt>
                 <dd class="mono">{{ primary.confidence ?? '—' }}</dd>
               </div>
               <div>
-                <dt>Shared segments</dt>
+                <dt i18n="@@review.shared_segments">Shared segments</dt>
                 <dd class="mono">{{ primary.sharedSegmentCount ?? 1 }}</dd>
               </div>
               <div>
-                <dt>Image file</dt>
-                <dd class="mono">{{ primary.materializationState || 'png_ready' }}</dd>
+                <dt i18n="@@review.image_file">Image file</dt>
+                <dd>{{ imageStateLabel(primary.materializationState) }}</dd>
               </div>
             </dl>
             <div class="screenshot-actions">
@@ -375,7 +430,7 @@
                 type="button"
                 (click)="previewScreenshot(primary)"
               >
-                <ns-pixel-icon name="search" />View full size
+                <ns-pixel-icon name="search" /><span i18n="@@review.view_full">View full size</span>
               </button>
               <button
                 class="ns-button ns-button--small ns-button--danger"
@@ -383,13 +438,15 @@
                 [disabled]="screenshotPending()"
                 (click)="removePrimaryScreenshot()"
               >
-                <ns-pixel-icon name="trash" />Remove primary
+                <ns-pixel-icon name="trash" /><span i18n="@@review.remove_primary"
+                  >Remove primary</span
+                >
               </button>
             </div>
           } @else {
             <div class="empty-state no-primary">
-              <h3>No primary screenshot</h3>
-              <p class="muted">
+              <h3 i18n="@@review.no_primary">No primary screenshot</h3>
+              <p class="muted" i18n="@@review.no_primary_help">
                 The segment stays in the package without an image. Choose an alternative below if
                 one fits.
               </p>
@@ -398,7 +455,7 @@
 
           @if (alternativeScreenshots().length > 0) {
             <section class="candidates" aria-labelledby="candidates-heading">
-              <h3 id="candidates-heading">Alternatives</h3>
+              <h3 id="candidates-heading" i18n="@@review.alternatives">Alternatives</h3>
               <div class="candidate-grid">
                 @for (screenshot of alternativeScreenshots(); track screenshot.id) {
                   <article class="candidate">
@@ -406,30 +463,23 @@
                       class="media-frame"
                       type="button"
                       (click)="previewScreenshot(screenshot)"
-                      [attr.aria-label]="
-                        'Preview candidate at ' + timeLabel(screenshot.timestampSeconds)
-                      "
+                      [attr.aria-label]="previewLabel(screenshot)"
                     >
-                      <img
-                        [src]="screenshotUrl(screenshot.id)"
-                        [alt]="'Screenshot candidate at ' + timeLabel(screenshot.timestampSeconds)"
-                      />
+                      <img [src]="screenshotUrl(screenshot.id)" [alt]="candidateAlt(screenshot)" />
                     </button>
                     <div class="candidate__footer">
                       <span>
                         <span class="mono">{{ timeLabel(screenshot.timestampSeconds) }}</span> ·
-                        {{ screenshot.selectionReason || 'alternative' }}
+                        {{ selectionReasonLabel(screenshot.selectionReason ?? 'alternative') }}
                       </span>
                       <button
                         class="ns-button ns-button--small"
                         type="button"
                         [disabled]="screenshotPending()"
-                        [attr.aria-label]="
-                          'Use as primary: screenshot at ' + timeLabel(screenshot.timestampSeconds)
-                        "
+                        [attr.aria-label]="useAsPrimaryLabel(screenshot)"
                         (click)="selectPrimaryScreenshot(screenshot)"
                       >
-                        Use as primary
+                        <ng-container i18n="@@review.use_primary">Use as primary</ng-container>
                       </button>
                     </div>
                   </article>
@@ -437,7 +487,9 @@
               </div>
             </section>
           } @else if (!primaryScreenshot()) {
-            <p class="muted candidate-empty">This segment has no screenshots.</p>
+            <p class="muted candidate-empty" i18n="@@review.no_screenshots">
+              This segment has no screenshots.
+            </p>
           }
         }
       </ns-window>

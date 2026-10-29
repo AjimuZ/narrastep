@@ -15,7 +15,8 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Subscription, catchError, finalize, interval, of, switchMap, tap } from 'rxjs';
 
 import { ProcessingJob, ProcessingStage, Project } from '../../core/api.models';
-import { NarrastepApiError } from '../../core/services/api-error.interceptor';
+import { errorText, localizedError } from '../../core/i18n/error-text';
+import { activeLocale } from '../../core/i18n/language';
 import { ApiService } from '../../core/services/api.service';
 import { projectTypeLabel } from '../../shared/project-types';
 import { StatusLabel, jobStatusLabel, projectStatusLabel } from '../../shared/status-labels';
@@ -54,6 +55,13 @@ export class ProcessingComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly transportMessage = signal<string | null>(null);
   readonly now = signal(Date.now());
+  /** Placeholder for the project name while the project loads. */
+  readonly loadingProjectLabel = $localize`:@@common.loading_project:Loading project…`;
+  /**
+   * The worker's progress message is English only. In another language the translated stage label
+   * says the same thing, so the English line is left out instead of mixing languages.
+   */
+  readonly showApiMessage = activeLocale().toLowerCase().startsWith('en');
   readonly isTerminal = computed(() => {
     const status = this.job()?.status;
     return (
@@ -123,7 +131,7 @@ export class ProcessingComponent implements OnInit {
           this.errorMessage.set(
             this.errorText(
               error,
-              'The project could not be loaded. Check that Narrastep is running, then try again.',
+              $localize`:@@processing.error_load:The project could not be loaded. Check that Narrastep is running, then try again.`,
             ),
           );
           return EMPTY;
@@ -159,7 +167,7 @@ export class ProcessingComponent implements OnInit {
           this.errorMessage.set(
             this.errorText(
               error,
-              'Processing could not be started or followed. Try again to reload the project.',
+              $localize`:@@processing.error_start:Processing could not be started or followed. Try again to reload the project.`,
             ),
           );
           return EMPTY;
@@ -183,7 +191,10 @@ export class ProcessingComponent implements OnInit {
         finalize(() => this.actionPending.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'Processing could not be cancelled. Try again in a moment.'),
+            this.errorText(
+              error,
+              $localize`:@@processing.error_cancel:Processing could not be cancelled. Try again in a moment.`,
+            ),
           );
           return EMPTY;
         }),
@@ -193,25 +204,103 @@ export class ProcessingComponent implements OnInit {
 
   /** Maps backend stage identifiers to concise operational language. */
   stageLabel(stage: ProcessingStage): string {
-    const labels: Record<ProcessingStage, string> = {
-      queued: 'Waiting for the worker',
-      validating: 'Checking the video',
-      reading_metadata: 'Reading video details',
-      extracting_audio: 'Extracting audio',
-      transcribing: 'Transcribing speech',
-      extracting_frames: 'Finding screenshot candidates',
-      scanning_frames: 'Scanning screen changes',
-      global_clustering: 'Grouping similar screens',
-      coverage_selection: 'Choosing screenshots',
-      thumbnail_persistence: 'Saving screenshot previews',
-      deduplicating_frames: 'Removing duplicate screenshots',
-      associating_frames: 'Linking screenshots to segments',
-      saving_results: 'Saving results',
-      completed: 'Ready for review',
-      failed: 'Processing failed',
-      cancelled: 'Processing cancelled',
-    };
-    return labels[stage];
+    switch (stage) {
+      case 'queued':
+        return $localize`:@@processing.stage.queued:Waiting for the worker`;
+      case 'validating':
+        return $localize`:@@processing.stage.validating:Checking the video`;
+      case 'reading_metadata':
+        return $localize`:@@processing.stage.reading_metadata:Reading video details`;
+      case 'extracting_audio':
+        return $localize`:@@processing.stage.extracting_audio:Extracting audio`;
+      case 'transcribing':
+        return $localize`:@@processing.stage.transcribing:Transcribing speech`;
+      case 'extracting_frames':
+        return $localize`:@@processing.stage.extracting_frames:Finding screenshot candidates`;
+      case 'scanning_frames':
+        return $localize`:@@processing.stage.scanning_frames:Scanning screen changes`;
+      case 'global_clustering':
+        return $localize`:@@processing.stage.global_clustering:Grouping similar screens`;
+      case 'coverage_selection':
+        return $localize`:@@processing.stage.coverage_selection:Choosing screenshots`;
+      case 'thumbnail_persistence':
+        return $localize`:@@processing.stage.thumbnail_persistence:Saving screenshot previews`;
+      case 'deduplicating_frames':
+        return $localize`:@@processing.stage.deduplicating_frames:Removing duplicate screenshots`;
+      case 'associating_frames':
+        return $localize`:@@processing.stage.associating_frames:Linking screenshots to segments`;
+      case 'saving_results':
+        return $localize`:@@processing.stage.saving_results:Saving results`;
+      case 'completed':
+        return $localize`:@@processing.stage.completed:Ready for review`;
+      case 'failed':
+        return $localize`:@@processing.stage.failed:Processing failed`;
+      case 'cancelled':
+        return $localize`:@@processing.stage.cancelled:Processing cancelled`;
+    }
+  }
+
+  /** Name of a stage gauge: the stage and its percentage. */
+  stagePercentLabel(stage: ProcessingStage, percent: number): string {
+    return $localize`:@@processing.stage_gauge:${this.stageLabel(stage)}:STAGE: ${percent}:PERCENT:%`;
+  }
+
+  /** Name of the activity line of the running stage. */
+  stageRunningLabel(stage: ProcessingStage): string {
+    return $localize`:@@processing.stage_running:${this.stageLabel(stage)}:STAGE: in progress`;
+  }
+
+  /** Name of the overall gauge. */
+  overallLabel(job: ProcessingJob): string {
+    return $localize`:@@processing.overall:Overall progress ${job.progressPercent}:PERCENT:%`;
+  }
+
+  /** Screen-reader announcement of the stage and the job-wide percentage. */
+  announcement(job: ProcessingJob): string {
+    const text = $localize`:@@processing.announcement:${this.stageLabel(job.currentStage)}:STAGE:. ${job.progressPercent}:PERCENT: percent.`;
+    return this.showApiMessage && job.message ? `${text} ${job.message}` : text;
+  }
+
+  /** Heading of the failure notice: interrupted or failed. */
+  failureTitle(job: ProcessingJob): string {
+    return job.status === 'interrupted'
+      ? $localize`:@@processing.interrupted:Processing was interrupted.`
+      : $localize`:@@processing.failed:Processing failed.`;
+  }
+
+  /** Why the job failed, in the active language; see `localizedError`. */
+  failureText(job: ProcessingJob): string {
+    return localizedError(
+      job.errorCode ?? 'PROCESSING_FAILED',
+      job.errorMessage,
+      $localize`:@@error.PROCESSING_FAILED:Processing did not finish. Retry processing to start again from the original video.`,
+    );
+  }
+
+  /** Word for the screenshot selection strategy of the job. */
+  selectionLabel(job: ProcessingJob): string {
+    return job.selectionStrategy === 'adaptive_v1'
+      ? $localize`:@@processing.selection.adaptive:Adaptive`
+      : $localize`:@@processing.selection.legacy:Basic`;
+  }
+
+  /** Word for the text recognition mode of the job. */
+  ocrLabel(job: ProcessingJob): string {
+    return job.ocrMode === 'selective'
+      ? $localize`:@@processing.ocr.selective:Selective`
+      : $localize`:@@processing.ocr.off:Off`;
+  }
+
+  /** Word for the image budget profile of the job. */
+  budgetLabel(job: ProcessingJob): string {
+    switch (job.imageBudgetProfile) {
+      case 'compact':
+        return $localize`:@@processing.budget.compact:Compact`;
+      case 'detailed':
+        return $localize`:@@processing.budget.detailed:Detailed`;
+      default:
+        return $localize`:@@processing.budget.balanced:Balanced`;
+    }
   }
 
   /** Marks a stage relative to the current persisted worker position for the visual timeline. */
@@ -238,12 +327,16 @@ export class ProcessingComponent implements OnInit {
   stageStateLabel(stage: ProcessingStage): string {
     const state = this.stageState(stage);
     if (state === 'completed') {
-      return 'Done';
+      return $localize`:@@processing.state.done:Done`;
     }
     if (state === 'active') {
-      return this.isTerminal() ? 'Stopped' : 'Running';
+      return this.isTerminal()
+        ? $localize`:@@processing.state.stopped:Stopped`
+        : $localize`:@@processing.state.running:Running`;
     }
-    return this.isTerminal() ? 'Not done' : 'Waiting';
+    return this.isTerminal()
+      ? $localize`:@@processing.state.not_done:Not done`
+      : $localize`:@@processing.state.waiting:Waiting`;
   }
 
   /**
@@ -273,7 +366,7 @@ export class ProcessingComponent implements OnInit {
   durationLabel(project: Project): string {
     const durationSeconds = project.videoAsset?.durationSeconds;
     if (durationSeconds === null || durationSeconds === undefined) {
-      return 'Unknown';
+      return $localize`:@@common.unknown:Unknown`;
     }
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = Math.floor(durationSeconds % 60);
@@ -283,7 +376,7 @@ export class ProcessingComponent implements OnInit {
   /** Detected spoken-language code, else the chosen one; "auto" before detection reads "Automatic". */
   languageLabel(project: Project): string {
     const code = project.detectedLanguage ?? project.sourceLanguage;
-    return code === 'auto' ? 'Automatic' : code;
+    return code === 'auto' ? $localize`:@@processing.language_auto:Automatic` : code;
   }
 
   /** Reads one safe numeric worker metric without assuming a particular diagnostics version. */
@@ -306,7 +399,9 @@ export class ProcessingComponent implements OnInit {
     if (project.videoAsset?.originalFilename) {
       return project.videoAsset.originalFilename;
     }
-    return project.videoAssetId ? 'Unknown' : 'No video';
+    return project.videoAssetId
+      ? $localize`:@@common.unknown:Unknown`
+      : $localize`:@@status.project.draft:No video`;
   }
 
   /** Applies one monotonic worker snapshot and mirrors terminal lifecycle state in the route view. */
@@ -334,8 +429,8 @@ export class ProcessingComponent implements OnInit {
     });
   }
 
-  /** Prefers a structured local API error without exposing stack traces. */
+  /** Prefers the translation of a structured local API error code without exposing stack traces. */
   private errorText(error: unknown, fallback: string): string {
-    return error instanceof NarrastepApiError ? error.message : fallback;
+    return errorText(error, fallback);
   }
 }

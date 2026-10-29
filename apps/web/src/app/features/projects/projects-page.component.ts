@@ -15,17 +15,13 @@ import { EMPTY, catchError, filter, finalize, switchMap } from 'rxjs';
 
 import { Project, ProjectMode, ProjectStatus } from '../../core/api.models';
 import { ApiService } from '../../core/services/api.service';
-import { NarrastepApiError } from '../../core/services/api-error.interceptor';
+import { errorText } from '../../core/i18n/error-text';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../shared/dialogs/confirm-dialog.component';
-import { PROJECT_TYPES, projectTypeLabel } from '../../shared/project-types';
-import {
-  PROJECT_STATUS_OPTIONS,
-  StatusLabel,
-  projectStatusLabel,
-} from '../../shared/status-labels';
+import { projectTypeLabel, projectTypes } from '../../shared/project-types';
+import { projectStatusOptions, StatusLabel, projectStatusLabel } from '../../shared/status-labels';
 import {
   ActivityLineComponent,
   PixelIconComponent,
@@ -57,8 +53,8 @@ export class ProjectsPageComponent {
   readonly searchQuery = signal('');
   readonly statusFilter = signal<'all' | ProjectStatus>('all');
   readonly typeFilter = signal<'all' | ProjectMode>('all');
-  readonly projectTypes = PROJECT_TYPES;
-  readonly statusOptions = PROJECT_STATUS_OPTIONS;
+  readonly projectTypes = projectTypes();
+  readonly statusOptions = projectStatusOptions();
   readonly sortOrder = signal<'updated_desc' | 'created_desc' | 'name_asc'>('updated_desc');
   readonly visibleProjects = computed(() => {
     const query = this.searchQuery().trim().toLocaleLowerCase();
@@ -135,17 +131,16 @@ export class ProjectsPageComponent {
   /** Requires an accessible destructive confirmation before deleting local evidence. */
   confirmDelete(project: Project): void {
     const data: ConfirmDialogData = {
-      title: `Delete “${project.name}”?`,
-      message:
-        'The video, transcript, screenshots and packages of this project are deleted from this computer. This cannot be undone.',
-      confirmLabel: 'Delete project',
+      title: $localize`:@@projects.delete_title:Delete “${project.name}:NAME:”?`,
+      message: $localize`:@@projects.delete_message:The video, transcript, screenshots and packages of this project are deleted from this computer. This cannot be undone.`,
+      confirmLabel: $localize`:@@projects.delete_confirm:Delete project`,
       danger: true,
     };
 
     this.dialog
       .open<boolean>(ConfirmDialogComponent, {
         data,
-        ariaLabel: `Confirm deletion of ${project.name}`,
+        ariaLabel: $localize`:@@projects.delete_aria:Confirm deletion of ${project.name}:NAME:`,
         disableClose: true,
       })
       .closed.pipe(
@@ -205,17 +200,33 @@ export class ProjectsPageComponent {
   durationLabel(project: Project): string {
     const durationSeconds = project.videoAsset?.durationSeconds;
     if (durationSeconds === null || durationSeconds === undefined) {
-      return 'Unknown';
+      return $localize`:@@common.unknown:Unknown`;
     }
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = Math.floor(durationSeconds % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  /** Uses the stable API message when available and hides unknown implementation details. */
+  /** Title of the list window with the total number of projects. */
+  listTitle(): string {
+    return $localize`:@@projects.list_title:All projects (${this.total()}:COUNT:)`;
+  }
+
+  /** Accessible name of the Open button, which shows only a verb. */
+  openLabel(project: Project): string {
+    return $localize`:@@projects.open_aria:Open ${project.name}:NAME:`;
+  }
+
+  /** Accessible name of the Delete button, which shows only a verb. */
+  deleteLabel(project: Project): string {
+    return $localize`:@@projects.delete_aria_label:Delete ${project.name}:NAME:`;
+  }
+
+  /** Translates a known API error code, else the API message; hides unknown implementation details. */
   private errorText(error: unknown): string {
-    return error instanceof NarrastepApiError
-      ? error.message
-      : 'Narrastep could not reach its local service. Check that it is running, then try again.';
+    return errorText(
+      error,
+      $localize`:@@projects.error_unreachable:Narrastep could not reach its local service. Check that it is running, then try again.`,
+    );
   }
 }

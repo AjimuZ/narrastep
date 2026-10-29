@@ -24,7 +24,8 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.scss"],
+            "polyfills": ["@angular/localize/init"]
           },
           "configurations": {
             "production": {
@@ -79,7 +80,18 @@
           "options": {
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "narrastep-web:build:development",
+            "format": "json",
+            "outputPath": "src/locale"
+          }
         }
+      },
+      "i18n": {
+        "sourceLocale": "en"
       }
     }
   }

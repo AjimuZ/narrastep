@@ -28,8 +28,8 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
         const envelope = readErrorEnvelope(error.error);
         const fallbackMessage =
           error.status === 0
-            ? 'Narrastep could not reach the local API. Check that the service is running.'
-            : 'Narrastep could not complete the request.';
+            ? $localize`:@@error.api_unreachable:Narrastep could not reach the local service. Check that Narrastep is running.`
+            : $localize`:@@error.request_failed:Narrastep could not complete the request.`;
 
         return throwError(
           () =>
@@ -43,7 +43,11 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
       }
 
       return throwError(
-        () => new NarrastepApiError('REQUEST_FAILED', 'Narrastep could not complete the request.'),
+        () =>
+          new NarrastepApiError(
+            'REQUEST_FAILED',
+            $localize`:@@error.request_failed:Narrastep could not complete the request.`,
+          ),
       );
     }),
   );

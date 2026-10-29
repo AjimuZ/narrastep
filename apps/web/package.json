@@ -8,7 +8,9 @@
   },
   "scripts": {
     "start": "ng serve --host 127.0.0.1 --port 4200 --proxy-config proxy.conf.json",
-    "build": "ng build --configuration production",
+    "build": "node scripts/check-i18n.mjs && ng build --configuration production",
+    "check:i18n": "node scripts/check-i18n.mjs --extract",
+    "extract-i18n": "node scripts/check-i18n.mjs write",
     "test": "ng test --watch=false",
     "test:watch": "ng test",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
@@ -25,6 +27,7 @@
     "@angular/compiler": "22.0.6",
     "@angular/core": "22.0.6",
     "@angular/forms": "22.0.6",
+    "@angular/localize": "22.0.6",
     "@angular/platform-browser": "22.0.6",
     "@angular/platform-browser-dynamic": "22.0.6",
     "@angular/router": "22.0.6",
@@ -33,10 +36,10 @@
     "zone.js": "0.16.2"
   },
   "devDependencies": {
+    "@angular-eslint/builder": "22.0.0",
     "@angular/build": "22.0.6",
     "@angular/cli": "22.0.6",
     "@angular/compiler-cli": "22.0.6",
-    "@angular-eslint/builder": "22.0.0",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.61.1",
     "@types/node": "26.0.0",

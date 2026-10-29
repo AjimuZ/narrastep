@@ -552,7 +552,8 @@ details p {
   .workspace-switcher {
     position: sticky;
     z-index: 10;
-    top: 3rem;
+    // Below 48rem the shell header scrolls away, so the switcher sticks to the top edge.
+    top: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2px;
@@ -613,6 +614,19 @@ details p {
 
   .playback-speed {
     flex-basis: 100%;
+  }
+}
+
+// At 320 px the longest Italian word ("Trascrizione") must fit one option without breaking.
+@media (max-width: 29.999rem) {
+  .workspace-switcher {
+    grid-template-columns: repeat(3, minmax(min-content, 1fr));
+  }
+
+  .workspace-switcher__option span {
+    padding: var(--space-1);
+    font-size: var(--text-xs);
+    overflow-wrap: normal;
   }
 }
 

@@ -1,4 +1,6 @@
 import 'zone.js';
+// The language catalog must be applied before any module evaluates a $localize message.
+import './app/core/i18n/init';
 
 import { bootstrapApplication } from '@angular/platform-browser';
 

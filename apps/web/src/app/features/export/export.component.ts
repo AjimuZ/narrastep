@@ -15,7 +15,8 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, catchError, finalize, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import { ExportEstimate, Project, ProjectExport } from '../../core/api.models';
-import { NarrastepApiError } from '../../core/services/api-error.interceptor';
+import { errorText, localizedError } from '../../core/i18n/error-text';
+import { formatFileSize } from '../../core/i18n/format';
 import { ApiService } from '../../core/services/api.service';
 import { StatusLabel, exportStatusLabel } from '../../shared/status-labels';
 import {
@@ -25,12 +26,19 @@ import {
   WindowComponent,
 } from '../../shared/ui';
 
-/** Words for the stages the export worker persists; other stages fall back to a generic word. */
-const EXPORT_STAGE_LABELS: Record<string, string> = {
-  queued: 'Waiting to start',
-  collecting_evidence: 'Collecting the reviewed evidence',
-  building_package: 'Building the package',
-};
+/** Word for a stage the export worker persists; other stages fall back to a generic word. */
+function exportStageLabel(stage: string | null): string {
+  switch (stage) {
+    case 'queued':
+      return $localize`:@@export.stage.queued:Waiting to start`;
+    case 'collecting_evidence':
+      return $localize`:@@export.stage.collecting:Collecting the reviewed evidence`;
+    case 'building_package':
+      return $localize`:@@export.stage.building:Building the package`;
+    default:
+      return $localize`:@@export.stage.default:Creating the package`;
+  }
+}
 
 /** Creates and lists the immutable packages of one project; `projectId` comes from the route. */
 @Component({
@@ -65,6 +73,9 @@ export class ExportComponent implements OnInit {
     this.exports().filter((item) => item.status === 'completed' || item.status === 'failed'),
   );
 
+  /** Project name placeholder while the project loads. */
+  readonly loadingProjectLabel = $localize`:@@common.loading_project:Loading project…`;
+
   readonly standardFiles = [
     'README.md',
     '01-ai-input/llm-input.md',
@@ -73,8 +84,8 @@ export class ExportComponent implements OnInit {
     '03-transcript/reviewed-transcript.md',
     '03-transcript/subtitles.srt',
     '03-transcript/raw-transcript.json',
-    '04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images',
-    'metadata/manifest.json (schema 0.3.0)',
+    $localize`:@@export.file.batch:04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images`,
+    $localize`:@@export.file.manifest:metadata/manifest.json (schema 0.3.0)`,
     'metadata/source.json',
   ];
 
@@ -109,7 +120,7 @@ export class ExportComponent implements OnInit {
           this.errorMessage.set(
             this.errorText(
               error,
-              'The package history could not be loaded. Reload the page to try again.',
+              $localize`:@@export.error_load:The package history could not be loaded. Reload the page to try again.`,
             ),
           );
           return EMPTY;
@@ -153,7 +164,10 @@ export class ExportComponent implements OnInit {
         finalize(() => this.creating.set(false)),
         catchError((error: unknown) => {
           this.errorMessage.set(
-            this.errorText(error, 'The package could not be created. Try again.'),
+            this.errorText(
+              error,
+              $localize`:@@export.error_create:The package could not be created. Try again.`,
+            ),
           );
           return EMPTY;
         }),
@@ -168,13 +182,12 @@ export class ExportComponent implements OnInit {
 
   /** Formats optional ZIP size metadata; returns "Unknown" instead of implying a value. */
   formatFileSize(bytes: number | null): string {
-    if (bytes === null) {
-      return 'Unknown';
-    }
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`;
-    }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return bytes === null ? $localize`:@@common.unknown:Unknown` : formatFileSize(bytes);
+  }
+
+  /** Title of the history window with the number of packages. */
+  historyTitle(): string {
+    return $localize`:@@export.history_title:Packages (${this.completedExports().length}:COUNT:)`;
   }
 
   /** Word and pill tone for an export state. */
@@ -184,7 +197,7 @@ export class ExportComponent implements OnInit {
 
   /** Readable word for the persisted stage of an active export; never a raw stage code. */
   stageLabel(item: ProjectExport): string {
-    return (item.currentStage && EXPORT_STAGE_LABELS[item.currentStage]) || 'Creating the package';
+    return exportStageLabel(item.currentStage);
   }
 
   /** Reads one numeric immutable-export metric while supporting older export records. */
@@ -193,9 +206,24 @@ export class ExportComponent implements OnInit {
     return typeof value === 'number' ? value : null;
   }
 
-  /** Uses backend-safe messages and suppresses unknown exception details. */
+  /** A metric as text, or "Unknown" when an older export record has none. */
+  metricText(item: ProjectExport, metric: string): string {
+    const value = this.exportMetric(item, metric);
+    return value === null ? $localize`:@@common.unknown:Unknown` : String(value);
+  }
+
+  /** Why a package failed, in the active language; see `localizedError`. */
+  failureText(item: ProjectExport): string {
+    return localizedError(
+      item.errorCode ?? 'EXPORT_FAILED',
+      item.errorMessage,
+      $localize`:@@export.failed_default:This package was not created. Create a new package.`,
+    );
+  }
+
+  /** Uses translated backend error codes and suppresses unknown exception details. */
   private errorText(error: unknown, fallback: string): string {
-    return error instanceof NarrastepApiError ? error.message : fallback;
+    return errorText(error, fallback);
   }
 }
 

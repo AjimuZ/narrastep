@@ -16,7 +16,7 @@ export interface ImagePreviewDialogData {
   imports: [PixelIconComponent],
   template: `
     <section class="ns-dialog preview" aria-labelledby="preview-title">
-      <h2 id="preview-title" class="ns-dialog__title">
+      <h2 id="preview-title" class="ns-dialog__title" i18n="@@preview.title">
         Screenshot at <span class="mono">{{ data.timestampLabel }}</span>
       </h2>
       <div class="ns-dialog__body">
@@ -24,7 +24,7 @@ export interface ImagePreviewDialogData {
       </div>
       <div class="ns-dialog__actions">
         <button class="ns-button" type="button" (click)="close()">
-          <ns-pixel-icon name="close" />Close
+          <ns-pixel-icon name="close" /><span i18n="@@dialog.close">Close</span>
         </button>
       </div>
     </section>

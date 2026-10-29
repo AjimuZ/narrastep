@@ -32,6 +32,7 @@ inventory inside the containers is roadmap item I-15.
 | Nginx | 1.28.0 | BSD-2-Clause | |
 | Node.js (build only) | 22.23.1 | MIT | |
 | Angular, Angular CDK | 22.0.x | MIT | |
+| `@angular/localize` | 22.0.6 | MIT | Runtime `$localize` and `loadTranslations`; its Babel tooling (`@babel/core`, MIT) is a build-time dependency of the Angular tools and is not shipped in the web image |
 | RxJS | 7.8.2 | Apache-2.0 | |
 | zone.js, tslib | 0.16.2, 2.8.1 | MIT, 0BSD | |
 

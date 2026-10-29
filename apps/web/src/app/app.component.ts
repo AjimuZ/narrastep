@@ -4,6 +4,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { catchError, filter, map, of, startWith, switchMap, timer } from 'rxjs';
 
+import { LANGUAGES, Language } from './core/i18n/language';
+import { LanguageService } from './core/i18n/language.service';
 import { ApiService } from './core/services/api.service';
 import { StatusLabel } from './shared/status-labels';
 import { PixelIconComponent, PixelIconName, StatusPillComponent } from './shared/ui';
@@ -14,15 +16,23 @@ export const HEALTH_INTERVAL_MS = 30_000;
 /** Health pill states; `checking` is shown only until the first answer. */
 export type ShellHealth = 'checking' | 'ok' | 'degraded' | 'offline';
 
-const HEALTH_LABELS: Record<ShellHealth, StatusLabel> = {
-  checking: { label: 'Checking services', tone: 'info' },
-  ok: { label: 'Services ready', tone: 'ok' },
-  degraded: { label: 'Processing unavailable', tone: 'wait' },
-  offline: { label: 'Services offline', tone: 'error' },
-};
+/** State word and tone of the health pill; read on demand so the active language applies. */
+function healthStatusLabel(health: ShellHealth): StatusLabel {
+  switch (health) {
+    case 'checking':
+      return { label: $localize`:@@shell.health.checking:Checking services`, tone: 'info' };
+    case 'ok':
+      return { label: $localize`:@@shell.health.ok:Services ready`, tone: 'ok' };
+    case 'degraded':
+      return { label: $localize`:@@shell.health.degraded:Processing unavailable`, tone: 'wait' };
+    case 'offline':
+      return { label: $localize`:@@shell.health.offline:Services offline`, tone: 'error' };
+  }
+}
 
 interface MenuEntry {
-  label: string;
+  /** Visible text in the active language. */
+  label: () => string;
   path: string;
   icon: PixelIconName;
   /** Whether a router URL (without query or fragment) belongs to this entry. */
@@ -35,13 +45,18 @@ interface MenuEntry {
  */
 export const MENU_ENTRIES: readonly MenuEntry[] = [
   {
-    label: 'Projects',
+    label: () => $localize`:@@shell.menu.projects:Projects`,
     path: '/projects',
     icon: 'folder',
     // Every project screen belongs to Projects except the new-project form.
     matches: (url) => url === '/projects' || (url.startsWith('/projects/') && !isNewProject(url)),
   },
-  { label: 'New project', path: '/projects/new', icon: 'plus', matches: isNewProject },
+  {
+    label: () => $localize`:@@shell.menu.new_project:New project`,
+    path: '/projects/new',
+    icon: 'plus',
+    matches: isNewProject,
+  },
 ];
 
 function isNewProject(url: string): boolean {
@@ -52,7 +67,7 @@ function isNewProject(url: string): boolean {
   selector: 'ns-root',
   imports: [PixelIconComponent, RouterLink, RouterOutlet, StatusPillComponent],
   template: `
-    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <a class="skip-link" href="#main-content" i18n="@@shell.skip_link">Skip to main content</a>
     <header class="shell-header">
       <a class="shell-brand" routerLink="/projects">Narrastep</a>
       <ns-status-pill
@@ -61,9 +76,28 @@ function isNewProject(url: string): boolean {
         [label]="healthLabel().label"
         [tone]="healthLabel().tone"
       />
+      <div
+        class="shell-language"
+        role="group"
+        aria-label="Language"
+        i18n-aria-label="@@shell.language.group"
+      >
+        @for (option of languages; track option.code) {
+          <button
+            type="button"
+            class="ns-menu-entry shell-language__option"
+            [attr.lang]="option.code"
+            [attr.aria-label]="option.name"
+            [attr.aria-current]="option.code === language.current ? 'true' : null"
+            (click)="switchLanguage(option.code)"
+          >
+            {{ option.short }}
+          </button>
+        }
+      </div>
     </header>
     <div class="shell-body">
-      <nav class="shell-menu" aria-label="Main menu">
+      <nav class="shell-menu" aria-label="Main menu" i18n-aria-label="@@shell.menu.label">
         <ul>
           @for (entry of menu; track entry.path) {
             <li>
@@ -73,7 +107,7 @@ function isNewProject(url: string): boolean {
                 [attr.aria-current]="entry.matches(currentPath()) ? 'page' : null"
               >
                 <ns-pixel-icon [name]="entry.icon" />
-                <span>{{ entry.label }}</span>
+                <span>{{ entry.label() }}</span>
               </a>
             </li>
           }
@@ -116,7 +150,6 @@ function isNewProject(url: string): boolean {
       min-height: 3rem;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
       gap: var(--space-2) var(--space-4);
       padding: var(--space-2) var(--page-gutter);
       border-bottom: 1px solid var(--frame);
@@ -127,6 +160,21 @@ function isNewProject(url: string): boolean {
       color: var(--color-text-strong);
       font: 600 var(--text-xl) / 1.2 var(--font-pixel);
       text-decoration: none;
+    }
+
+    /* The health pill takes the free space, so the language switch stays at the right edge. */
+    .shell-health {
+      margin-right: auto;
+    }
+
+    .shell-language {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .shell-language__option {
+      min-height: 2rem;
+      font: 600 var(--text-sm) / 1.2 var(--font-ui);
     }
 
     .shell-body {
@@ -157,6 +205,11 @@ function isNewProject(url: string): boolean {
 
     /* Below 768 px the vertical menu becomes a bar under the header with the same entries. */
     @media (max-width: 47.99rem) {
+      /* The header can wrap to two rows here; it scrolls away instead of covering the content. */
+      .shell-header {
+        position: static;
+      }
+
       .shell-body {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto 1fr;
@@ -181,6 +234,8 @@ export class AppComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
 
+  protected readonly language = inject(LanguageService);
+  protected readonly languages = LANGUAGES;
   protected readonly menu = MENU_ENTRIES;
 
   /** Current route path without query string or fragment, used for `aria-current`. */
@@ -209,7 +264,12 @@ export class AppComponent {
     { initialValue: 'checking' as ShellHealth },
   );
 
-  protected readonly healthLabel = computed(() => HEALTH_LABELS[this.health()]);
+  protected readonly healthLabel = computed(() => healthStatusLabel(this.health()));
+
+  /** Saves the language and reloads; an unsaved-review-changes confirmation may cancel it. */
+  protected switchLanguage(code: Language): void {
+    void this.language.switchTo(code);
+  }
 }
 
 /** Path part of a router URL: `/projects/1?x=2#y` becomes `/projects/1`. */

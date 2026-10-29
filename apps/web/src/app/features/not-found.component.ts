@@ -10,10 +10,21 @@ import { WindowComponent } from '../shared/ui';
   imports: [RouterLink, WindowComponent],
   template: `
     <section class="page not-found">
-      <header class="page-header"><h1>Page not found</h1></header>
-      <ns-window title="This address does not exist" [primary]="true">
-        <p class="muted">The link may be wrong, or the project was deleted.</p>
-        <a class="ns-button ns-button--primary" routerLink="/projects">Open projects</a>
+      <header class="page-header"><h1 i18n="@@not_found.title">Page not found</h1></header>
+      <ns-window
+        title="This address does not exist"
+        i18n-title="@@not_found.window"
+        [primary]="true"
+      >
+        <p class="muted" i18n="@@not_found.help">
+          The link may be wrong, or the project was deleted.
+        </p>
+        <a
+          class="ns-button ns-button--primary"
+          routerLink="/projects"
+          i18n="@@not_found.open_projects"
+          >Open projects</a
+        >
       </ns-window>
     </section>
   `,

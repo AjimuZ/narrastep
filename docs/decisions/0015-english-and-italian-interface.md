@@ -14,7 +14,7 @@ comments and documentation stay in English.
 - Ship one build. Both translation files (`apps/web/src/locale/messages.en.json` and
   `messages.it.json`) are bundled; `loadTranslations()` applies the stored language before
   bootstrap.
-- A language switch (`EN` / `IT`) sits in the header and in Settings. Switching stores the choice in
+- A language switch (`EN` / `IT`) sits in the header and in Settings (Settings arrives with P06.4). Switching stores the choice in
   local storage and reloads the page. The unsaved-review-changes guard runs before the reload.
 - The first visit uses the browser language when it is Italian, otherwise English.
 - The API keeps English messages and stable error codes. The interface translates by error code and
@@ -38,3 +38,25 @@ comments and documentation stay in English.
 - Every new interface text needs both translations in the same change ([CLAUDE.md](../../CLAUDE.md)).
 - `npm run extract-i18n` and the message-ID check become part of the frontend checks.
 - Tests run in English by default; one browser-contract test runs the main journey in Italian.
+
+## Amendment (2026-10-29, P04.4)
+
+Decisions taken while implementing the catalogs:
+
+- **Custom IDs.** Every message has a readable custom ID (`@@shell.menu.projects`), so catalogs
+  stay reviewable and editing the English text never orphans a translation. A source that uses
+  `i18n` or `$localize` without a custom ID fails the check.
+- **No translated constants.** Messages are read when a screen or function runs, never at module
+  load, because the catalog is applied by `core/i18n/init.ts` at startup. The `$localize` runtime is
+  a build polyfill (`angular.json`).
+- **Check.** `apps/web/scripts/check-i18n.mjs` runs before `npm run build` and compares the IDs
+  that the sources use with both catalogs, the catalogs with each other, and their placeholders;
+  `npm run check:i18n` also compares the English catalog with `ng extract-i18n`.
+- **Error text.** English shows the API message as sent because it can carry specifics; every other
+  language shows the translation of the stable error code and falls back to the API message for an
+  unknown code. The job progress line of the API stays English and is shown only in English.
+- **Spoken-language names** come from `Intl.DisplayNames`; the language buttons are named by the
+  language in its own language (English, Italiano).
+- **Header on narrow screens.** The header holds three items, so below 768 px it can wrap to two
+  rows; it then scrolls with the page instead of staying fixed.
+- **Dependency.** `@angular/localize` 22.0.6 (MIT) is added to the web app ([Licenses](../LICENSES.md)).

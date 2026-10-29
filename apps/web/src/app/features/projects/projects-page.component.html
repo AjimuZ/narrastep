@@ -1,8 +1,8 @@
 <section class="page">
   <header class="page-header">
-    <h1>Projects</h1>
+    <h1 i18n="@@projects.title">Projects</h1>
     <a class="ns-button ns-button--primary" routerLink="/projects/new">
-      <ns-pixel-icon name="plus" />New project
+      <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
     </a>
   </header>
 
@@ -10,79 +10,91 @@
     <div class="ns-notice ns-notice--error error-row" role="alert">
       <span>{{ message }}</span>
       <button class="ns-button ns-button--small" type="button" (click)="loadProjects()">
-        <ns-pixel-icon name="refresh" />Try again
+        <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again">Try again</span>
       </button>
     </div>
   }
 
   @if (loading()) {
-    <div class="loading" aria-label="Loading projects" aria-busy="true">
-      <span class="visually-hidden">Loading projects…</span>
-      <ns-activity-line label="Loading projects" />
+    <div
+      class="loading"
+      aria-label="Loading projects"
+      i18n-aria-label="@@projects.loading"
+      aria-busy="true"
+    >
+      <span class="visually-hidden" i18n="@@projects.loading_text">Loading projects…</span>
+      <ns-activity-line label="Loading projects" i18n-label="@@projects.loading" />
       <div class="ns-placeholder"></div>
       <div class="ns-placeholder"></div>
     </div>
   } @else if (projects().length === 0) {
-    <ns-window title="No projects yet" [primary]="true">
-      <p class="muted">Create a project, then upload a screen recording to process it.</p>
+    <ns-window title="No projects yet" i18n-title="@@projects.empty_title" [primary]="true">
+      <p class="muted" i18n="@@projects.empty_help">
+        Create a project, then upload a screen recording to process it.
+      </p>
       <a class="ns-button ns-button--primary" routerLink="/projects/new">
-        <ns-pixel-icon name="plus" />New project
+        <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
       </a>
     </ns-window>
   } @else {
-    <ns-window [title]="'All projects (' + total() + ')'" [primary]="true">
+    <ns-window [title]="listTitle()" [primary]="true">
       <div class="library-controls">
         <label class="ns-form-row search-field">
-          <span class="ns-label">Search</span>
+          <span class="ns-label" i18n="@@projects.search">Search</span>
           <input
             class="ns-field"
             type="search"
             placeholder="Name or description"
+            i18n-placeholder="@@projects.search_placeholder"
             [value]="searchQuery()"
             (input)="updateSearch($event)"
           />
         </label>
         <label class="ns-form-row">
-          <span class="ns-label">Type</span>
+          <span class="ns-label" i18n="@@projects.type">Type</span>
           <select class="ns-field" [value]="typeFilter()" (change)="updateTypeFilter($event)">
-            <option value="all">All types</option>
+            <option value="all" i18n="@@projects.all_types">All types</option>
             @for (type of projectTypes; track type.value) {
               <option [value]="type.value">{{ type.label }}</option>
             }
           </select>
         </label>
         <label class="ns-form-row">
-          <span class="ns-label">Status</span>
+          <span class="ns-label" i18n="@@projects.status">Status</span>
           <select class="ns-field" [value]="statusFilter()" (change)="updateStatusFilter($event)">
-            <option value="all">All statuses</option>
+            <option value="all" i18n="@@projects.all_statuses">All statuses</option>
             @for (status of statusOptions; track status.value) {
               <option [value]="status.value">{{ status.label }}</option>
             }
           </select>
         </label>
         <label class="ns-form-row">
-          <span class="ns-label">Sort by</span>
+          <span class="ns-label" i18n="@@projects.sort">Sort by</span>
           <select class="ns-field" [value]="sortOrder()" (change)="updateSortOrder($event)">
-            <option value="updated_desc">Last change</option>
-            <option value="created_desc">Date created</option>
-            <option value="name_asc">Name A–Z</option>
+            <option value="updated_desc" i18n="@@projects.sort.updated">Last change</option>
+            <option value="created_desc" i18n="@@projects.sort.created">Date created</option>
+            <option value="name_asc" i18n="@@projects.sort.name">Name A–Z</option>
           </select>
         </label>
       </div>
 
       @if (visibleProjects().length === 0) {
-        <div class="ns-notice filtered-empty" role="status">
+        <div class="ns-notice filtered-empty" role="status" i18n="@@projects.no_match">
           No project matches these filters. Change the search or the filters.
         </div>
       } @else {
-        <p class="muted list-count" role="status">
+        <p class="muted list-count" role="status" i18n="@@projects.shown">
           {{ visibleProjects().length }} of {{ total() }} shown
         </p>
-        <ul class="project-list" aria-label="Projects">
+        <ul class="project-list" aria-label="Projects" i18n-aria-label="@@projects.title">
           <li class="project-list__header" aria-hidden="true">
-            <span>Project</span><span>Status</span><span>Type</span><span>Duration</span
-            ><span>Segments</span><span>Screenshots</span><span>Last change</span
-            ><span class="visually-hidden">Actions</span>
+            <span i18n="@@projects.col.project">Project</span
+            ><span i18n="@@projects.status">Status</span><span i18n="@@projects.type">Type</span
+            ><span i18n="@@projects.col.duration">Duration</span
+            ><span i18n="@@projects.col.segments">Segments</span
+            ><span i18n="@@projects.col.screenshots">Screenshots</span
+            ><span i18n="@@projects.sort.updated">Last change</span
+            ><span class="visually-hidden" i18n="@@projects.col.actions">Actions</span>
           </li>
           @for (project of visibleProjects(); track project.id) {
             <li class="ns-row project-row">
@@ -92,17 +104,29 @@
                   <p class="muted">{{ project.description }}</p>
                 }
               </div>
-              <div data-label="Status">
+              <div data-label="Status" i18n-data-label="@@projects.status">
                 <ns-status-pill
                   [label]="statusLabel(project).label"
                   [tone]="statusLabel(project).tone"
                 />
               </div>
-              <div data-label="Type">{{ modeLabel(project.mode) }}</div>
-              <div class="mono" data-label="Duration">{{ durationLabel(project) }}</div>
-              <div class="mono" data-label="Segments">{{ project.activeSegmentCount ?? 0 }}</div>
-              <div class="mono" data-label="Screenshots">{{ project.screenshotCount ?? 0 }}</div>
-              <div data-label="Last change">
+              <div data-label="Type" i18n-data-label="@@projects.type">
+                {{ modeLabel(project.mode) }}
+              </div>
+              <div class="mono" data-label="Duration" i18n-data-label="@@projects.col.duration">
+                {{ durationLabel(project) }}
+              </div>
+              <div class="mono" data-label="Segments" i18n-data-label="@@projects.col.segments">
+                {{ project.activeSegmentCount ?? 0 }}
+              </div>
+              <div
+                class="mono"
+                data-label="Screenshots"
+                i18n-data-label="@@projects.col.screenshots"
+              >
+                {{ project.screenshotCount ?? 0 }}
+              </div>
+              <div data-label="Last change" i18n-data-label="@@projects.sort.updated">
                 <time [attr.datetime]="project.updatedAt">{{
                   project.updatedAt | date: 'short'
                 }}</time>
@@ -111,21 +135,24 @@
                 <button
                   class="ns-button ns-button--small"
                   type="button"
-                  [attr.aria-label]="'Open ' + project.name"
+                  [attr.aria-label]="openLabel(project)"
                   (click)="openProject(project)"
                 >
-                  <ns-pixel-icon name="chevron-right" />Open
+                  <ns-pixel-icon name="chevron-right" /><span i18n="@@projects.open">Open</span>
                 </button>
                 <button
                   class="ns-button ns-button--small ns-button--danger"
                   type="button"
-                  [attr.aria-label]="'Delete ' + project.name"
+                  [attr.aria-label]="deleteLabel(project)"
                   [disabled]="deletingProjectId() === project.id"
                   (click)="confirmDelete(project)"
                 >
-                  <ns-pixel-icon name="trash" />{{
-                    deletingProjectId() === project.id ? 'Deleting…' : 'Delete'
-                  }}
+                  <ns-pixel-icon name="trash" />
+                  @if (deletingProjectId() === project.id) {
+                    <span i18n="@@projects.deleting">Deleting…</span>
+                  } @else {
+                    <span i18n="@@projects.delete">Delete</span>
+                  }
                 </button>
               </div>
             </li>

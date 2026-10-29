@@ -1,11 +1,13 @@
 <section class="page">
   <header class="page-header">
     <div>
-      <h1>Processing</h1>
-      <p>{{ project()?.name || 'Loading project…' }}</p>
+      <h1 i18n="@@processing.title">Processing</h1>
+      <p>{{ project()?.name || loadingProjectLabel }}</p>
     </div>
     <div class="page-header__actions">
-      <a class="ns-button" routerLink="/projects">Back to projects</a>
+      <a class="ns-button" routerLink="/projects"
+        ><span i18n="@@common.back_to_projects">Back to projects</span></a
+      >
     </div>
   </header>
 
@@ -13,24 +15,25 @@
     <div class="ns-notice ns-notice--error error-row" role="alert">
       <span>{{ message }}</span>
       <button class="ns-button ns-button--small" type="button" (click)="loadProject()">
-        <ns-pixel-icon name="refresh" />Try again
+        <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again">Try again</span>
       </button>
     </div>
   }
 
   @if (loading()) {
     <div class="loading" aria-busy="true">
-      <span class="visually-hidden">Loading processing state…</span>
-      <ns-activity-line label="Loading processing state" />
+      <span class="visually-hidden" i18n="@@processing.loading_text">
+        Loading processing state…
+      </span>
+      <ns-activity-line label="Loading processing state" i18n-label="@@processing.loading" />
       <div class="ns-placeholder"></div>
     </div>
   } @else if (project(); as currentProject) {
     <div class="processing-layout">
-      <ns-window title="Processing" [primary]="true">
+      <ns-window title="Processing" i18n-title="@@processing.title" [primary]="true">
         @if (job(); as activeJob) {
           <p class="visually-hidden" role="status" aria-atomic="true">
-            {{ stageLabel(activeJob.currentStage) }}. {{ activeJob.progressPercent }} percent.
-            {{ activeJob.message }}
+            {{ announcement(activeJob) }}
           </p>
 
           <div class="job-summary">
@@ -47,17 +50,23 @@
             [percent]="activeJob.progressPercent"
             [segments]="40"
             [tone]="hasFailed() ? 'danger' : 'ok'"
-            [label]="'Overall progress ' + activeJob.progressPercent + '%'"
+            [label]="overallLabel(activeJob)"
           />
 
           <p class="job-message">
-            <span class="muted">{{ activeJob.message }}</span>
-            <span class="muted"
+            @if (showApiMessage) {
+              <span class="muted">{{ activeJob.message }}</span>
+            }
+            <span class="muted" i18n="@@processing.elapsed"
               >Elapsed time <span class="mono">{{ elapsedLabel(activeJob) }}</span></span
             >
           </p>
 
-          <ol class="stage-list" aria-label="Processing stages">
+          <ol
+            class="stage-list"
+            aria-label="Processing stages"
+            i18n-aria-label="@@processing.stages_label"
+          >
             @for (stage of timelineStages(); track stage) {
               <li
                 class="stage"
@@ -71,10 +80,10 @@
                     <ns-segmented-gauge
                       [percent]="percent"
                       [segments]="10"
-                      [label]="stageLabel(stage) + ' ' + percent + '%'"
+                      [label]="stagePercentLabel(stage, percent)"
                     />
                   } @else if (stageState(stage) === 'active' && !isTerminal()) {
-                    <ns-activity-line [label]="stageLabel(stage) + ' in progress'" />
+                    <ns-activity-line [label]="stageRunningLabel(stage)" />
                   }
                 </span>
               </li>
@@ -84,22 +93,17 @@
           @if (hasFailed()) {
             <div class="ns-notice ns-notice--error" role="alert">
               <p>
-                <strong>{{
-                  activeJob.status === 'interrupted'
-                    ? 'Processing was interrupted.'
-                    : 'Processing failed.'
-                }}</strong>
-                {{
-                  activeJob.errorMessage ||
-                    'Processing did not finish. Retry processing to start again from the original video.'
-                }}
+                <strong>{{ failureTitle(activeJob) }}</strong>
+                {{ failureText(activeJob) }}
               </p>
-              <p class="mono error-code">Code: {{ activeJob.errorCode || 'PROCESSING_FAILED' }}</p>
+              <p class="mono error-code" i18n="@@processing.error_code">
+                Code: {{ activeJob.errorCode || 'PROCESSING_FAILED' }}
+              </p>
             </div>
           }
 
           @if (activeJob.status === 'cancelled') {
-            <div class="ns-notice" role="status">
+            <div class="ns-notice" role="status" i18n="@@processing.cancelled_notice">
               Processing was cancelled. The original video is kept, so you can retry processing.
             </div>
           }
@@ -112,9 +116,12 @@
                 [disabled]="actionPending() || activeJob.status === 'cancelling'"
                 (click)="cancelProcessing()"
               >
-                <ns-pixel-icon name="stop" />{{
-                  activeJob.status === 'cancelling' ? 'Cancelling…' : 'Cancel processing'
-                }}
+                <ns-pixel-icon name="stop" />
+                @if (activeJob.status === 'cancelling') {
+                  <span i18n="@@processing.cancelling">Cancelling…</span>
+                } @else {
+                  <span i18n="@@processing.cancel">Cancel processing</span>
+                }
               </button>
             }
             @if (hasFailed() || activeJob.status === 'cancelled') {
@@ -124,7 +131,9 @@
                 [disabled]="actionPending()"
                 (click)="startProcessing()"
               >
-                <ns-pixel-icon name="refresh" />Retry processing
+                <ns-pixel-icon name="refresh" /><span i18n="@@processing.retry"
+                  >Retry processing</span
+                >
               </button>
             }
             @if (activeJob.status === 'completed') {
@@ -132,24 +141,32 @@
                 class="ns-button ns-button--primary"
                 [routerLink]="['/projects', currentProject.id, 'review']"
               >
-                <ns-pixel-icon name="chevron-right" />Open review
+                <ns-pixel-icon name="chevron-right" /><span i18n="@@common.open_review"
+                  >Open review</span
+                >
               </a>
             }
           </div>
         } @else if (currentProject.status === 'review' || currentProject.status === 'completed') {
-          <p>Processing is done. Open the review to check segments and screenshots.</p>
+          <p i18n="@@processing.done_help">
+            Processing is done. Open the review to check segments and screenshots.
+          </p>
           <div class="actions">
             <a
               class="ns-button ns-button--primary"
               [routerLink]="['/projects', currentProject.id, 'review']"
             >
-              <ns-pixel-icon name="chevron-right" />Open review
+              <ns-pixel-icon name="chevron-right" /><span i18n="@@common.open_review"
+                >Open review</span
+              >
             </a>
           </div>
         } @else {
-          <p>This project has not been processed yet. Processing runs on this computer.</p>
+          <p i18n="@@processing.not_processed">
+            This project has not been processed yet. Processing runs on this computer.
+          </p>
           @if (currentProject.status === 'draft') {
-            <p class="ns-error" id="processing-draft-error">
+            <p class="ns-error" id="processing-draft-error" i18n="@@processing.no_video">
               This project has no video. Upload a video before processing.
             </p>
           }
@@ -163,17 +180,22 @@
               "
               (click)="startProcessing()"
             >
-              <ns-pixel-icon name="play" />{{ actionPending() ? 'Starting…' : 'Start processing' }}
+              <ns-pixel-icon name="play" />
+              @if (actionPending()) {
+                <span i18n="@@common.starting">Starting…</span>
+              } @else {
+                <span i18n="@@common.start_processing">Start processing</span>
+              }
             </button>
           </div>
         }
       </ns-window>
 
       <div class="processing-side">
-        <ns-window title="Project">
+        <ns-window title="Project" i18n-title="@@processing.project">
           <dl class="facts">
             <div>
-              <dt>Status</dt>
+              <dt i18n="@@projects.status">Status</dt>
               <dd>
                 <ns-status-pill
                   [label]="projectStatus(currentProject).label"
@@ -182,23 +204,23 @@
               </dd>
             </div>
             <div>
-              <dt>Video</dt>
+              <dt i18n="@@processing.video">Video</dt>
               <dd class="mono file-name">{{ videoFilename(currentProject) }}</dd>
             </div>
             <div>
-              <dt>Duration</dt>
+              <dt i18n="@@projects.col.duration">Duration</dt>
               <dd class="mono">{{ durationLabel(currentProject) }}</dd>
             </div>
             <div>
-              <dt>Spoken language</dt>
+              <dt i18n="@@new_project.language_label">Spoken language</dt>
               <dd class="mono">{{ languageLabel(currentProject) }}</dd>
             </div>
             <div>
-              <dt>Project type</dt>
+              <dt i18n="@@new_project.type_legend">Project type</dt>
               <dd>{{ typeLabel(currentProject) }}</dd>
             </div>
             <div>
-              <dt>Created</dt>
+              <dt i18n="@@export.created">Created</dt>
               <dd>
                 <time [attr.datetime]="currentProject.createdAt">{{
                   currentProject.createdAt | date: 'medium'
@@ -209,40 +231,40 @@
         </ns-window>
 
         @if (job(); as activeJob) {
-          <ns-window title="Processing settings">
+          <ns-window title="Processing settings" i18n-title="@@processing.settings">
             <dl class="facts">
               <div>
-                <dt>Screenshot selection</dt>
-                <dd class="mono">{{ activeJob.selectionStrategy || 'legacy' }}</dd>
+                <dt i18n="@@processing.selection">Screenshot selection</dt>
+                <dd class="mono">{{ selectionLabel(activeJob) }}</dd>
               </div>
               <div>
-                <dt>Text recognition</dt>
-                <dd class="mono">{{ activeJob.ocrMode || 'off' }}</dd>
+                <dt i18n="@@processing.ocr">Text recognition</dt>
+                <dd class="mono">{{ ocrLabel(activeJob) }}</dd>
               </div>
               <div>
-                <dt>Image budget</dt>
-                <dd class="mono">{{ activeJob.imageBudgetProfile || 'balanced' }}</dd>
+                <dt i18n="@@processing.budget">Image budget</dt>
+                <dd class="mono">{{ budgetLabel(activeJob) }}</dd>
               </div>
             </dl>
           </ns-window>
 
           @if (activeJob.metrics) {
-            <ns-window title="Counters">
+            <ns-window title="Counters" i18n-title="@@processing.counters">
               <dl class="facts">
                 <div>
-                  <dt>Candidate times</dt>
+                  <dt i18n="@@processing.candidates">Candidate times</dt>
                   <dd class="mono">{{ metricValue(activeJob, 'candidateTimestampCount') ?? 0 }}</dd>
                 </div>
                 <div>
-                  <dt>Decoded frames</dt>
+                  <dt i18n="@@processing.decoded">Decoded frames</dt>
                   <dd class="mono">{{ metricValue(activeJob, 'decodedFrameCount') ?? 0 }}</dd>
                 </div>
                 <div>
-                  <dt>Text recognition calls</dt>
+                  <dt i18n="@@processing.ocr_calls">Text recognition calls</dt>
                   <dd class="mono">{{ metricValue(activeJob, 'ocrTriggeredCount') ?? 0 }}</dd>
                 </div>
                 <div>
-                  <dt>Saved screenshots</dt>
+                  <dt i18n="@@processing.saved">Saved screenshots</dt>
                   <dd class="mono">{{ metricValue(activeJob, 'persistedThumbnailCount') ?? 0 }}</dd>
                 </div>
               </dl>

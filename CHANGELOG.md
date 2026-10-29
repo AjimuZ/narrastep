@@ -21,12 +21,20 @@ All notable changes to Narrastep are documented in this file.
   the Pixelify Sans title font bundled locally (SIL OFL 1.1; notice in `THIRD_PARTY_NOTICES.md`).
   Every screen uses them since the restyle below.
 
+- English and Italian interface: an `EN` / `IT` switch in the header saves the language and reloads
+  the page (Review asks before discarding unsaved edits), the first visit follows an Italian
+  browser, and every screen, dialog, state word, project type and API error code has an Italian
+  text. Dates, numbers and file sizes follow the language. A check fails the build when a message
+  exists in one language only.
+
 ### Changed
 
 - New pixel interface: a compact header with the product name and a service status (for example
   "Services ready" or "Services offline"), and a menu on the left with Projects and New project
   that becomes a bar at the top on narrow screens. Every screen and dialog now uses flat framed
   windows, pixel icons and the Pixelify Sans titles, without gradients or shadows.
+- On narrow screens (below 768 px) the header scrolls away with the page instead of staying fixed,
+  and the Review view switcher keeps every word whole in Italian at 320 px.
 - Plainer wording everywhere: buttons say what they do ("Create project", "Upload video",
   "Start processing", "Open review", "Create package", "Download package"), taglines are gone, an
   export is always called a package, errors say what to do next, and project states use words

@@ -22,7 +22,9 @@ export interface ConfirmDialogData {
         <p id="confirm-message" class="muted">{{ data.message }}</p>
       </div>
       <div class="ns-dialog__actions">
-        <button class="ns-button" type="button" (click)="close(false)">Cancel</button>
+        <button class="ns-button" type="button" (click)="close(false)" i18n="@@dialog.cancel">
+          Cancel
+        </button>
         <button
           class="ns-button"
           [class.ns-button--danger]="data.danger"

@@ -1,10 +1,15 @@
 <section class="page">
   <header class="page-header">
     <div>
-      <h1>Export</h1>
-      <p>{{ project()?.name || 'Loading project…' }}</p>
+      <h1 i18n="@@export.title">Export</h1>
+      <p>{{ project()?.name || loadingProjectLabel }}</p>
     </div>
-    <a class="ns-button" [routerLink]="['/projects', projectId(), 'review']">Back to review</a>
+    <a
+      class="ns-button"
+      [routerLink]="['/projects', projectId(), 'review']"
+      i18n="@@export.back_to_review"
+      >Back to review</a
+    >
   </header>
 
   @if (errorMessage(); as message) {
@@ -12,28 +17,38 @@
   }
 
   @if (loading()) {
-    <div class="loading" aria-label="Loading packages" aria-busy="true">
-      <span class="visually-hidden">Loading packages…</span>
-      <ns-activity-line label="Loading packages" />
+    <div
+      class="loading"
+      aria-label="Loading packages"
+      i18n-aria-label="@@export.loading"
+      aria-busy="true"
+    >
+      <span class="visually-hidden" i18n="@@export.loading_text">Loading packages…</span>
+      <ns-activity-line label="Loading packages" i18n-label="@@export.loading" />
       <div class="ns-placeholder"></div>
       <div class="ns-placeholder"></div>
     </div>
   } @else {
     <div class="export-layout">
-      <ns-window class="options-window" title="New package" [primary]="true">
-        <p class="muted">
+      <ns-window
+        class="options-window"
+        title="New package"
+        i18n-title="@@export.new_package"
+        [primary]="true"
+      >
+        <p class="muted" i18n="@@export.intro">
           A package holds the reviewed transcript, the screenshots, the source details and prompts
           that tell a language model to use only this evidence.
         </p>
 
-        <h3>Contents</h3>
+        <h3 i18n="@@export.contents">Contents</h3>
         <ul class="file-list mono">
           @for (file of standardFiles; track file) {
             <li>{{ file }}</li>
           }
         </ul>
 
-        <p class="muted">
+        <p class="muted" i18n="@@export.batches_help">
           Long recordings are also split into ChatGPT batches in time order. Each batch fits in one
           message: one evidence file and up to 19 images by default.
         </p>
@@ -47,8 +62,12 @@
             (change)="setIncludeOriginalVideo($event)"
           />
           <span class="video-option__text">
-            <span class="ns-label">Include the original video</span>
-            <span class="ns-help" id="include-original-video-help">
+            <span class="ns-label" i18n="@@export.include_video">Include the original video</span>
+            <span
+              class="ns-help"
+              id="include-original-video-help"
+              i18n="@@export.include_video_help"
+            >
               Off by default. The video can make the package much larger.
             </span>
           </span>
@@ -60,54 +79,63 @@
           [disabled]="creating() || !!currentExport()"
           (click)="createExport()"
         >
-          <ns-pixel-icon name="export" />{{
-            currentExport() || creating() ? 'Creating package…' : 'Create package'
-          }}
+          <ns-pixel-icon name="export" />
+          @if (currentExport() || creating()) {
+            <span i18n="@@export.creating">Creating package…</span>
+          } @else {
+            <span i18n="@@export.create">Create package</span>
+          }
         </button>
 
         @if (currentExport(); as activeExport) {
           <div class="current-export" aria-live="polite">
             <div class="current-export__heading">
-              <h3>Current package</h3>
+              <h3 i18n="@@export.current">Current package</h3>
               <ns-status-pill
                 [label]="statusLabel(activeExport).label"
                 [tone]="statusLabel(activeExport).tone"
               />
             </div>
             <p class="muted">{{ stageLabel(activeExport) }}</p>
-            <ns-activity-line label="Creating package" />
+            <ns-activity-line label="Creating package" i18n-label="@@export.creating_label" />
           </div>
         }
       </ns-window>
 
-      <ns-window class="estimate-window" title="Size estimate">
+      <ns-window class="estimate-window" title="Size estimate" i18n-title="@@export.estimate_title">
         <div aria-live="polite">
           @if (estimate(); as exportEstimate) {
             <dl class="estimate">
               <div class="estimate__size">
-                <dt>Estimated size</dt>
+                <dt i18n="@@export.estimated_size">Estimated size</dt>
                 <dd class="estimate__number">
                   {{ formatFileSize(exportEstimate.estimatedZipBytes) }}
                 </dd>
               </div>
               <div>
-                <dt>Screenshots</dt>
+                <dt i18n="@@export.screenshots">Screenshots</dt>
                 <dd>{{ exportEstimate.canonicalImageCount }}</dd>
               </div>
               <div>
-                <dt>ChatGPT batches</dt>
+                <dt i18n="@@export.chatgpt_batches">ChatGPT batches</dt>
                 <dd>{{ exportEstimate.batchCount }}</dd>
               </div>
               <div>
-                <dt>Screenshot copies in batches</dt>
+                <dt i18n="@@export.batch_copies">Screenshot copies in batches</dt>
                 <dd>{{ exportEstimate.batchImageCopyCount }}</dd>
               </div>
             </dl>
             @if (exportEstimate.isApproximate) {
-              <p class="ns-help estimate__note">Approximate: the final size can differ.</p>
+              <p class="ns-help estimate__note" i18n="@@export.approximate">
+                Approximate: the final size can differ.
+              </p>
             }
             @if (exportEstimate.redundancyWarning) {
-              <p class="ns-notice ns-notice--wait estimate__warning" role="status">
+              <p
+                class="ns-notice ns-notice--wait estimate__warning"
+                role="status"
+                i18n="@@export.redundancy"
+              >
                 Some screenshots are copied into several batches. The screenshots folder keeps each
                 one once.
               </p>
@@ -115,18 +143,20 @@
           } @else {
             <dl class="estimate">
               <div class="estimate__size">
-                <dt>Estimated size</dt>
-                <dd class="estimate__number">Unknown</dd>
+                <dt i18n="@@export.estimated_size">Estimated size</dt>
+                <dd class="estimate__number" i18n="@@common.unknown">Unknown</dd>
               </div>
             </dl>
-            <p class="ns-help estimate__note">The estimate is not available for this project.</p>
+            <p class="ns-help estimate__note" i18n="@@export.no_estimate">
+              The estimate is not available for this project.
+            </p>
           }
         </div>
       </ns-window>
 
-      <ns-window class="history-window" [title]="'Packages (' + completedExports().length + ')'">
+      <ns-window class="history-window" [title]="historyTitle()">
         @if (completedExports().length > 0) {
-          <ul class="history-list" aria-label="Packages">
+          <ul class="history-list" aria-label="Packages" i18n-aria-label="@@export.packages">
             @for (item of completedExports(); track item.id) {
               <li class="ns-row history-row">
                 <div class="history-row__main">
@@ -141,7 +171,7 @@
                   </div>
                   <dl class="history-facts">
                     <div>
-                      <dt>Created</dt>
+                      <dt i18n="@@export.created">Created</dt>
                       <dd>
                         <time [attr.datetime]="item.createdAt">{{
                           item.createdAt | date: 'medium'
@@ -149,26 +179,26 @@
                       </dd>
                     </div>
                     <div>
-                      <dt>Size</dt>
+                      <dt i18n="@@export.size">Size</dt>
                       <dd>{{ formatFileSize(item.sizeBytes) }}</dd>
                     </div>
                     @if (item.metrics) {
                       <div>
-                        <dt>Screenshots</dt>
-                        <dd>{{ exportMetric(item, 'exportCanonicalImageCount') ?? 'Unknown' }}</dd>
+                        <dt i18n="@@export.screenshots">Screenshots</dt>
+                        <dd>{{ metricText(item, 'exportCanonicalImageCount') }}</dd>
                       </div>
                       <div>
-                        <dt>Batches</dt>
-                        <dd>{{ exportMetric(item, 'batchCount') ?? 'Unknown' }}</dd>
+                        <dt i18n="@@export.batches">Batches</dt>
+                        <dd>{{ metricText(item, 'batchCount') }}</dd>
                       </div>
                       <div>
-                        <dt>Copies</dt>
-                        <dd>{{ exportMetric(item, 'exportBatchCopyCount') ?? 'Unknown' }}</dd>
+                        <dt i18n="@@export.copies">Copies</dt>
+                        <dd>{{ metricText(item, 'exportBatchCopyCount') }}</dd>
                       </div>
                     }
                   </dl>
                   @if (item.includeOriginalVideo) {
-                    <p class="ns-help">Original video included</p>
+                    <p class="ns-help" i18n="@@export.video_included">Original video included</p>
                   }
                 </div>
                 @if (item.status === 'completed') {
@@ -178,14 +208,14 @@
                     [attr.aria-describedby]="'export-name-' + item.id"
                     download
                   >
-                    <ns-pixel-icon name="download" />Download package
+                    <ns-pixel-icon name="download" /><span i18n="@@export.download"
+                      >Download package</span
+                    >
                   </a>
                 } @else {
                   <div class="ns-notice ns-notice--error history-error" role="alert">
                     <span class="mono">{{ item.errorCode || 'EXPORT_FAILED' }}</span>
-                    <span>{{
-                      item.errorMessage || 'This package was not created. Create a new package.'
-                    }}</span>
+                    <span>{{ failureText(item) }}</span>
                   </div>
                 }
               </li>
@@ -194,9 +224,13 @@
         } @else {
           <p class="muted empty-history">
             @if (currentExport()) {
-              The package appears here when it is ready.
+              <ng-container i18n="@@export.history_pending"
+                >The package appears here when it is ready.</ng-container
+              >
             } @else {
-              No packages yet. Create the first package when the review is ready.
+              <ng-container i18n="@@export.history_empty"
+                >No packages yet. Create the first package when the review is ready.</ng-container
+              >
             }
           </p>
         }

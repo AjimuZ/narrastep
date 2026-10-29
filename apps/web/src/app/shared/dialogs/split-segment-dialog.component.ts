@@ -23,23 +23,29 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
       aria-labelledby="split-title"
       aria-describedby="split-description"
     >
-      <h2 id="split-title" class="ns-dialog__title">Split transcript segment</h2>
+      <h2 id="split-title" class="ns-dialog__title" i18n="@@split.title">
+        Split transcript segment
+      </h2>
       <div class="ns-dialog__body">
-        <p id="split-description" class="muted">Check the two parts and the split time.</p>
+        <p id="split-description" class="muted" i18n="@@split.description">
+          Check the two parts and the split time.
+        </p>
 
         <div class="split-copy">
           <article>
-            <h3>First segment</h3>
+            <h3 i18n="@@split.first">First segment</h3>
             <p>{{ data.leftReviewedText }}</p>
           </article>
           <article>
-            <h3>Second segment</h3>
+            <h3 i18n="@@split.second">Second segment</h3>
             <p>{{ data.rightReviewedText }}</p>
           </article>
         </div>
 
         <div class="ns-form-row">
-          <label class="ns-label" for="split-seconds">Split time (seconds)</label>
+          <label class="ns-label" for="split-seconds" i18n="@@split.time_label">
+            Split time (seconds)
+          </label>
           <input
             id="split-seconds"
             class="ns-field mono"
@@ -52,11 +58,11 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
             [attr.aria-invalid]="isValid() ? null : 'true'"
             aria-describedby="split-range"
           />
-          <p id="split-range" class="ns-help">
+          <p id="split-range" class="ns-help" i18n="@@split.range">
             Between {{ data.minSeconds.toFixed(3) }} and {{ data.maxSeconds.toFixed(3) }} seconds.
           </p>
           @if (!isValid()) {
-            <p class="ns-error" role="alert">
+            <p class="ns-error" role="alert" i18n="@@split.invalid">
               The time is outside the segment. Enter a time between its start and end.
             </p>
           }
@@ -64,12 +70,15 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
       </div>
 
       <div class="ns-dialog__actions">
-        <button class="ns-button" type="button" (click)="cancel()">Cancel</button>
+        <button class="ns-button" type="button" (click)="cancel()" i18n="@@dialog.cancel">
+          Cancel
+        </button>
         <button
           class="ns-button ns-button--primary"
           type="button"
           [disabled]="!isValid()"
           (click)="confirm()"
+          i18n="@@split.confirm"
         >
           Split segment
         </button>

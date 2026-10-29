@@ -1,9 +1,9 @@
 # User interface
 
-Status: **implemented in English** for the shell and every existing screen (P04.3 in the
-[roadmap](ROADMAP.md)); the Italian catalogs and the language switch are P04.4, the browser
-accessibility pass in both languages is P04.5. Decision:
-[ADR 0012](decisions/0012-pixel-ui-design-system.md).
+Status: **implemented in English and Italian** for the shell and every existing screen (P04.3 and
+P04.4 in the [roadmap](ROADMAP.md)); the browser accessibility pass in both languages is P04.5.
+Decisions: [ADR 0012](decisions/0012-pixel-ui-design-system.md),
+[ADR 0015](decisions/0015-english-and-italian-interface.md).
 
 ## Principles
 
@@ -28,14 +28,14 @@ The interface is available in English and Italian
   sound."
 - Use sentence case. Use the same word for the same thing everywhere (for example always
   "package", never also "bundle" or "archive").
-- Keep a short glossary of fixed translations in `apps/web/src/locale/GLOSSARY.md` (for example
+- The glossary of fixed translations is `apps/web/src/locale/GLOSSARY.md` (for example
   package = pacchetto, review = revisione, project type = tipo di progetto).
 - Italian text is often longer: layouts must not truncate it at 320 px.
 
 ### Fixed terms
 
-The English copy uses one word per concept since P04.3. The Italian column is the agreed
-translation that P04.4 moves into the catalogs and the glossary.
+The English copy uses one word per concept since P04.3. The Italian column is the translation in
+`messages.it.json` and in the glossary since P04.4.
 
 | Concept | English | Italian |
 | --- | --- | --- |
@@ -61,8 +61,8 @@ Every status pill takes its word and tone from `apps/web/src/app/shared/status-l
 ### Project type labels
 
 The new-project form (legend "Project type") and the projects list ("Type" column) use these
-labels since P02.1. The interface is English-only until the P04.4 catalogs exist; the Italian
-column is the agreed translation that P04.4 moves into `messages.it.json`.
+labels since P02.1; the Italian column is in `messages.it.json` since P04.4
+(`project_type.*` message IDs).
 
 | Value | English label and help | Italian label and help |
 | --- | --- | --- |
@@ -72,13 +72,38 @@ column is the agreed translation that P04.4 moves into `messages.it.json`.
 | `general` | Generic — Anything else, such as a demo or a recorded note. | Generico — Tutto il resto, per esempio una demo o una nota registrata. |
 | (legend, column) | Project type, Type | Tipo di progetto, Tipo |
 
-## Language switch
+## Language
 
-- An `EN` / `IT` switch in the header and in Settings; the current language is marked with the
-  pixel cursor and has `aria-current`.
-- Switching saves the choice and reloads; unsaved review edits trigger the existing confirmation
-  first.
-- `<html lang>` follows the active language.
+The interface is available in English and Italian
+([ADR 0015](decisions/0015-english-and-italian-interface.md)). Implemented since P04.4:
+
+- **Switch:** two buttons, `EN` and `IT`, at the right edge of the header (group name "Language" /
+  "Lingua"; each button is named by the language in its own language and has `lang`). The current
+  language has the pixel cursor and `aria-current="true"`. Below 768 px the header may wrap to two
+  rows and then scrolls away with the page instead of staying fixed, so it never covers content. The
+  switch also belongs in Settings (P06.4), which does not exist yet.
+- **Switching** stores the choice in local storage (`narrastep.language`) and reloads the page. A
+  screen with unsaved edits registers a leave check with `LanguageService`; the review screen asks
+  "Discard unsaved edits?" before the reload and the reload does not happen when the user keeps the
+  edits.
+- **First visit:** the stored choice, else Italian when the first browser language is Italian, else
+  English. `<html lang>` is set from the active language before the app starts.
+- **Catalogs:** `apps/web/src/locale/messages.en.json` and `messages.it.json`; every message has a
+  custom ID (`i18n="@@id"`, `i18n-title="@@id"`, `` $localize`:@@id:text` ``). `core/i18n/init.ts`
+  loads the active catalog before any component runs, so there is no per-language build.
+- **Dates, numbers and sizes** follow the active locale (`DatePipe` with `LOCALE_ID`, `Intl` in
+  `core/i18n/format.ts`: "8,0 KB" in Italian). Spoken-language names come from `Intl.DisplayNames`.
+- **API errors** are shown by stable code (`core/i18n/error-text.ts`, one message per code of
+  [API](API.md#stable-errors)). English shows the API message as sent, because it can carry
+  specifics; Italian shows the translation of the code and falls back to the API message for a
+  code without translation. The processing job's English progress line is shown in English only,
+  because the translated stage name says the same thing.
+- **Transcript text** stays in its spoken language, and so do file names.
+- **Checks:** `npm run check:i18n` (also run by `npm run build`, without the extraction) fails when an
+  ID is in one catalog only, when a source uses an ID that is not in both, when a message has no
+  custom ID or an empty text, or when the placeholders differ; with `--extract` it also compares
+  `messages.en.json` with `ng extract-i18n`. `npm run extract-i18n` rewrites the English catalog from
+  the sources; the Italian text is written by hand.
 
 ## Typography
 
@@ -204,9 +229,9 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - **Shell:** compact header (product name, health pill, language switch) and a vertical menu on
   the left: Projects, Record, New project, Settings. Below 768 px the menu becomes a top bar with the same
   entries.
-  - Implemented (P04.3, `apps/web/src/app/app.component.ts`): the header shows the product name and
-    the health pill; the menu holds **Projects** and **New project**. Record joins with the recorder
-    (P05.3), Settings with its screen (P06.4) and the language switch with P04.4, because planned
+  - Implemented (P04.3, P04.4, `apps/web/src/app/app.component.ts`): the header shows the product
+    name, the health pill and the language switch; the menu holds **Projects** and **New project**.
+    Record joins with the recorder (P05.3) and Settings with its screen (P06.4), because planned
     screens must not appear as enabled entries.
   - The current entry has `aria-current="page"`; every project screen counts as Projects except the
     new-project form.
@@ -248,7 +273,10 @@ The table above is the target. What the English interface does today:
   reports no color literal outside the token file (clean since P04.1).
 - Text contrast is at least 4.5:1; large text, focus rings and control borders at least 3:1.
 - Every action works with the keyboard in a logical order, with a visible focus ring.
-- No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px, and at 200% zoom.
-- The existing Playwright browser-contract journey passes after the restyle.
+- No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px, and at 200% zoom, in
+  English and in Italian (the browser-contract journey runs in both).
+- The Playwright browser-contract journey passes in English and in Italian, and the language
+  switch test passes.
+- `npm run check:i18n` reports no message missing in either language.
 - Screens lay out against the content column, not the viewport, where they can: list rows use
   container queries, because the menu takes 13 rem of the width from 768 px up.

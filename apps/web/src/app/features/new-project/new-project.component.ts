@@ -13,9 +13,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, catchError, finalize } from 'rxjs';
 
 import { Project, ProjectMode } from '../../core/api.models';
-import { NarrastepApiError } from '../../core/services/api-error.interceptor';
+import { errorText } from '../../core/i18n/error-text';
+import { formatFileSize, languageName } from '../../core/i18n/format';
+import { activeLocale } from '../../core/i18n/language';
 import { ApiService } from '../../core/services/api.service';
-import { PROJECT_TYPES } from '../../shared/project-types';
+import { projectTypes } from '../../shared/project-types';
 import { PixelIconComponent, SegmentedGaugeComponent, WindowComponent } from '../../shared/ui';
 
 const SUPPORTED_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv']);
@@ -57,30 +59,39 @@ export class NewProjectComponent implements OnInit {
   });
 
   /** The four ADR 0009 project types, in the documented order, with one line of help each. */
-  readonly projectTypes = PROJECT_TYPES;
+  readonly projectTypes = projectTypes();
 
   /** Names of the three wizard steps, in order; step `n` is `steps[n - 1]`. */
-  readonly steps = ['Project', 'Video', 'Processing'] as const;
+  readonly steps = [
+    $localize`:@@new_project.step.project:Project`,
+    $localize`:@@new_project.step.video:Video`,
+    $localize`:@@new_project.step.processing:Processing`,
+  ];
 
+  /** Spoken-language suggestions; names come from `Intl.DisplayNames` in the active language. */
   readonly languageSuggestions: readonly { code: string; label: string }[] = [
-    { code: 'auto', label: 'Detect automatically' },
-    { code: 'ar', label: 'Arabic' },
-    { code: 'zh', label: 'Chinese' },
-    { code: 'nl', label: 'Dutch' },
-    { code: 'en', label: 'English' },
-    { code: 'fr', label: 'French' },
-    { code: 'de', label: 'German' },
-    { code: 'hi', label: 'Hindi' },
-    { code: 'it', label: 'Italian' },
-    { code: 'ja', label: 'Japanese' },
-    { code: 'ko', label: 'Korean' },
-    { code: 'pl', label: 'Polish' },
-    { code: 'pt', label: 'Portuguese' },
-    { code: 'ru', label: 'Russian' },
-    { code: 'es', label: 'Spanish' },
-    { code: 'sv', label: 'Swedish' },
-    { code: 'tr', label: 'Turkish' },
-    { code: 'uk', label: 'Ukrainian' },
+    { code: 'auto', label: $localize`:@@new_project.language_auto:Detect automatically` },
+    ...[
+      'ar',
+      'zh',
+      'nl',
+      'en',
+      'fr',
+      'de',
+      'hi',
+      'it',
+      'ja',
+      'ko',
+      'pl',
+      'pt',
+      'ru',
+      'es',
+      'sv',
+      'tr',
+      'uk',
+    ]
+      .map((code) => ({ code, label: languageName(code) }))
+      .sort((left, right) => left.label.localeCompare(right.label, activeLocale())),
   ];
 
   private readonly api = inject(ApiService);
@@ -105,7 +116,7 @@ export class NewProjectComponent implements OnInit {
           this.requestError.set(
             this.errorText(
               error,
-              'This project could not be opened. Go back to projects and try again.',
+              $localize`:@@new_project.error_open:This project could not be opened. Go back to projects and try again.`,
             ),
           );
           return EMPTY;
@@ -142,7 +153,8 @@ export class NewProjectComponent implements OnInit {
     );
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    return `${type?.label ?? 'Generic'} ${now.getFullYear()}-${month}-${day}`;
+    const label = type?.label ?? $localize`:@@project_type.general.label:Generic`;
+    return `${label} ${now.getFullYear()}-${month}-${day}`;
   }
 
   /** Persists valid project metadata before accepting a potentially large video. */
@@ -174,7 +186,10 @@ export class NewProjectComponent implements OnInit {
         finalize(() => this.creating.set(false)),
         catchError((error: unknown) => {
           this.requestError.set(
-            this.errorText(error, 'The project could not be created. Try again.'),
+            this.errorText(
+              error,
+              $localize`:@@new_project.error_create:The project could not be created. Try again.`,
+            ),
           );
           return EMPTY;
         }),
@@ -232,7 +247,7 @@ export class NewProjectComponent implements OnInit {
     const files = event.dataTransfer?.files;
     if (!files || files.length !== 1) {
       this.selectedFile.set(null);
-      this.fileError.set('Drop one video at a time.');
+      this.fileError.set($localize`:@@new_project.error_drop_one:Drop one video at a time.`);
       return;
     }
     this.selectFile(files.item(0));
@@ -258,7 +273,7 @@ export class NewProjectComponent implements OnInit {
           this.requestError.set(
             this.errorText(
               error,
-              'The video could not be stored. Try again or choose another video.',
+              $localize`:@@new_project.error_upload:The video could not be stored. Try again or choose another video.`,
             ),
           );
           return EMPTY;
@@ -287,7 +302,12 @@ export class NewProjectComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.starting.set(false)),
         catchError((error: unknown) => {
-          this.requestError.set(this.errorText(error, 'Processing could not start. Try again.'));
+          this.requestError.set(
+            this.errorText(
+              error,
+              $localize`:@@new_project.error_start:Processing could not start. Try again.`,
+            ),
+          );
           return EMPTY;
         }),
       )
@@ -296,10 +316,17 @@ export class NewProjectComponent implements OnInit {
 
   /** Formats a file byte count for upload confirmation without changing its stored value. */
   formatFileSize(bytes: number): string {
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`;
-    }
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return formatFileSize(bytes);
+  }
+
+  /** Accessible name of the upload gauge. */
+  uploadLabel(): string {
+    return $localize`:@@new_project.upload_gauge:Upload ${this.uploadPercent()}:PERCENT:%`;
+  }
+
+  /** Title of the last step's window. */
+  readyTitle(name: string): string {
+    return $localize`:@@new_project.ready_title:Ready to process “${name}:NAME:”`;
   }
 
   /** Applies cheap browser checks while leaving the configurable size limit to the local API. */
@@ -316,18 +343,22 @@ export class NewProjectComponent implements OnInit {
     }
     const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
     if (!SUPPORTED_EXTENSIONS.has(extension)) {
-      this.fileError.set('This file type is not supported. Choose an MP4, WebM, MOV or MKV video.');
+      this.fileError.set(
+        $localize`:@@new_project.error_type:This file type is not supported. Choose an MP4, WebM, MOV or MKV video.`,
+      );
       return;
     }
     if (file.size === 0) {
-      this.fileError.set('The file is empty. Choose another video.');
+      this.fileError.set(
+        $localize`:@@new_project.error_empty:The file is empty. Choose another video.`,
+      );
       return;
     }
     this.selectedFile.set(file);
   }
 
-  /** Prefers the backend's stable user-safe message over a generic transport fallback. */
+  /** Prefers the translation of the backend's stable error code over a generic fallback. */
   private errorText(error: unknown, fallback: string): string {
-    return error instanceof NarrastepApiError ? error.message : fallback;
+    return errorText(error, fallback);
   }
 }

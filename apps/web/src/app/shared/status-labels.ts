@@ -8,50 +8,75 @@ export interface StatusLabel {
   tone: StatusTone;
 }
 
-const PROJECT_STATUS: Record<ProjectStatus, StatusLabel> = {
-  draft: { label: 'No video', tone: 'info' },
-  uploaded: { label: 'Not processed', tone: 'info' },
-  queued: { label: 'Queued', tone: 'wait' },
-  processing: { label: 'Processing', tone: 'wait' },
-  review: { label: 'Ready for review', tone: 'ok' },
-  exporting: { label: 'Creating package', tone: 'wait' },
-  completed: { label: 'Package ready', tone: 'ok' },
-  failed: { label: 'Failed', tone: 'error' },
-};
-
-const JOB_STATUS: Record<ProcessingJobStatus, StatusLabel> = {
-  queued: { label: 'Queued', tone: 'wait' },
-  processing: { label: 'Processing', tone: 'wait' },
-  completed: { label: 'Done', tone: 'ok' },
-  failed: { label: 'Failed', tone: 'error' },
-  cancelling: { label: 'Cancelling', tone: 'wait' },
-  cancelled: { label: 'Cancelled', tone: 'info' },
-  interrupted: { label: 'Interrupted', tone: 'error' },
-};
-
-const EXPORT_STATUS: Record<ProjectExportStatus, StatusLabel> = {
-  queued: { label: 'Queued', tone: 'wait' },
-  processing: { label: 'Creating', tone: 'wait' },
-  completed: { label: 'Ready', tone: 'ok' },
-  failed: { label: 'Failed', tone: 'error' },
-};
-
 /** Word and tone for a project lifecycle state; every `ProjectStatus` has an entry. */
 export function projectStatusLabel(status: ProjectStatus): StatusLabel {
-  return PROJECT_STATUS[status];
+  switch (status) {
+    case 'draft':
+      return { label: $localize`:@@status.project.draft:No video`, tone: 'info' };
+    case 'uploaded':
+      return { label: $localize`:@@status.project.uploaded:Not processed`, tone: 'info' };
+    case 'queued':
+      return { label: $localize`:@@status.project.queued:Queued`, tone: 'wait' };
+    case 'processing':
+      return { label: $localize`:@@status.project.processing:Processing`, tone: 'wait' };
+    case 'review':
+      return { label: $localize`:@@status.project.review:Ready for review`, tone: 'ok' };
+    case 'exporting':
+      return { label: $localize`:@@status.project.exporting:Creating package`, tone: 'wait' };
+    case 'completed':
+      return { label: $localize`:@@status.project.completed:Package ready`, tone: 'ok' };
+    case 'failed':
+      return { label: $localize`:@@status.project.failed:Failed`, tone: 'error' };
+  }
 }
 
 /** Word and tone for a processing job state; every `ProcessingJobStatus` has an entry. */
 export function jobStatusLabel(status: ProcessingJobStatus): StatusLabel {
-  return JOB_STATUS[status];
+  switch (status) {
+    case 'queued':
+      return { label: $localize`:@@status.job.queued:Queued`, tone: 'wait' };
+    case 'processing':
+      return { label: $localize`:@@status.job.processing:Processing`, tone: 'wait' };
+    case 'completed':
+      return { label: $localize`:@@status.job.completed:Done`, tone: 'ok' };
+    case 'failed':
+      return { label: $localize`:@@status.job.failed:Failed`, tone: 'error' };
+    case 'cancelling':
+      return { label: $localize`:@@status.job.cancelling:Cancelling`, tone: 'wait' };
+    case 'cancelled':
+      return { label: $localize`:@@status.job.cancelled:Cancelled`, tone: 'info' };
+    case 'interrupted':
+      return { label: $localize`:@@status.job.interrupted:Interrupted`, tone: 'error' };
+  }
 }
 
 /** Word and tone for an export package state; every `ProjectExportStatus` has an entry. */
 export function exportStatusLabel(status: ProjectExportStatus): StatusLabel {
-  return EXPORT_STATUS[status];
+  switch (status) {
+    case 'queued':
+      return { label: $localize`:@@status.export.queued:Queued`, tone: 'wait' };
+    case 'processing':
+      return { label: $localize`:@@status.export.processing:Creating`, tone: 'wait' };
+    case 'completed':
+      return { label: $localize`:@@status.export.completed:Ready`, tone: 'ok' };
+    case 'failed':
+      return { label: $localize`:@@status.export.failed:Failed`, tone: 'error' };
+  }
 }
 
+/** Project statuses in lifecycle order, for the list filter. */
+const PROJECT_STATUS_ORDER: readonly ProjectStatus[] = [
+  'draft',
+  'uploaded',
+  'queued',
+  'processing',
+  'review',
+  'exporting',
+  'completed',
+  'failed',
+];
+
 /** Project status options for the list filter, in lifecycle order, with their words. */
-export const PROJECT_STATUS_OPTIONS: readonly { value: ProjectStatus; label: string }[] = (
-  Object.keys(PROJECT_STATUS) as ProjectStatus[]
-).map((value) => ({ value, label: PROJECT_STATUS[value].label }));
+export function projectStatusOptions(): { value: ProjectStatus; label: string }[] {
+  return PROJECT_STATUS_ORDER.map((value) => ({ value, label: projectStatusLabel(value).label }));
+}

@@ -12,6 +12,7 @@ import {
   SplitSegmentRequest,
   TranscriptSegment,
 } from '../../core/api.models';
+import { LanguageService, RELOAD_PAGE } from '../../core/i18n/language.service';
 import { ApiService } from '../../core/services/api.service';
 import { ConfirmDialogComponent } from '../../shared/dialogs/confirm-dialog.component';
 import { ImagePreviewDialogComponent } from '../../shared/dialogs/image-preview-dialog.component';
@@ -212,6 +213,34 @@ describe('ReviewComponent', () => {
       reviewedText: 'Select Search and review the results.',
     });
     expect(component.dirtyCount()).toBe(0);
+  });
+
+  it('asks about unsaved edits before a language switch reloads the page', async () => {
+    const reload = vi.fn();
+    TestBed.configureTestingModule({ providers: [{ provide: RELOAD_PAGE, useValue: reload }] });
+    const confirmation = new Subject<boolean>();
+    const openDialog = vi.fn(() => ({ closed: confirmation }));
+    const { fixture } = await setup({ openDialog });
+    const component = fixture.componentInstance;
+    component.editedTexts.set({ [SEGMENT.id]: 'Unsaved review text.' });
+    const language = TestBed.inject(LanguageService);
+
+    const switching = language.switchTo('it');
+    expect(openDialog).toHaveBeenCalledTimes(1);
+    confirmation.next(false);
+    expect(await switching).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+
+    const confirmed = new Subject<boolean>();
+    openDialog.mockReturnValue({ closed: confirmed });
+    const retry = language.switchTo('it');
+    confirmed.next(true);
+    expect(await retry).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    fixture.destroy();
+    expect(await language.switchTo('it')).toBe(true);
+    expect(openDialog).toHaveBeenCalledTimes(2);
   });
 
   it('blocks a split while any other transcript segment has unsaved text', async () => {

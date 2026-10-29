@@ -1,10 +1,22 @@
 <section class="page wizard-page">
   <header class="page-header">
-    <h1>{{ isResuming() ? 'Continue project' : 'New project' }}</h1>
-    <a class="ns-button" routerLink="/projects">Back to projects</a>
+    <h1>
+      @if (isResuming()) {
+        <ng-container i18n="@@new_project.title_continue">Continue project</ng-container>
+      } @else {
+        <ng-container i18n="@@projects.new_project">New project</ng-container>
+      }
+    </h1>
+    <a class="ns-button" routerLink="/projects"
+      ><span i18n="@@common.back_to_projects">Back to projects</span></a
+    >
   </header>
 
-  <ol class="steps" aria-label="Project creation progress">
+  <ol
+    class="steps"
+    aria-label="Project creation progress"
+    i18n-aria-label="@@new_project.steps_label"
+  >
     @for (step of steps; track step; let index = $index) {
       <li
         class="step"
@@ -21,7 +33,7 @@
         </span>
         <span class="step__label">{{ step }}</span>
         @if (currentStep() > index + 1) {
-          <span class="visually-hidden"> (done)</span>
+          <span class="visually-hidden" i18n="@@new_project.step_done"> (done)</span>
         }
       </li>
     }
@@ -32,16 +44,21 @@
   }
 
   @if (currentStep() === 1) {
-    <ns-window title="Project" [primary]="true">
+    <ns-window title="Project" i18n-title="@@new_project.step.project" [primary]="true">
       <form class="wizard-form" [formGroup]="projectForm" (ngSubmit)="createProject()">
         @if (showValidationSummary()) {
-          <div class="ns-notice ns-notice--error" role="alert" tabindex="-1">
+          <div
+            class="ns-notice ns-notice--error"
+            role="alert"
+            tabindex="-1"
+            i18n="@@new_project.invalid_summary"
+          >
             Some project details are not valid. Correct the highlighted fields.
           </div>
         }
 
         <fieldset class="type-fieldset">
-          <legend class="ns-label">Project type</legend>
+          <legend class="ns-label" i18n="@@new_project.type_legend">Project type</legend>
           <div class="type-grid">
             @for (type of projectTypes; track type.value) {
               <label class="ns-row type-card">
@@ -56,7 +73,7 @@
         </fieldset>
 
         <div class="ns-form-row">
-          <label class="ns-label" for="project-name"
+          <label class="ns-label" for="project-name" i18n="@@new_project.name_label"
             >Project name <span class="muted">(optional)</span></label
           >
           <input
@@ -76,9 +93,11 @@
                 : 'project-name-help'
             "
           />
-          <p id="project-name-help" class="ns-help">Leave empty to use “{{ defaultName() }}”.</p>
+          <p id="project-name-help" class="ns-help" i18n="@@new_project.name_help">
+            Leave empty to use “{{ defaultName() }}”.
+          </p>
           @if (projectForm.controls.name.touched && projectForm.controls.name.invalid) {
-            <p id="project-name-error" class="ns-error">
+            <p id="project-name-error" class="ns-error" i18n="@@new_project.name_error">
               The name is too long. Use at most 120 characters.
             </p>
           }
@@ -89,10 +108,12 @@
           [open]="moreOptionsOpen()"
           (toggle)="onMoreOptionsToggle($event)"
         >
-          <summary>More options</summary>
+          <summary i18n="@@new_project.more_options">More options</summary>
           <div class="options-grid">
             <div class="ns-form-row">
-              <label class="ns-label" for="source-language">Spoken language</label>
+              <label class="ns-label" for="source-language"
+                ><span i18n="@@new_project.language_label">Spoken language</span></label
+              >
               <input
                 id="source-language"
                 class="ns-field language-field"
@@ -119,21 +140,24 @@
                   <option [value]="language.code">{{ language.label }}</option>
                 }
               </datalist>
-              <p id="source-language-help" class="ns-help">
+              <p id="source-language-help" class="ns-help" i18n="@@new_project.language_help">
                 “auto” detects it; or enter a code such as “en” or “it”.
               </p>
               @if (
                 projectForm.controls.sourceLanguage.touched &&
                 projectForm.controls.sourceLanguage.invalid
               ) {
-                <p id="source-language-error" class="ns-error">
+                <p id="source-language-error" class="ns-error" i18n="@@new_project.language_error">
                   This is not a language code. Enter “auto” or a two- or three-letter code.
                 </p>
               }
             </div>
 
             <div class="ns-form-row">
-              <label class="ns-label" for="project-description"
+              <label
+                class="ns-label"
+                for="project-description"
+                i18n="@@new_project.description_label"
                 >Description <span class="muted">(optional)</span></label
               >
               <textarea
@@ -154,13 +178,13 @@
                     : 'description-help'
                 "
               ></textarea>
-              <p id="description-help" class="ns-help">
+              <p id="description-help" class="ns-help" i18n="@@new_project.description_help">
                 Context that helps reviewers understand the video.
               </p>
               @if (
                 projectForm.controls.description.touched && projectForm.controls.description.invalid
               ) {
-                <p id="description-error" class="ns-error">
+                <p id="description-error" class="ns-error" i18n="@@new_project.description_error">
                   The description is too long. Use at most 500 characters.
                 </p>
               }
@@ -170,7 +194,12 @@
 
         <div class="wizard-actions">
           <button class="ns-button ns-button--primary" type="submit" [disabled]="creating()">
-            <ns-pixel-icon name="plus" />{{ creating() ? 'Creating…' : 'Create project' }}
+            <ns-pixel-icon name="plus" />
+            @if (creating()) {
+              <span i18n="@@new_project.creating">Creating…</span>
+            } @else {
+              <span i18n="@@new_project.create">Create project</span>
+            }
           </button>
         </div>
       </form>
@@ -178,7 +207,7 @@
   }
 
   @if (currentStep() === 2) {
-    <ns-window title="Video" [primary]="true">
+    <ns-window title="Video" i18n-title="@@new_project.step.video" [primary]="true">
       <div
         class="drop-zone"
         [class.drop-zone--dragging]="isDragging()"
@@ -202,16 +231,17 @@
           (change)="onFileInput($event)"
         />
         <span class="drop-zone__mark" aria-hidden="true"><ns-pixel-icon name="upload" /></span>
-        <strong>Drop a video here</strong>
-        <span class="muted">or</span>
+        <strong i18n="@@new_project.drop">Drop a video here</strong>
+        <span class="muted" i18n="@@new_project.or">or</span>
         <label
           class="ns-button file-picker-label"
           [class.file-picker-label--disabled]="uploading()"
           [attr.aria-disabled]="uploading()"
           for="video-file"
+          i18n="@@new_project.choose"
           >Choose video</label
         >
-        <p id="video-file-help" class="ns-help">
+        <p id="video-file-help" class="ns-help" i18n="@@new_project.file_help">
           MP4, WebM, MOV or MKV. The video is stored only on this computer.
         </p>
       </div>
@@ -233,13 +263,13 @@
       @if (uploading()) {
         <div class="upload-progress" aria-live="polite">
           <div class="upload-progress__line">
-            <span>Upload</span><strong class="mono">{{ uploadPercent() }}%</strong>
+            <span i18n="@@new_project.upload">Upload</span
+            ><strong class="mono">{{ uploadPercent() }}%</strong>
           </div>
-          <ns-segmented-gauge
-            [percent]="uploadPercent()"
-            [label]="'Upload ' + uploadPercent() + '%'"
-          />
-          <p class="ns-help">The whole video is checked before the next step.</p>
+          <ns-segmented-gauge [percent]="uploadPercent()" [label]="uploadLabel()" />
+          <p class="ns-help" i18n="@@new_project.upload_help">
+            The whole video is checked before the next step.
+          </p>
         </div>
       }
 
@@ -250,33 +280,43 @@
           [disabled]="!selectedFile() || !!fileError() || uploading()"
           (click)="uploadVideo()"
         >
-          <ns-pixel-icon name="upload" />{{ uploading() ? 'Uploading…' : 'Upload video' }}
+          <ns-pixel-icon name="upload" />
+          @if (uploading()) {
+            <span i18n="@@new_project.uploading">Uploading…</span>
+          } @else {
+            <span i18n="@@new_project.upload_video">Upload video</span>
+          }
         </button>
       </div>
     </ns-window>
   }
 
   @if (currentStep() === 3 && project(); as currentProject) {
-    <ns-window [title]="'Ready to process “' + currentProject.name + '”'" [primary]="true">
+    <ns-window [title]="readyTitle(currentProject.name)" [primary]="true">
       <div class="confirmation">
         <span class="confirmation__mark" aria-hidden="true"><ns-pixel-icon name="check" /></span>
-        <p>
+        <p i18n="@@new_project.stored">
           The video is stored. Processing transcribes the audio, extracts screenshots and links them
           to transcript segments.
         </p>
       </div>
-      <div class="ns-notice">
+      <div class="ns-notice" i18n="@@new_project.takes_time">
         Processing can take several minutes. You can follow it and cancel it on the next screen.
       </div>
       <div class="wizard-actions">
-        <a class="ns-button" routerLink="/projects">Process later</a>
+        <a class="ns-button" routerLink="/projects" i18n="@@new_project.later">Process later</a>
         <button
           class="ns-button ns-button--primary"
           type="button"
           [disabled]="starting()"
           (click)="startProcessing()"
         >
-          <ns-pixel-icon name="play" />{{ starting() ? 'Starting…' : 'Start processing' }}
+          <ns-pixel-icon name="play" />
+          @if (starting()) {
+            <span i18n="@@common.starting">Starting…</span>
+          } @else {
+            <span i18n="@@common.start_processing">Start processing</span>
+          }
         </button>
       </div>
     </ns-window>
