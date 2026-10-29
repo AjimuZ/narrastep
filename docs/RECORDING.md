@@ -1,9 +1,10 @@
 # Recording
 
 Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording session API with
-per-track chunk storage, resume and discard is implemented (P05.1); completion into a source video
-(P05.2), the recorder screen (P05.3) and speaker labels (P05.5) are planned. Until P05.3 Narrastep
-offers no way to record from the interface.
+per-track chunk storage, resume and discard (P05.1) and the completion into a validated source
+video with the kept microphone track (P05.2) are implemented; the recorder screen (P05.3) and
+speaker labels (P05.5) are planned. Until P05.3 Narrastep offers no way to record from the
+interface.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
 
 ## Goal
@@ -106,10 +107,10 @@ Recordings made in Narrastep label each transcript segment **You** (*Tu*) or **O
 | POST | `/api/v1/recordings` | Create a project named after the date and open its recording session | Implemented (P05.1) |
 | PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one chunk of `screen` or `microphone` atomically; repeating a stored sequence is a no-op | Implemented (P05.1) |
 | GET | `/api/v1/recordings/{recordingId}` | Read state, chunk counts, gaps and stored bytes per track, for resume | Implemented (P05.1) |
-| POST | `/api/v1/recordings/{recordingId}/complete` | Accept the optional name; join, align, mix, validate and save; never starts processing | Planned (P05.2) |
+| POST | `/api/v1/recordings/{recordingId}/complete` | Accept the optional name; join, align, mix, validate and save; never starts processing | Implemented (P05.2) |
 | DELETE | `/api/v1/recordings/{recordingId}` | Discard the session, its chunks and its project | Implemented (P05.1) |
 
-The implemented endpoints are in [openapi.json](openapi.json); request and response fields are in
+All endpoints are in [openapi.json](openapi.json); request and response fields are in
 [API](API.md#recording-sessions).
 
 ### Session rules (P05.1)
@@ -152,12 +153,67 @@ The implemented endpoints are in [openapi.json](openapi.json); request and respo
   `409 INVALID_PROJECT_STATE`, and processing answers `409 PROJECT_ASSET_MISSING` because there is
   no source video yet. A completed session refuses chunks with `409 INVALID_PROJECT_STATE`.
 
+### Completion rules (P05.2)
+
+`POST .../complete` runs in the request, under the project's operation lock, in
+`backend/app/services/recording_completion.py`:
+
+1. **Plan.** Each track's stored chunks must form one run from sequence 0. A gap answers
+   `409 RECORDING_INCOMPLETE` with the track, the first missing sequence and the missing count;
+   with `stopAtGap: true` the track ends before its first gap instead, because a WebM stream cannot
+   be decoded reliably across a hole. The screen track needs at least chunk 0. A microphone track
+   with no chunk (or, with `stopAtGap`, no chunk 0) is left out.
+2. **Disk.** Free space must cover the stored bytes once more plus the free-disk reserve
+   (`507 INSUFFICIENT_DISK_SPACE`); the outputs are about the size of the chunks.
+3. **Join.** Chunks are not copied into a joined file. FFmpeg reads each track through the
+   `concatf` protocol from a list of `file:` URLs, in sequence order; only `concatf` and `file`
+   are allowed. A byte concatenation is the stream `MediaRecorder` wrote.
+4. **Probe.** FFprobe reads the joined tracks. The screen track needs a video stream, the
+   microphone track an audio stream (`422 VIDEO_VALIDATION_FAILED`), and at least one of system
+   audio or microphone must exist (`422 VIDEO_AUDIO_TRACK_MISSING`).
+5. **Align.** The source video starts with the screen track. The microphone moves by
+   `microphone startOffsetMs − screen startOffsetMs`: a later microphone gets leading silence
+   (`adelay`), an earlier one loses its head (`atrim`). A track without an offset counts as 0, so
+   two tracks without offsets start together. The microphone's own first timestamp is reset to 0
+   first, and `aresample=async=1` fills dropped audio with silence so no track drifts.
+6. **Mix.** The screen video is copied, never re-encoded. With both audio sources the microphone
+   is added to the system audio without lowering either (`amix ... normalize=0`), encoded as Opus
+   at 128 kbit/s. With the microphone only, it is the soundtrack; with system audio only, that
+   audio is copied. The mix is padded with silence and the output ends with the video, so the
+   source duration is the screen duration. VP8, VP9 and AV1 video goes into `source/source.webm`;
+   other video (for example H.264 from `video/webm;codecs=h264`) into `source/source.mkv`.
+7. **Keep the microphone.** The aligned microphone alone is written to `source/microphone.webm`
+   (Opus, 96 kbit/s). Time `t` in it is time `t` in the source video, which speaker labels (P05.5)
+   rely on. The asset's `metadataJson.recording` records the chunk counts, the applied shift,
+   whether system audio existed and whether the microphone was kept.
+8. **Validate and save.** The source video passes the same FFprobe validation as an upload
+   (container, video and audio stream, duration, size). Then one transaction marks the session
+   `completed` as its first write (which waits for and then blocks chunk uploads), refuses with
+   `409 RECORDING_INCOMPLETE` if a chunk was stored meanwhile, deletes the chunk rows, creates the
+   media asset, renames the project when a name was sent and sets it to `uploaded`. The outputs are
+   renamed into place inside that transaction and removed if it fails. After the commit the
+   `recording/` folder is deleted; if that fails, startup removes chunk files without rows.
+
+Measured on 2026-10-29 (development worker, FFmpeg 7.1): a 10-minute synthetic recording
+(640×360 VP8 at 15 fps with Opus system audio, 34 MB, plus a 7.7 MB microphone track, 120 chunks
+each, microphone 250 ms late) completed in 4.7 s; the source video lasts 600.008 s. Real browser
+recordings are measured with P05.6.
+
+Temporary files (`.upload-{token}.partial*` in `source/`) are removed on every failure and at
+startup. FFmpeg output is never logged. A failure leaves the session open with every chunk, so the
+recorder can upload what is missing and save again, or discard.
+
 ## Verification
 
 - Playwright with `--use-fake-ui-for-media-stream` and `--use-fake-device-for-media-stream` records,
   stops, saves with a name and finds the project as **Not processed**, with no job queued.
 - API tests: out-of-order and repeated chunks per track, a missing chunk, an oversized session,
   resume after restart, discard, a session without a microphone track.
+- Completion tests (`backend/tests/test_recording_completion.py`, P05.2) build WebM tracks with
+  FFmpeg at test time, written to a pipe like `MediaRecorder` output, split them at arbitrary byte
+  offsets and measure tones in the result: a later and an earlier microphone, mix levels, the kept
+  microphone, system audio only, no audio, `stopAtGap`, H.264 into Matroska, a chunk stored during
+  the conversion and FFprobe failure. They are skipped when FFmpeg or FFprobe is not on `PATH`.
 - Speaker-label tests on synthetic audio: microphone only, system only, both at once, silence.
 - Manual test on the owner's computer with a real Teams call; the result is recorded in
   [Status](STATUS.md) with the date and browser version.

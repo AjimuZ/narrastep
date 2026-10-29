@@ -42,6 +42,7 @@
     "error.EXPORT_NOT_FOUND": "Questo pacchetto non esiste. Potrebbe essere stato eliminato.",
     "error.RECORDING_NOT_FOUND": "Questa registrazione non esiste. Potrebbe essere stata scartata.",
     "error.RECORDING_CHUNK_CONFLICT": "Una parte di questa registrazione era già salvata con un contenuto diverso. Ferma la registrazione e salva quello che è stato registrato.",
+    "error.RECORDING_INCOMPLETE": "Alcune parti di questa registrazione non sono ancora state caricate. Attendi la fine del caricamento oppure salva quello che è stato registrato prima della parte mancante.",
     "error.VALIDATION_ERROR": "Alcuni valori non sono validi. Controlla i campi e riprova.",
     "error.api_unreachable": "Narrastep non riesce a raggiungere il servizio locale. Controlla che Narrastep sia in esecuzione.",
     "error.request_failed": "Narrastep non è riuscito a completare la richiesta.",

@@ -78,6 +78,17 @@ before the file is renamed into place. Discarding takes the project operation lo
 same staged workspace removal as project deletion. Nothing reaches Redis or the worker; no job
 is queued.
 
+Completion (P05.2, `services/recording_completion.py`) also runs in the API request, under the
+project operation lock, because it is a bounded media conversion like upload validation, not
+processing: FFmpeg copies the video and only encodes audio. It reads the chunk list from SQLite,
+lets FFmpeg read the chunks in place through the `concatf` protocol, writes the source video and
+`source/microphone.webm` as partial files, validates the source with the upload's FFprobe rules,
+and promotes both in the transaction that marks the session `completed`. That transaction's first
+statement is the session-row update, the same lock chunk uploads take, so an upload that slipped
+in during the conversion is detected and the save is refused instead of losing the chunk. The
+chunk rows are deleted in that transaction and the files after it; the startup cleanup removes
+chunk files without rows, so a crash in between leaves nothing behind.
+
 ## Review and lineage
 
 `raw-transcript.json` is immutable. Reviewed segments are active views over that evidence. Split and merge archive their source rows, create derived active rows, and record `SegmentLineage` edges in one transaction. This protects original transcription evidence while allowing structural editing.
@@ -155,8 +166,8 @@ flowchart LR
   the microphone as two tracks and uploads chunks. The API owns recording sessions, joins the
   chunks, aligns and mixes the tracks with FFmpeg, keeps the microphone track for speaker labels
   and saves the project without queuing processing. No new container. The session API and chunk
-  storage exist since P05.1 (see "Recording sessions" below); joining, the recorder screen and
-  the labels are still planned.
+  storage exist since P05.1 and the completion into the source video since P05.2 (see
+  "Recording sessions" below); the recorder screen and the labels are still planned.
 - **Model manager ([Local generation](LOCAL_GENERATION.md)).** The API downloads model files only
   after an explicit user action, through the `local` network, which has an Internet route. It
   verifies SHA-256 hashes and writes to `/data/models`. No project data leaves the computer.

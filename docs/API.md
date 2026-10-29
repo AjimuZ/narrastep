@@ -54,6 +54,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | POST | `/api/v1/recordings` | Create a recorder project and open its recording session | 201 |
 | GET | `/api/v1/recordings/{recordingId}` | Read the session state and what each track stored | 200 |
 | PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one `screen` or `microphone` chunk; an identical repeat is a no-op | 201/200 |
+| POST | `/api/v1/recordings/{recordingId}/complete` | Join, align, mix and validate the tracks into the source video; never starts processing | 200 |
 | DELETE | `/api/v1/recordings/{recordingId}` | Discard an open session, its chunks and its project | 204 |
 
 ## Important requests
@@ -143,16 +144,28 @@ return:
 `{"track", "sequence", "sizeBytes", "duplicate": false}`, or `200` with `duplicate: true` when the
 same bytes were already stored. `track` is `screen` or `microphone`; `sequence` is 0 to 999999.
 `DELETE` answers `204`. Project responses carry `recording`: `{"id", "state", "interrupted"}` for
-recorder projects and `null` for uploaded ones. `state` is `recording` or `completed`; the
-completion endpoint arrives with P05.2.
+recorder projects and `null` for uploaded ones. `state` is `recording` or `completed`.
+
+`POST /api/v1/recordings/{recordingId}/complete` (P05.2) saves an open session as its project's
+source video. The optional body is `{"name": "Weekly sync", "stopAtGap": false}`: `name` replaces
+the project name, and `stopAtGap: true` keeps each track only up to its first missing chunk
+(the interface's "Save what was recorded" for an interrupted recording). It answers `200` with the
+project representation: `status: "uploaded"`, `videoAsset` set, `recording.state: "completed"`,
+`activeJobId: null`. No processing job is queued. The request returns when FFmpeg has finished; the video is copied,
+only the audio is encoded. Errors: `409 RECORDING_INCOMPLETE` with
+`details` `{"track", "firstMissingSequence", "missingCount"}` when a chunk is missing, or without
+details when chunks arrived during the conversion; `409 PROJECT_BUSY`, `409 INVALID_PROJECT_STATE`
+for a saved session; `422 VIDEO_VALIDATION_FAILED` for unreadable tracks, `422
+VIDEO_AUDIO_TRACK_MISSING` without system audio and microphone; `507 INSUFFICIENT_DISK_SPACE`;
+`500 FFMPEG_FAILED`. After a failure the session stays open with all its chunks. After success the
+chunks are deleted, so `GET` reports the saved session with empty tracks. The conversion rules are
+in [Recording](RECORDING.md#completion-rules-p052).
 
 ## Planned changes
 
 Not implemented and not in [openapi.json](openapi.json):
 
 - Optional `mode` until processing starts ([ADR 0009](decisions/0009-project-types.md), P05.4).
-- Recording completion, `POST /api/v1/recordings/{recordingId}/complete`
-  ([Recording](RECORDING.md#api), P05.2).
 - Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).
 
 ## Progress events
@@ -177,7 +190,7 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `VIDEO_AUDIO_TRACK_MISSING` | 422 or failed job | FFprobe found no audio track required for transcription. |
 | `INSUFFICIENT_DISK_SPACE` | 507 | The configured free-space reserve would be crossed. |
 | `FFPROBE_FAILED` | 422 or failed job | Bounded media inspection failed or timed out. |
-| `FFMPEG_FAILED` | failed job | Audio normalization failed or timed out. |
+| `FFMPEG_FAILED` | 500 or failed job | Audio normalization, or the conversion of a recording into its source video, failed or timed out. |
 | `TRANSCRIPTION_FAILED` | failed job | The offline model is missing or local transcription failed. |
 | `FRAME_EXTRACTION_FAILED` | failed job | Screenshot decoding or encoding failed. |
 | `REDIS_UNAVAILABLE` | 503 | The local broker is not reachable. |
@@ -197,4 +210,5 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `EXPORT_NOT_READY` | 409 | A ZIP was requested before export completion. |
 | `RECORDING_NOT_FOUND` | 404 | The recording session does not exist or was discarded. |
 | `RECORDING_CHUNK_CONFLICT` | 409 | A stored chunk sequence was sent with different bytes, or a track with a different start offset. |
+| `RECORDING_INCOMPLETE` | 409 | A recording cannot be saved: a chunk is missing (the first screen chunk, or a gap without `stopAtGap`), or chunks arrived while it was being saved. |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

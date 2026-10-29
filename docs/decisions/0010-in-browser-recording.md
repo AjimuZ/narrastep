@@ -3,7 +3,7 @@
 Status: accepted (2026-10-28). Supersedes: none. Amended (2026-10-28): the microphone is recorded
 as a separate track for speaker labels, and recording saves the project without processing it.
 Amended (2026-10-29, P05.1): implementation choices for the session API, listed under
-Consequences.
+Consequences. Amended (2026-10-29, P05.2): completion choices, listed under Consequences.
 
 ## Context
 
@@ -58,5 +58,19 @@ pipeline is unchanged. Details are in [Recording](../RECORDING.md).
   Chunk uploads are serialized by SQLite's write lock instead of the project operation lock,
   which would refuse the second track while the first uploads. "Interrupted" is derived on read
   from the time since the last chunk, because a closed tab sends nothing the server could store.
+- Completion choices (P05.2). Completion runs in the API request, not as a worker job: the
+  screen video is copied, only audio is encoded, and the recorder needs the project before it
+  can show it as saved. FFmpeg reads the chunks in place through its `concatf` protocol instead
+  of a joined copy, which would need the recording's size again on disk; the alternative of a
+  `concat:` argument fails on long recordings because one argument is limited to 128 KB on Linux.
+  The microphone is aligned to the screen track, the source video's time 0, by the difference of
+  the start offsets (0 when the recorder sent none), and mixed without level normalization so
+  neither side is halved; loud overlaps may clip, which matters less than a quiet voice for
+  transcription. The kept `microphone.webm` is re-encoded on the same timeline rather than
+  stored raw with an offset, so speaker labels need no time arithmetic. Missing chunks refuse the
+  save unless the caller asks to stop at the first gap; decoding across a hole is not reliable.
+  A recording with neither system audio nor microphone is refused rather than given a silent
+  track, since it cannot be transcribed. Chunks are deleted after the save to avoid keeping the
+  recording twice. Video that WebM cannot hold (H.264) is copied into Matroska.
 - Evidence: Playwright test with fake media devices, API tests for chunk order, resume and
   completion, and a manual test with a real Teams call (P05 in the [roadmap](../ROADMAP.md)).

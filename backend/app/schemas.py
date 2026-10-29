@@ -493,6 +493,29 @@ class RecordingCreate(ApiModel):
         return normalized
 
 
+class RecordingComplete(ApiModel):
+    """Validate the optional input of a recording's completion into the project source video.
+
+    `name` replaces the project name when sent (the recorder's Save dialog). `stopAtGap` keeps
+    each track only up to its first missing chunk, for an interrupted recording whose missing
+    chunks can no longer be uploaded; without it a missing chunk refuses the completion.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    stop_at_gap: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def strip_optional_name(cls, value: str | None) -> str | None:
+        """Normalize a supplied name and reject one that holds only whitespace."""
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Recording name must not be empty.")
+        return normalized
+
+
 class RecordingTrackResponse(ApiModel):
     """Report what is stored for one track so an interrupted recorder can resume its uploads.
 

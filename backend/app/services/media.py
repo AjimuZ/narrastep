@@ -216,6 +216,60 @@ def probe_video(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class StreamSummary:
+    """Name the codec of the first video and first audio stream; None when that type is absent."""
+
+    video_codec: str | None
+    audio_codec: str | None
+
+
+def probe_streams(
+    source: str | Path,
+    *,
+    config: MediaToolConfig | None = None,
+    protocol_whitelist: str | None = None,
+) -> StreamSummary:
+    """Return which stream types a media input holds, without the source-video rules.
+
+    `source` may be a path or an FFmpeg URL such as `concatf:` when `protocol_whitelist` names
+    the protocols it may open. Unlike `probe_video` it accepts audio-only and video-only inputs
+    and needs no duration, so it can inspect joined recording tracks, which carry none. Raises
+    `MediaServiceError` with `FFPROBE_FAILED` when FFprobe fails, times out or prints no JSON.
+    """
+
+    probe_binary = _first_config_value(config, ("ffprobe_path", "ffprobe_binary"), "ffprobe")
+    probe_timeout = _first_config_value(
+        config, ("ffprobe_timeout_seconds", "ffmpeg_timeout_seconds"), 30.0
+    )
+    whitelist = ["-protocol_whitelist", protocol_whitelist] if protocol_whitelist else []
+    completed = run_media_command(
+        [
+            str(probe_binary),
+            "-v",
+            "error",
+            *whitelist,
+            "-show_entries",
+            "stream=index,codec_type,codec_name:stream_disposition=attached_pic",
+            "-of",
+            "json",
+            str(source),
+        ],
+        timeout_seconds=float(probe_timeout),
+        failure_code="FFPROBE_FAILED",
+        failure_message="The recording could not be inspected.",
+    )
+    streams = _parse_probe_payload(completed.stdout).get("streams")
+    if not isinstance(streams, list):
+        streams = []
+    video = _first_stream(streams, "video")
+    audio = _first_stream(streams, "audio")
+    return StreamSummary(
+        video_codec=str(video.get("codec_name") or "unknown") if video else None,
+        audio_codec=str(audio.get("codec_name") or "unknown") if audio else None,
+    )
+
+
 def validate_video(
     source_path: str | Path,
     *,

@@ -75,6 +75,8 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.RECORDING_NOT_FOUND:This recording does not exist. It may have been discarded.`;
     case 'RECORDING_CHUNK_CONFLICT':
       return $localize`:@@error.RECORDING_CHUNK_CONFLICT:A part of this recording was already saved with different content. Stop the recording and save what was recorded.`;
+    case 'RECORDING_INCOMPLETE':
+      return $localize`:@@error.RECORDING_INCOMPLETE:Some parts of this recording were not uploaded yet. Wait for the upload to finish, or save what was recorded before the missing part.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

@@ -58,6 +58,7 @@ from app.schemas import (
     ProjectResponse,
     ProjectUpdate,
     RecordingChunkResponse,
+    RecordingComplete,
     RecordingCreate,
     RecordingResponse,
     ScreenshotAssociationResponse,
@@ -84,6 +85,7 @@ from app.services.processing import (
     next_export_sequence,
 )
 from app.services.progress import publish_cancellation_flag, publish_job_event
+from app.services.recording_completion import complete_recording
 from app.services.recordings import (
     MAX_CHUNK_SEQUENCE,
     MAX_START_OFFSET_MS,
@@ -527,6 +529,52 @@ async def upload_recording_chunk(
         "sizeBytes": stored.size_bytes,
         "duplicate": stored.duplicate,
     }
+
+
+@router.post(
+    "/recordings/{recording_id}/complete",
+    response_model=ProjectResponse,
+    responses={
+        409: {"model": ErrorEnvelope, "description": "Missing chunks, busy or saved recording"},
+        507: {"model": ErrorEnvelope, "description": "Not enough free disk space"},
+    },
+)
+def complete_recording_session(
+    recording_id: str,
+    request: RecordingComplete | None = None,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Save an open recording as its project's source video and return the project.
+
+    Joins each track's chunks, aligns the microphone by the stored start offsets, mixes it into
+    the system audio, validates the result like an uploaded video and keeps the aligned
+    microphone as `source/microphone.webm`. The project becomes `uploaded`; no processing job is
+    queued. Errors are listed in `complete_recording`; a busy project answers `PROJECT_BUSY`.
+    """
+    options = request or RecordingComplete()
+    recording = _require_recording(session, recording_id)
+    project = recording.project
+    reservation = acquire_project_operation(settings.data_root, project.id, "complete")
+    try:
+        session.refresh(recording)
+        session.refresh(project)
+        require_open_recording(recording)
+        _reject_busy_project(project)
+        complete_recording(
+            session,
+            recording,
+            project,
+            name=options.name,
+            stop_at_gap=options.stop_at_gap,
+            workspace=reservation.workspace_path,
+            token=reservation.token,
+            settings=settings,
+        )
+        session.refresh(project)
+        return _project_payload(session, project, settings)
+    finally:
+        release_project_operation(reservation)
 
 
 @router.delete("/recordings/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)

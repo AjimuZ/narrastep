@@ -38,6 +38,15 @@ All notable changes to Narrastep are documented in this file.
   `RECORDING_CHUNK_CONFLICT`, translated in Italian. Recordings cannot be made from the interface
   yet.
 
+- Saving a recording: `POST /api/v1/recordings/{id}/complete` joins the uploaded chunks of each
+  track, aligns the microphone with the screen by their start offsets, adds it to the system
+  audio, copies the screen video without re-encoding and validates the result like an uploaded
+  video. The project gets this source video and becomes **Not processed**, optionally under a new
+  name; no processing starts. The aligned microphone is kept as `source/microphone.webm` for the
+  coming speaker labels, and the chunks are deleted. A missing chunk refuses the save with the new
+  error `RECORDING_INCOMPLETE` (translated in Italian) unless the caller asks to save what was
+  recorded before it. Recordings cannot be made from the interface yet.
+
 ### Changed
 
 - Accessibility pass in English and Italian: placeholder text and the danger button text now

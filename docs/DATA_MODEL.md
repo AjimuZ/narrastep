@@ -79,7 +79,9 @@ chunks, `completed` once the chunks became the source video in P05.2; enforced b
 `recording_state` CHECK constraint), `screen_start_offset_ms` and `microphone_start_offset_ms`
 (the start of each track relative to the session's common start, as sent by the recorder; null
 until a chunk of that track carries it, and never changed afterwards), `last_chunk_at`, and
-timestamps. `project_id` is unique and cascades on project deletion. A discarded session is deleted
+timestamps. Completion (P05.2) deletes the session's chunk rows and files once the source video
+is saved; the completed session row stays as the record that the project was recorded.
+`project_id` is unique and cascades on project deletion. A discarded session is deleted
 with its project, so there is no `discarded` state. The API reports a `recording` session as
 `interrupted` when no chunk arrived for `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS`; that flag
 is derived on read, not stored.
@@ -107,7 +109,8 @@ projects/{project UUID}/
   diagnostics/processing-{job UUID}.json
   diagnostics/export-{export UUID}.json
   exports/narrastep-{export UUID}.zip
-  recording/screen/NNNNNN.webm          (recorder projects only, P05.1)
+  source/microphone.webm                (recorder projects with a microphone, P05.2)
+  recording/screen/NNNNNN.webm          (open recording sessions only, P05.1)
   recording/microphone/NNNNNN.webm
 ```
 
@@ -116,6 +119,12 @@ reaches the path. A chunk is streamed to `recording/{track}/.chunk-{random}.part
 renamed after its row is flushed. At API startup, partial files and chunk files without a row (a
 crash between the rename and the commit) are removed; the recorder still holds those chunks and
 sends them again.
+
+A saved recording's source is `source/source.webm` (`source.mkv` for video the WebM container
+cannot hold) and its aligned microphone `source/microphone.webm`, on the same timeline. The media
+asset's `metadata_json.recording` holds `screenChunks`, `microphoneChunks`, `microphoneShiftMs`
+(null without microphone), `systemAudio` and `microphoneTrack`. Completion writes its temporary
+files as `source/.upload-{token}.partial*`, which startup removes like interrupted uploads.
 
 Temporary upload, processing, and export paths use a suffix or task-specific directory and are promoted atomically after validation.
 
@@ -130,7 +139,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 | Change | Package |
 | --- | --- |
 | `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
-| `source/microphone.webm` kept beside the mixed source video of in-app recordings | P05.2 |
 | `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
 | `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |
 | `Generation` (project, model key, prompt version, status, progress, relative document path) | P06 |

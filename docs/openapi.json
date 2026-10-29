@@ -558,6 +558,31 @@
         "title": "RecordingChunkResponse",
         "type": "object"
       },
+      "RecordingComplete": {
+        "description": "Validate the optional input of a recording's completion into the project source video.\n\n`name` replaces the project name when sent (the recorder's Save dialog). `stopAtGap` keeps\neach track only up to its first missing chunk, for an interrupted recording whose missing\nchunks can no longer be uploaded; without it a missing chunk refuses the completion.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "stopAtGap": {
+            "default": false,
+            "title": "Stopatgap",
+            "type": "boolean"
+          }
+        },
+        "title": "RecordingComplete",
+        "type": "object"
+      },
       "RecordingCreate": {
         "description": "Validate the optional metadata of a new recording session and its project.\n\nThe recorder sends the name in the interface language and local time (ADR 0015); without it\nthe API names the project `Recording {YYYY-MM-DD HH:MM}` in the server's local time.",
         "properties": {
@@ -1944,6 +1969,83 @@
           }
         },
         "summary": "Get Recording"
+      }
+    },
+    "/api/v1/recordings/{recording_id}/complete": {
+      "post": {
+        "description": "Save an open recording as its project's source video and return the project.\n\nJoins each track's chunks, aligns the microphone by the stored start offsets, mixes it into\nthe system audio, validates the result like an uploaded video and keeps the aligned\nmicrophone as `source/microphone.webm`. The project becomes `uploaded`; no processing job is\nqueued. Errors are listed in `complete_recording`; a busy project answers `PROJECT_BUSY`.",
+        "operationId": "complete_recording_session_api_v1_recordings__recording_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recording_id",
+            "required": true,
+            "schema": {
+              "title": "Recording Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RecordingComplete"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Missing chunks, busy or saved recording"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          },
+          "507": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not enough free disk space"
+          }
+        },
+        "summary": "Complete Recording Session"
       }
     },
     "/api/v1/recordings/{recording_id}/tracks/{track}/chunks/{sequence}": {
