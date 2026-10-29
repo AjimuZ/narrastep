@@ -110,7 +110,64 @@ def test_export_contains_complete_honest_package(tmp_path: Path) -> None:
         assert "Screenshot: step-001_00m00s.png" in batch_input
         assert "Evidence step 2" in batch_input
         assert "Screenshot: none included" in batch_input
+        # Without speaker labels nothing about speakers is written.
+        assert "Speaker" not in llm_input + batch_input + reviewed
         assert all(not name.startswith("source/") for name in names)
+
+
+def test_speaker_labels_appear_in_transcripts_and_ai_input(tmp_path: Path) -> None:
+    """Name the speaker of labelled steps in every transcript file and explain the labels once.
+
+    An unlabelled step gets no speaker line, and the manifest keeps the stored values.
+    """
+    raw = tmp_path / "raw-transcript.json"
+    raw.write_text('{"language":"en","segments":[]}\n', encoding="utf-8")
+    destination = tmp_path / "exports" / "result.zip"
+    segments = [
+        ExportSegment(
+            id=f"segment-{index}",
+            sequence=index,
+            start_seconds=index * 4,
+            end_seconds=index * 4 + 4,
+            raw_text=text,
+            reviewed_text=text,
+            speaker=speaker,
+            confidence=0.9,
+        )
+        for index, (speaker, text) in enumerate(
+            [("you", "I will send the report."), ("others", "Thanks."), (None, "Bye.")]
+        )
+    ]
+    request = ExportRequest(
+        export_id="export-1",
+        project={"id": "project-1", "name": "Call", "description": None},
+        source={"assetId": "asset-1", "durationSeconds": 12.0},
+        segments=segments,
+        raw_transcript_path=raw,
+        destination_path=destination,
+        output_mode="meeting",
+    )
+
+    build_export_package(request)
+
+    with open_package(destination) as archive:
+        reviewed = archive.read("03-transcript/reviewed-transcript.md").decode("utf-8")
+        assert "## Step 1\n\n**Speaker:** You\n\nI will send the report." in reviewed
+        assert "## Step 2\n\n**Speaker:** Others\n\nThanks." in reviewed
+        assert "## Step 3\n\nBye." in reviewed
+        subtitles = archive.read("03-transcript/subtitles.srt").decode("utf-8")
+        assert "You: I will send the report.\n" in subtitles
+        assert "Others: Thanks.\n" in subtitles
+        assert "\nBye.\n" in subtitles
+        for name in ("01-ai-input/llm-input.md", f"{BATCH_1}/batch-input.md"):
+            text = archive.read(name).decode("utf-8")
+            assert text.count(exporting.SPEAKER_NOTE) == 1, name
+            assert "Speaker: You\nTranscript: I will send the report." in text, name
+            assert "Speaker: Others\nTranscript: Thanks." in text, name
+            step_3 = text.split("## Evidence step 3", 1)[1]
+            assert "Speaker:" not in step_3, name
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        assert [item["speaker"] for item in manifest["segments"]] == ["you", "others", None]
 
 
 def test_export_includes_original_only_when_explicitly_requested(tmp_path: Path) -> None:

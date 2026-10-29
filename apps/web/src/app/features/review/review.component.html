@@ -226,6 +226,9 @@
                 <span class="mono"
                   >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
                 >
+                @if (speakerName(segment.speakerLabel); as speaker) {
+                  <span class="segment-select__speaker">{{ speaker }}</span>
+                }
               </button>
               <label class="merge-check">
                 <input
@@ -281,8 +284,22 @@
 
             <div class="segment-meta">
               <span>{{ confidenceLabel(segment.confidence) }}</span>
-              @if (segment.speakerLabel) {
-                <span>{{ segment.speakerLabel }}</span>
+              <label class="speaker-field">
+                <span i18n="@@review.speaker">Speaker</span>
+                <select
+                  class="ns-field"
+                  [value]="segment.speakerLabel ?? ''"
+                  [disabled]="structuralPending()"
+                  [attr.aria-busy]="savingSpeakerIds().has(segment.id)"
+                  (change)="updateSpeaker(segment, $event)"
+                >
+                  <option value="" i18n="@@review.speaker_none">No label</option>
+                  <option value="you">{{ speakerName('you') }}</option>
+                  <option value="others">{{ speakerName('others') }}</option>
+                </select>
+              </label>
+              @if (segment.speakerLabel && segment.speakerSource === 'automatic') {
+                <span i18n="@@review.speaker_automatic">Set from the audio levels</span>
               }
               @if (isDirty(segment)) {
                 <ns-status-pill

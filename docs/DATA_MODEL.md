@@ -31,7 +31,7 @@ Stores a relative path, safe display metadata, MIME type, byte size, duration, d
 
 ### TranscriptSegment
 
-Stores project order, timestamps, immutable row-level raw text, mutable reviewed text, optional speaker/confidence, active/archive state, and timestamps. Only active rows participate in review and export. The workspace raw transcript remains the immutable source of word-level evidence.
+Stores project order, timestamps, immutable row-level raw text, mutable reviewed text, optional speaker/confidence, active/archive state, and timestamps. `speaker` is `you`, `others` or NULL and `speaker_source` is `automatic` (set by processing from the loudness of an in-app recording's tracks), `user` (set or cleared in Review) or NULL when no label was ever set; both are non-native enums with the named CHECK constraints `speaker_label` and `speaker_source` (migration `20261029_0007`, P05.5). Only active rows participate in review and export. The workspace raw transcript remains the immutable source of word-level evidence.
 
 ### Screenshot
 
@@ -121,9 +121,11 @@ crash between the rename and the commit) are removed; the recorder still holds t
 sends them again.
 
 A saved recording's source is `source/source.webm` (`source.mkv` for video the WebM container
-cannot hold) and its aligned microphone `source/microphone.webm`, on the same timeline. The media
+cannot hold), its aligned microphone `source/microphone.webm` and, when it has both audio
+sources, its system audio alone `source/system.webm` (P05.5), all on the same timeline. The media
 asset's `metadata_json.recording` holds `screenChunks`, `microphoneChunks`, `microphoneShiftMs`
-(null without microphone), `systemAudio` and `microphoneTrack`. Completion writes its temporary
+(null without microphone), `systemAudio`, `microphoneTrack` and `systemTrack` (written since
+P05.5; absent in recordings saved before). Completion writes its temporary
 files as `source/.upload-{token}.partial*`, which startup removes like interrupted uploads.
 
 Temporary upload, processing, and export paths use a suffix or task-specific directory and are promoted atomically after validation.
@@ -138,7 +140,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 
 | Change | Package |
 | --- | --- |
-| `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
 | `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |
 | `Generation` (project, model key, prompt version, status, progress, relative document path) | P06 |
 

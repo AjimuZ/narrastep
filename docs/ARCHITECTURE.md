@@ -82,8 +82,8 @@ Completion (P05.2, `services/recording_completion.py`) also runs in the API requ
 project operation lock, because it is a bounded media conversion like upload validation, not
 processing: FFmpeg copies the video and only encodes audio. It reads the chunk list from SQLite,
 lets FFmpeg read the chunks in place through the `concatf` protocol, writes the source video and
-`source/microphone.webm` as partial files, validates the source with the upload's FFprobe rules,
-and promotes both in the transaction that marks the session `completed`. That transaction's first
+`source/microphone.webm` (and, with system audio, `source/system.webm`, P05.5) as partial files,
+validates the source with the upload's FFprobe rules, and promotes them in the transaction that marks the session `completed`. That transaction's first
 statement is the session-row update, the same lock chunk uploads take, so an upload that slipped
 in during the conversion is detected and the save is refused instead of losing the chunk. The
 chunk rows are deleted in that transaction and the files after it; the startup cleanup removes
@@ -174,10 +174,13 @@ flowchart LR
 
 - **Recording ([Recording](RECORDING.md)).** The browser records the screen with system audio and
   the microphone as two tracks and uploads chunks. The API owns recording sessions, joins the
-  chunks, aligns and mixes the tracks with FFmpeg, keeps the microphone track for speaker labels
-  and saves the project without queuing processing. No new container. The session API and chunk
-  storage exist since P05.1, the completion into the source video since P05.2 and the recorder
-  screen since P05.3 (see "Recording sessions" below); speaker labels are still planned.
+  chunks, aligns and mixes the tracks with FFmpeg, keeps the microphone and the system audio as
+  separate tracks for speaker labels and saves the project without queuing processing. No new
+  container. The session API and chunk storage exist since P05.1, the completion into the source
+  video since P05.2 and the recorder screen since P05.3 (see "Recording sessions" below). Since
+  P05.5 the worker labels segments You / Others by comparing the two tracks' loudness
+  (`services/speaker_labels.py`, run by `services/processing.py` after transcription), and the
+  review API lets the user change the label.
 - **Model manager ([Local generation](LOCAL_GENERATION.md)).** The API downloads model files only
   after an explicit user action, through the `local` network, which has an Internet route. It
   verifies SHA-256 hashes and writes to `/data/models`. No project data leaves the computer.

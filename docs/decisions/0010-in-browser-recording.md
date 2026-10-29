@@ -87,5 +87,16 @@ pipeline is unchanged. Details are in [Recording](../RECORDING.md).
   that held the missing chunks is gone. The microphone level is computed in the page with Web
   Audio and never stored. The browser picker is used until the desktop window supplies its own
   (P07).
+- Speaker-label choices (P05.5). Completion keeps the system audio alone as `system.webm`
+  next to `microphone.webm` when both exist, because the mixed source video cannot be split back
+  into its two sources reliably after lossy encoding; it costs about 0.7 MB per minute. Labels
+  come from the two tracks' RMS level over each segment, not from a diarization model, so nothing
+  new is installed. A label needs a 10 dB lead (about three times the amplitude) and an audible
+  louder track (−50 dBFS); closer levels stay unlabelled, because a wrong label is worse than
+  none and speakers can bring the call into the microphone. Recordings with one audio source get
+  no labels: without system audio the call heard through speakers would be "You", and without a
+  microphone there is no "You". Labelling is an aid, so a track that cannot be decoded leaves
+  the segments unlabelled instead of failing processing. A label changed in Review is stored as a
+  user choice (`speakerSource: user`), which merges keep.
 - Evidence: Playwright test with fake media devices, API tests for chunk order, resume and
   completion, and a manual test with a real Teams call (P05 in the [roadmap](../ROADMAP.md)).

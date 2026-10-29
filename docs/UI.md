@@ -272,7 +272,7 @@ The table above is the target. What the English interface does today:
 | Recorder | Title "Record"; Sources window (screen, system audio, microphone with device list and level gauge, consent and headset notices, **Start recording**); Recording window (state pill, length, uploaded size, sources, gauge, retry notice, Pause or Resume, **Stop**); Save recording window (length, uploaded size, parts still uploading, optional name, **Save** or **Save what was recorded**, Discard); Recording saved window (Open projects, Record again). `/record?recording={id}` opens an interrupted session. Details in [Recording](RECORDING.md#recorder-screen-p053) (P05.3) |
 | New project | Three steps (Project, Video, Processing) each in one primary window; type cards are `.ns-row` radio cards; **Create project**, then **Upload video** with a segmented upload gauge fed by the real upload percentage, then **Start processing** or Process later |
 | Processing | Title "Processing" with the project name; the stage list is the primary window. The API reports progress for the whole job only, so one overall gauge shows that value, finished stages show a full gauge, the running stage an activity line and pending stages only a word. **Open review**, Cancel processing, Retry processing; Project, Processing settings and Counters windows beside it |
-| Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen |
+| Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen. The Transcript window has a **Speaker** select (No label, You, Others; Italian Chi parla: Nessuna etichetta, Tu, Altri) beside the confidence, saved immediately without touching unsaved text; an automatic label adds "Set from the audio levels", a labelled segment shows its speaker in the Segments row, and the result is announced in the polite live region ("Speaker of segment 1: Others."). The select stays enabled while saving so focus never jumps; a choice made meanwhile is sent after the first, and a refused save puts the stored label back and shows the error (P05.5) |
 | Export | Title "Export" with the project name; New package (primary: contents, original-video option, **Create package**, the current package with an activity line, because the worker writes fixed stage values rather than a measured percentage), Size estimate, and Packages titled with each stored ZIP name and **Download package** |
 | Not found | "Page not found" with **Open projects** |
 
@@ -285,9 +285,13 @@ Export, Not found) in English and Italian against a deterministic fake API, and 
 split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
 (the source checks); `tests/e2e/recorder.spec.ts` adds contrast and 320 px reflow of the checks,
 recording and save windows with fake devices in both languages. `tests/e2e/process.spec.ts` covers the Process dialog on a saved recording (journey, refusal
-without a type, keyboard, language option, contrast, 320 px and 200% zoom) in both languages. The
-last full run (2026-10-29, P05.4) passed 388 tests: 174 accessibility checks, 5 recorder tests and
-12 Process dialog tests per Chromium project, plus the 6 contract tests.
+without a type, keyboard, language option, contrast, 320 px and 200% zoom) in both languages.
+The fake API's first segment carries an automatic You label, so every Review check covers the
+speaker select, and `tests/e2e/speaker-labels.spec.ts` changes and clears it with the keyboard,
+reports a refused save and checks contrast, 320 px and 200% zoom in both languages (P05.5). The
+last full run (2026-10-29, P05.5) passed 408 tests: 174 accessibility checks, 5 recorder tests,
+12 Process dialog tests and 10 speaker-label tests per Chromium project, plus the 6 contract
+tests.
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).

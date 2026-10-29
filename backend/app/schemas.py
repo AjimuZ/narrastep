@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from app.models import (
     ExportStatus,
@@ -14,6 +21,8 @@ from app.models import (
     ProjectState,
     RecordingState,
     RecordingTrack,
+    SpeakerLabel,
+    SpeakerSource,
 )
 
 SUPPORTED_WHISPER_LANGUAGES = frozenset(
@@ -369,7 +378,10 @@ class SegmentResponse(ApiModel):
     raw_text: str
     reviewed_text: str
     words: list[WordResponse]
-    speaker_label: str | None
+    # `you`, `others` or null; `speakerSource` is `automatic` (loudness comparison of an in-app
+    # recording), `user` (set or cleared in Review) or null when no label was ever set.
+    speaker_label: SpeakerLabel | None
+    speaker_source: SpeakerSource | None
     confidence: float | None
     created_at: datetime
     updated_at: datetime
@@ -383,9 +395,28 @@ class SegmentListResponse(ApiModel):
 
 
 class SegmentUpdate(ApiModel):
-    """Validate an explicit reviewed-text save, including an intentional empty value."""
+    """Validate an explicit review save of the text, the speaker label, or both.
 
-    reviewed_text: str = Field(max_length=100_000)
+    `reviewedText` may be an intentional empty value. `speakerLabel` set to null clears the
+    label; leaving the field out keeps it. At least one of the two fields must be sent.
+    """
+
+    reviewed_text: str | None = Field(default=None, max_length=100_000)
+    speaker_label: SpeakerLabel | None = None
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> SegmentUpdate:
+        """Reject a body that names neither field, and an explicit null reviewed text."""
+        if not self.model_fields_set & {"reviewed_text", "speaker_label"}:
+            raise ValueError("Send reviewedText, speakerLabel or both.")
+        if "reviewed_text" in self.model_fields_set and self.reviewed_text is None:
+            raise ValueError("reviewedText cannot be null.")
+        return self
+
+    @property
+    def updates_speaker(self) -> bool:
+        """Return true when the request sets or clears the speaker label."""
+        return "speaker_label" in self.model_fields_set
 
 
 class SegmentSplitRequest(ApiModel):

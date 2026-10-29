@@ -88,6 +88,24 @@ class RecordingTrack(StrEnum):
     MICROPHONE = "microphone"
 
 
+class SpeakerLabel(StrEnum):
+    """Name who speaks in a transcript segment of an in-app recording (P05.5, I-03).
+
+    `you` is the person at the microphone, `others` everyone heard through the system audio.
+    A segment without a label stores NULL.
+    """
+
+    YOU = "you"
+    OTHERS = "others"
+
+
+class SpeakerSource(StrEnum):
+    """Record who set a segment's speaker label: the loudness comparison or the user in Review."""
+
+    AUTOMATIC = "automatic"
+    USER = "user"
+
+
 class OutputMode(StrEnum):
     """Describe the project type: the purpose of the recording and the package built for it.
 
@@ -227,7 +245,26 @@ class TranscriptSegment(Base):
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     reviewed_text: Mapped[str] = mapped_column(Text, nullable=False)
     raw_words: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
-    speaker: Mapped[str | None] = mapped_column(String(100))
+    # `you`, `others` or NULL. Set by the loudness comparison of an in-app recording during
+    # processing or by the user in Review; `speaker_source` says which (NULL when never set).
+    speaker: Mapped[SpeakerLabel | None] = mapped_column(
+        Enum(
+            SpeakerLabel,
+            name="speaker_label",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        )
+    )
+    speaker_source: Mapped[SpeakerSource | None] = mapped_column(
+        Enum(
+            SpeakerSource,
+            name="speaker_source",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        )
+    )
     confidence: Mapped[float | None] = mapped_column(Float)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(

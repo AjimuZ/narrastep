@@ -127,13 +127,21 @@ export interface TranscriptWord {
   probability?: number | null;
 }
 
+/** Who speaks in a segment of an in-app recording: the microphone user or the call (P05.5). */
+export type SpeakerLabel = 'you' | 'others';
+
+/** Who set a speaker label: the loudness comparison during processing, or the user in Review. */
+export type SpeakerSource = 'automatic' | 'user';
+
 export interface TranscriptSegment {
   id: string;
   projectId: string;
   segmentIndex: number;
   startSeconds: number;
   endSeconds: number;
-  speakerLabel: string | null;
+  speakerLabel: SpeakerLabel | null;
+  /** Null when no label was ever set; `user` also after the user cleared a label. */
+  speakerSource: SpeakerSource | null;
   rawText: string;
   reviewedText: string;
   confidence: number | null;
@@ -142,8 +150,10 @@ export interface TranscriptSegment {
   updatedAt: string;
 }
 
+/** A review save: the text, the speaker label (null clears it) or both; at least one field. */
 export interface UpdateSegmentRequest {
-  reviewedText: string;
+  reviewedText?: string;
+  speakerLabel?: SpeakerLabel | null;
 }
 
 export interface SplitSegmentRequest {

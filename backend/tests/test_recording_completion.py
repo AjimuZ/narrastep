@@ -22,11 +22,12 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.errors import ApiError
 from app.main import app
-from app.models import ProcessingJob, RecordingChunk, RecordingTrack
+from app.models import MediaAsset, ProcessingJob, RecordingChunk, RecordingTrack
 from app.services import recording_completion
 from app.services.recording_completion import (
     build_microphone_command,
     build_source_command,
+    build_system_audio_command,
     microphone_alignment_filter,
     plan_track,
 )
@@ -267,6 +268,12 @@ def test_source_command_copies_video_and_mixes_without_halving_levels(tmp_path: 
     assert kept[kept.index("-af") + 1] == "ALIGN"
     assert kept[-3:] == ["-f", "webm", str(output)]
 
+    system = build_system_audio_command("ffmpeg", "concatf:/s.txt", output=output)
+    assert system[system.index("-map") + 1] == "0:a:0"
+    assert system[system.index("-af") + 1] == "aresample=async=1"
+    assert system[system.index("-c:a") + 1] == "libopus"
+    assert system[-3:] == ["-f", "webm", str(output)]
+
 
 def test_missing_chunks_refuse_completion_and_keep_the_session_open(
     client: TestClient, session: Session
@@ -367,10 +374,16 @@ def test_complete_aligns_mixes_validates_and_keeps_the_microphone(
 
     source = _source_dir(project_id) / "source.webm"
     microphone = _source_dir(project_id) / "microphone.webm"
+    system = _source_dir(project_id) / "system.webm"
     assert sorted(path.name for path in _source_dir(project_id).iterdir()) == [
         "microphone.webm",
         "source.webm",
+        "system.webm",
     ]
+    stored = session.scalar(select(MediaAsset).where(MediaAsset.project_id == project_id))
+    assert stored is not None
+    assert stored.metadata_json["recording"]["microphoneTrack"] is True
+    assert stored.metadata_json["recording"]["systemTrack"] is True
     assert asset["sizeBytes"] == source.stat().st_size
     # Ends with the video although the delayed microphone runs to 3.5 s only.
     assert _duration(source) == pytest.approx(4.0, abs=0.15)
@@ -386,6 +399,11 @@ def test_complete_aligns_mixes_validates_and_keeps_the_microphone(
     kept = _audio(microphone)
     assert _tone(kept, 1000, 0.05, 0.45) < ABSENT
     assert _tone(kept, 1000, 0.7, 3.3) > PRESENT
+    # The system audio is kept alone, on the same timeline, for speaker labels (P05.5).
+    kept_system = _audio(system)
+    assert _tone(kept_system, 440, 0.05, 3.9) == pytest.approx(0.125, abs=0.025)
+    assert _tone(kept_system, 1000, 0.7, 3.3) < ABSENT
+    assert _duration(system) == pytest.approx(4.0, abs=0.15)
 
     assert _chunk_rows(session, recording_id) == 0
     assert not (DATA_ROOT / "projects" / project_id / "recording").exists()
@@ -421,6 +439,11 @@ def test_an_earlier_microphone_loses_its_head(client: TestClient) -> None:
     assert response.status_code == 200, response.text
     assert response.json()["name"].startswith("Recording ")
 
+    # Without system audio there is nothing to keep beside the microphone.
+    assert sorted(path.name for path in _source_dir(project_id).iterdir()) == [
+        "microphone.webm",
+        "source.webm",
+    ]
     mixed = _audio(_source_dir(project_id) / "source.webm")
     assert _tone(mixed, 1000, 0.0, 0.15) < ABSENT
     assert _tone(mixed, 1000, 0.3, 0.9) > PRESENT

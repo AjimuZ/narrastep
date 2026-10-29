@@ -16,7 +16,7 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | ID | Risk | Impact | Mitigation |
 | --- | --- | --- | --- |
 | K1 | System audio is unavailable when a window, not the whole screen, is shared | Call audio missing | Pre-recording check that names the missing track and the fix |
-| K2 | Speakers make the microphone record the call twice | Echo in the transcript and wrong You / Others labels | Echo cancellation; headset recommendation; segments with close loudness stay unlabelled (P05.5) |
+| K2 | Speakers make the microphone record the call twice | Echo in the transcript and wrong You / Others labels | Echo cancellation; headset recommendation; a label needs the microphone or the system audio to be at least 10 dB louder, so segments with close loudness stay unlabelled (P05.5); the user can change any label in Review. Measured with a real call in P05.6 |
 | K3 | CPU generation with E2B is too slow for long meetings | Feature unusable on long recordings | Chronological parts with progress; E4B only when hardware allows; P06.5 benchmark before release |
 | K4 | E2B output quality is too low for task briefings | Wrong or vague documents | Evidence-only prompts with citations; review screen; E4B option |
 | K5 | Docker Desktop memory limit is lower than model plus context | Worker killed during generation | Check free memory before the job; readable `GENERATION_OUT_OF_MEMORY` error |

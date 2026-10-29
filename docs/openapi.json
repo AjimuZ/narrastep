@@ -942,9 +942,8 @@
           "segmentIndex": {
             "title": "Segmentindex"
           },
-          "speakerLabel": {
-            "title": "Speakerlabel"
-          },
+          "speakerLabel": {},
+          "speakerSource": {},
           "startSeconds": {
             "title": "Startseconds"
           },
@@ -965,6 +964,7 @@
           "reviewedText",
           "words",
           "speakerLabel",
+          "speakerSource",
           "confidence",
           "createdAt",
           "updatedAt"
@@ -1000,19 +1000,51 @@
         "type": "object"
       },
       "SegmentUpdate": {
-        "description": "Validate an explicit reviewed-text save, including an intentional empty value.",
+        "description": "Validate an explicit review save of the text, the speaker label, or both.\n\n`reviewedText` may be an intentional empty value. `speakerLabel` set to null clears the\nlabel; leaving the field out keeps it. At least one of the two fields must be sent.",
         "properties": {
           "reviewedText": {
-            "maxLength": 100000,
-            "title": "Reviewedtext",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedtext"
+          },
+          "speakerLabel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpeakerLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": [
-          "reviewedText"
-        ],
         "title": "SegmentUpdate",
         "type": "object"
+      },
+      "SpeakerLabel": {
+        "description": "Name who speaks in a transcript segment of an in-app recording (P05.5, I-03).\n\n`you` is the person at the microphone, `others` everyone heard through the system audio.\nA segment without a label stores NULL.",
+        "enum": [
+          "you",
+          "others"
+        ],
+        "title": "SpeakerLabel",
+        "type": "string"
+      },
+      "SpeakerSource": {
+        "description": "Record who set a segment's speaker label: the loudness comparison or the user in Review.",
+        "enum": [
+          "automatic",
+          "user"
+        ],
+        "title": "SpeakerSource",
+        "type": "string"
       },
       "WordResponse": {
         "description": "Expose immutable word-level evidence used by split operations.",
@@ -2414,7 +2446,7 @@
         "summary": "Get Segment"
       },
       "patch": {
-        "description": "Save reviewed text explicitly while never modifying raw transcript evidence.",
+        "description": "Save reviewed text and/or the speaker label while never modifying raw transcript evidence.\n\nEither field can be sent alone; `speakerLabel: null` clears the label. Raises 404 for an\nunknown segment, 409 for an archived segment or a busy project, and 422 for an empty body or\na label other than `you` / `others`.",
         "operationId": "update_segment_api_v1_segments__segment_id__patch",
         "parameters": [
           {

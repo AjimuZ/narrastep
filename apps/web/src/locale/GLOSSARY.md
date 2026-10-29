@@ -20,6 +20,9 @@ terms in every new message and in both catalogs (`messages.en.json`, `messages.i
 | A screen capture made in the recorder   | recording        | registrazione            |
 | Uploaded piece of a recording           | part             | parte                    |
 | Computer sound shared with the screen   | system audio     | audio di sistema         |
+| Who speaks in a segment                 | speaker          | chi parla                |
+| The person at the microphone            | You              | Tu                       |
+| The people heard in the system audio    | Others           | Altri                    |
 
 Other rules:
 

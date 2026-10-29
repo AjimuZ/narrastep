@@ -2,7 +2,7 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { EMPTY, Observable, Subject, of } from 'rxjs';
+import { EMPTY, Observable, Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -40,6 +40,7 @@ const SEGMENT: TranscriptSegment = {
   startSeconds: 1,
   endSeconds: 5,
   speakerLabel: null,
+  speakerSource: null,
   rawText: 'Select Search.',
   reviewedText: 'Select Search.',
   confidence: 0.91,
@@ -615,5 +616,123 @@ describe('ReviewComponent', () => {
     expect(root.querySelector('.unsaved[role="status"]')?.textContent).toContain('1 unsaved');
     expect(root.querySelector('.segment-rail__item.dirty')?.textContent).toContain('Unsaved');
     expect(root.querySelector('article.segment.dirty')?.textContent).toContain('Unsaved edit');
+  });
+
+  /** Returns the speaker select of the shown segment. */
+  function speakerSelect(fixture: { nativeElement: HTMLElement }): HTMLSelectElement {
+    return fixture.nativeElement.querySelector('.speaker-field select') as HTMLSelectElement;
+  }
+
+  /** Chooses an option in a native select the way a user does. */
+  function choose(select: HTMLSelectElement, value: string): void {
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+  }
+
+  it('shows an automatic label in the rail and the select, and saves a changed speaker', async () => {
+    const labelled: TranscriptSegment = {
+      ...SEGMENT,
+      speakerLabel: 'you',
+      speakerSource: 'automatic',
+    };
+    const updateSegment = vi.fn(() =>
+      of({ ...labelled, speakerLabel: 'others', speakerSource: 'user' } as TranscriptSegment),
+    );
+    const { fixture } = await setup({ segments: [labelled], updateSegment });
+    const root = fixture.nativeElement as HTMLElement;
+    const select = speakerSelect(fixture);
+
+    expect(select.value).toBe('you');
+    expect([...select.options].map((option) => option.textContent?.trim())).toEqual([
+      'No label',
+      'You',
+      'Others',
+    ]);
+    expect(root.querySelector('.speaker-field')?.textContent).toContain('Speaker');
+    expect(root.querySelector('.segment-meta')?.textContent).toContain('Set from the audio levels');
+    expect(root.querySelector('.segment-select__speaker')?.textContent?.trim()).toBe('You');
+
+    fixture.componentInstance.editedTexts.set({ [SEGMENT.id]: 'Unsaved text stays.' });
+    choose(select, 'others');
+    fixture.detectChanges();
+
+    expect(updateSegment).toHaveBeenCalledTimes(1);
+    expect(updateSegment).toHaveBeenCalledWith(SEGMENT.id, { speakerLabel: 'others' });
+    const component = fixture.componentInstance;
+    expect(component.segments()[0]?.speakerLabel).toBe('others');
+    expect(component.statusMessage()).toBe('Speaker of segment 1: Others.');
+    expect(root.querySelector('.segment-select__speaker')?.textContent?.trim()).toBe('Others');
+    expect(root.querySelector('.segment-meta')?.textContent).not.toContain(
+      'Set from the audio levels',
+    );
+    // The label is saved alone: the unsaved text edit is neither sent nor lost.
+    expect(component.reviewedText(component.segments()[0]!)).toBe('Unsaved text stays.');
+    expect(component.dirtyCount()).toBe(1);
+  });
+
+  it('clears a label with No label and sends nothing when the choice does not change', async () => {
+    const labelled: TranscriptSegment = {
+      ...SEGMENT,
+      speakerLabel: 'others',
+      speakerSource: 'user',
+    };
+    const updateSegment = vi.fn(() =>
+      of({ ...labelled, speakerLabel: null, speakerSource: 'user' } as TranscriptSegment),
+    );
+    const { fixture } = await setup({ segments: [labelled], updateSegment });
+    const select = speakerSelect(fixture);
+
+    choose(select, 'others');
+    expect(updateSegment).not.toHaveBeenCalled();
+
+    choose(select, '');
+    fixture.detectChanges();
+    expect(updateSegment).toHaveBeenCalledWith(SEGMENT.id, { speakerLabel: null });
+    expect(fixture.componentInstance.statusMessage()).toBe('Speaker label removed from segment 1.');
+    expect(fixture.nativeElement.querySelector('.segment-select__speaker')).toBeNull();
+  });
+
+  it('sends the last speaker chosen while an earlier choice is saving', async () => {
+    const responses: Subject<TranscriptSegment>[] = [];
+    const updateSegment = vi.fn(() => {
+      const response = new Subject<TranscriptSegment>();
+      responses.push(response);
+      return response.asObservable();
+    });
+    const { fixture } = await setup({ updateSegment });
+    const select = speakerSelect(fixture);
+
+    choose(select, 'you');
+    choose(select, 'others');
+    choose(select, '');
+    choose(select, 'others');
+    expect(updateSegment).toHaveBeenCalledTimes(1);
+
+    responses[0]!.next({ ...SEGMENT, speakerLabel: 'you', speakerSource: 'user' });
+    responses[0]!.complete();
+    expect(updateSegment).toHaveBeenCalledTimes(2);
+    expect(updateSegment).toHaveBeenLastCalledWith(SEGMENT.id, { speakerLabel: 'others' });
+    responses[1]!.next({ ...SEGMENT, speakerLabel: 'others', speakerSource: 'user' });
+    responses[1]!.complete();
+    fixture.detectChanges();
+
+    expect(updateSegment).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.segments()[0]?.speakerLabel).toBe('others');
+    expect(fixture.componentInstance.savingSpeakerIds().size).toBe(0);
+  });
+
+  it('puts the select back and shows the error when the speaker cannot be saved', async () => {
+    const updateSegment = vi.fn(() => throwError(() => new Error('offline')));
+    const { fixture } = await setup({ updateSegment });
+    const select = speakerSelect(fixture);
+
+    choose(select, 'you');
+    fixture.detectChanges();
+
+    expect(select.value).toBe('');
+    expect(fixture.componentInstance.segments()[0]?.speakerLabel).toBeNull();
+    expect(fixture.componentInstance.errorMessage()).toBe(
+      'The speaker could not be changed. Try again.',
+    );
   });
 });

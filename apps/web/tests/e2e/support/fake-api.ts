@@ -52,15 +52,25 @@ function project(
   };
 }
 
-/** Builds a transcript segment. */
-function segment(id: string, index: number, start: number, end: number, text: string) {
+/** Builds a transcript segment, unlabelled unless a speaker label (P05.5) is given. */
+function segment(
+  id: string,
+  index: number,
+  start: number,
+  end: number,
+  text: string,
+  speaker: { speakerLabel: 'you' | 'others' | null; speakerSource: 'automatic' | 'user' | null } = {
+    speakerLabel: null,
+    speakerSource: null,
+  },
+) {
   return {
     id,
     projectId: 'project-1',
     segmentIndex: index,
     startSeconds: start,
     endSeconds: end,
-    speakerLabel: null,
+    ...speaker,
     rawText: text,
     reviewedText: text,
     confidence: 0.92,
@@ -90,8 +100,13 @@ function job(status: 'processing' | 'failed') {
 
 /** Registers the fake API on a browser context for one scenario; unknown routes answer 404. */
 export async function useFakeApi(context: BrowserContext, scenario: FakeScenario): Promise<void> {
+  // The first segment carries an automatic speaker label, so every screen check also covers the
+  // Review speaker select with its hint; the second is unlabelled.
   const segments = [
-    segment('segment-1', 0, 0, 6, 'Select Search and review the results.'),
+    segment('segment-1', 0, 0, 6, 'Select Search and review the results.', {
+      speakerLabel: 'you',
+      speakerSource: 'automatic',
+    }),
     segment('segment-2', 1, 6, 12, 'Open the customer record from the list.'),
   ];
   const shots = [
@@ -155,6 +170,22 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
       await route.fulfill({ status: 206, contentType: 'video/mp4', body: '' });
     } else if (path === '/api/v1/projects/project-1/segments') {
       await route.fulfill({ json: segments });
+    } else if (/^\/api\/v1\/segments\/[^/]+$/.test(path) && method === 'PATCH') {
+      // A review save: applies the sent text and speaker label to the stored segment.
+      const index = segments.findIndex((item) => path.endsWith(`/${item.id}`));
+      const body = route.request().postDataJSON() as {
+        reviewedText?: string;
+        speakerLabel?: 'you' | 'others' | null;
+      };
+      const current = segments[index]!;
+      segments[index] = {
+        ...current,
+        reviewedText: body.reviewedText ?? current.reviewedText,
+        ...('speakerLabel' in body
+          ? { speakerLabel: body.speakerLabel ?? null, speakerSource: 'user' as const }
+          : {}),
+      };
+      await route.fulfill({ json: segments[index] });
     } else if (/\/api\/v1\/segments\/[^/]+\/screenshots$/.test(path)) {
       await route.fulfill({ json: shots });
     } else if (/\/api\/v1\/screenshots\/[^/]+\/(content|thumbnail)$/.test(path)) {

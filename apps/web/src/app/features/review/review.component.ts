@@ -30,6 +30,7 @@ import {
 import {
   Project,
   SegmentScreenshot,
+  SpeakerLabel,
   SplitSegmentRequest,
   TranscriptSegment,
 } from '../../core/api.models';
@@ -83,6 +84,8 @@ export class ReviewComponent implements OnInit {
   readonly editedTexts = signal<Record<string, string>>({});
   readonly caretPositions = signal<Record<string, number>>({});
   readonly savingSegmentIds = signal<ReadonlySet<string>>(new Set());
+  /** Segments whose speaker label is being saved. */
+  readonly savingSpeakerIds = signal<ReadonlySet<string>>(new Set());
   readonly mergeSelection = signal<ReadonlySet<string>>(new Set());
   readonly loading = signal(true);
   readonly screenshotLoading = signal(false);
@@ -156,6 +159,8 @@ export class ReviewComponent implements OnInit {
   private readonly segmentSearchInput =
     viewChild<ElementRef<HTMLInputElement>>('segmentSearchInput');
   private screenshotRequestVersion = 0;
+  /** Last speaker chosen per segment while an earlier choice is still being saved. */
+  private readonly pendingSpeakers = new Map<string, SpeakerLabel | null>();
 
   /** Loads the reviewed evidence model and selects the first active segment on route entry. */
   ngOnInit(): void {
@@ -435,6 +440,36 @@ export class ReviewComponent implements OnInit {
           $localize`:@@review.saved:Segment ${updated.segmentIndex + 1}:INDEX: saved.`,
         );
       });
+  }
+
+  /**
+   * Saves the speaker label chosen in the select right away (empty value clears it). Text edits
+   * stay as they are, saved or not. A choice made while an earlier one is saving is sent after
+   * it, so the last choice wins. On failure the select returns to the stored label and the error
+   * is shown.
+   */
+  updateSpeaker(segment: TranscriptSegment, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const speakerLabel = parseSpeakerLabel(select.value);
+    if (this.savingSpeakerIds().has(segment.id)) {
+      this.pendingSpeakers.set(segment.id, speakerLabel);
+      return;
+    }
+    if (speakerLabel !== segment.speakerLabel) {
+      this.saveSpeaker(segment.id, speakerLabel, select);
+    }
+  }
+
+  /** Returns the interface name of a speaker label, or null for an unlabelled segment. */
+  speakerName(label: SpeakerLabel | null): string | null {
+    switch (label) {
+      case 'you':
+        return $localize`:@@review.speaker_you:You`;
+      case 'others':
+        return $localize`:@@review.speaker_others:Others`;
+      default:
+        return null;
+    }
   }
 
   /** Opens a timestamp-aware split dialog only after every transcript edit is safely persisted. */
@@ -874,6 +909,69 @@ export class ReviewComponent implements OnInit {
   }
 
   /** Updates per-segment save state without allowing callers to mutate a shared Set instance. */
+  /** Sends one speaker label, then any label chosen meanwhile; see `updateSpeaker`. */
+  private saveSpeaker(
+    segmentId: string,
+    speakerLabel: SpeakerLabel | null,
+    select: HTMLSelectElement,
+  ): void {
+    this.setSpeakerSaving(segmentId, true);
+    this.errorMessage.set(null);
+    this.api
+      .updateSegment(segmentId, { speakerLabel })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          this.setSpeakerSaving(segmentId, false);
+          const next = this.pendingSpeakers.get(segmentId);
+          this.pendingSpeakers.delete(segmentId);
+          const stored = this.segments().find((item) => item.id === segmentId);
+          if (next !== undefined && stored && next !== stored.speakerLabel) {
+            this.saveSpeaker(segmentId, next, select);
+          }
+        }),
+        catchError((error: unknown) => {
+          const stored = this.segments().find((item) => item.id === segmentId);
+          // The select is not bound two-way, so it is put back to the label that is stored. The
+          // element is reused for the next segment, so only while this segment is still shown.
+          if (this.selectedSegmentId() === segmentId) {
+            select.value = stored?.speakerLabel ?? '';
+          }
+          this.pendingSpeakers.delete(segmentId);
+          this.errorMessage.set(
+            this.errorText(
+              error,
+              $localize`:@@review.error_speaker:The speaker could not be changed. Try again.`,
+            ),
+          );
+          return EMPTY;
+        }),
+      )
+      .subscribe((updated) => {
+        this.segments.update((segments) =>
+          segments.map((item) => (item.id === updated.id ? updated : item)),
+        );
+        const name = this.speakerName(updated.speakerLabel);
+        this.statusMessage.set(
+          name
+            ? $localize`:@@review.speaker_saved:Speaker of segment ${updated.segmentIndex + 1}:INDEX:: ${name}:SPEAKER:.`
+            : $localize`:@@review.speaker_cleared:Speaker label removed from segment ${updated.segmentIndex + 1}:INDEX:.`,
+        );
+      });
+  }
+
+  private setSpeakerSaving(segmentId: string, saving: boolean): void {
+    this.savingSpeakerIds.update((segmentIds) => {
+      const next = new Set(segmentIds);
+      if (saving) {
+        next.add(segmentId);
+      } else {
+        next.delete(segmentId);
+      }
+      return next;
+    });
+  }
+
   private setSegmentSaving(segmentId: string, saving: boolean): void {
     this.savingSegmentIds.update((segmentIds) => {
       const next = new Set(segmentIds);
@@ -899,6 +997,11 @@ interface SegmentScreenshotLoadResult {
 }
 
 /** Removes one editor entry without mutating the original signal value. */
+/** Returns the speaker label a select value names; any other value (the empty option) is null. */
+function parseSpeakerLabel(value: string): SpeakerLabel | null {
+  return value === 'you' || value === 'others' ? value : null;
+}
+
 function omitKey(values: Record<string, string>, key: string): Record<string, string> {
   return Object.fromEntries(Object.entries(values).filter(([entryKey]) => entryKey !== key));
 }

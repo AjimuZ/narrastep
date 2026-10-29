@@ -24,6 +24,22 @@ faster-whisper uses the locally stored `small` model with CPU/int8 defaults, aut
 
 Progress advances as generated segment end times move through the source duration. Confidence is `exp(avg_logprob)` clamped to `[0, 1]` and is explicitly a heuristic rather than a calibrated probability.
 
+#### Speaker labels (in-app recordings, P05.5)
+
+Right after transcription, a project whose video was recorded in Narrastep with both a microphone
+and system audio gets a You / Others label per segment (`backend/app/services/speaker_labels.py`).
+The worker decodes the kept `source/microphone.webm` and `source/system.webm` to 8 kHz mono PCM
+under `.processing/{jobId}/speakers/`, keeps the mean square level per 50 ms frame, removes the
+WAV files and compares the two RMS levels over each segment's time range: **You** when the
+microphone is at least 10 dB louder, **Others** when the system audio is at least 10 dB louder,
+no label when the levels are closer or the louder one is below −50 dBFS. Labels are stored with
+`speakerSource: automatic`. Uploaded videos and recordings with one audio source are skipped. A
+track that cannot be decoded does not fail processing: every segment stays unlabelled and the job
+metrics carry `speakerLabelFailed: 1`; otherwise they carry the counts `speakerLabelYouCount`,
+`speakerLabelOthersCount` and `speakerLabelUnlabelledCount` and the `speaker_labels` stage time.
+The step runs inside the transcription progress range and is checked for cancellation after it.
+Details and measurements: [Recording](RECORDING.md#speaker-labels).
+
 ### 4. Legacy candidate extraction and quality
 
 Candidate timestamps are the union of:
@@ -158,6 +174,10 @@ The project type also selects the wording of three package files
 | `04-chatgpt-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
 | `04-chatgpt-batches/batch-NN-of-NN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
 
+Labelled segments (P05.5) carry their speaker into the package: `**Speaker:** You` in
+`reviewed-transcript.md`, a `You:` or `Others:` prefix in `subtitles.srt`, and a `Speaker:` line
+in `llm-input.md` and `batch-input.md`, which also explain the labels once when any step has one.
+
 The sections are those of the "Output per project type" table in
 [Local generation](LOCAL_GENERATION.md). `01-ai-input/llm-input.md` and the screenshots keep their
 content; P03.2 moved them into the numbered archive layout and raised the manifest schema to
@@ -214,7 +234,8 @@ failure.
 
 - Optional local generation runs after review as a separate job
   ([Local generation](LOCAL_GENERATION.md)).
-- Persisted OCR indexing, speaker labelling, sensitive-data masking, screenshot annotation and
+- Persisted OCR indexing, speaker labelling of uploaded videos (diarization), sensitive-data
+  masking, screenshot annotation and
   GPU-specific tuning are candidates in the [roadmap](ROADMAP.md).
 - PaddleOCR, CLIP/SigLIP and TransNetV2 stay deferred.
 

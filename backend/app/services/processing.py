@@ -21,6 +21,8 @@ from app.models import (
     Screenshot,
     SegmentLineage,
     SegmentScreenshotAssociation,
+    SpeakerLabel,
+    SpeakerSource,
     TranscriptSegment,
     canonical_output_mode,
     utc_now,
@@ -47,6 +49,7 @@ from app.services.progress import (
     publish_job_event,
     update_job_progress,
 )
+from app.services.speaker_labels import label_segments, speaker_tracks_for
 from app.services.workspaces import create_project_workspace, ensure_within_root
 
 logger = logging.getLogger(__name__)
@@ -141,6 +144,10 @@ def perform_processing(
             write_raw_transcript(transcription, raw_transcript_path)
             metrics.set("transcriptSegmentCount", len(transcription.segments))
             metrics.finish_stage("transcription", logger)
+            speakers = _speaker_labels(
+                project, transcription, processing_root, processing_settings, metrics
+            )
+            _raise_if_cancelled(session, job.id)
             update_job_progress(
                 session,
                 job,
@@ -239,6 +246,7 @@ def perform_processing(
                 transcription,
                 candidates,
                 processing_settings,
+                speakers,
             )
             metrics.finish_stage("review_persistence", logger)
             metrics.set("screenshotRowCount", len(candidates))
@@ -848,6 +856,47 @@ def _record_export_metrics(
     session.flush()
 
 
+def _speaker_labels(
+    project: Project,
+    transcription: TranscriptionResult,
+    processing_root: Path,
+    settings: Settings,
+    metrics: MetricsCollector,
+) -> list[SpeakerLabel | None] | None:
+    """Return one You / Others label (or None) per transcribed segment of an in-app recording.
+
+    Returns None without measuring when the project's video has no kept microphone and system
+    audio tracks (uploads, recordings with one audio source, recordings saved before P05.5).
+    Labels are an aid for review, so a track that cannot be decoded or measured does not fail
+    processing: the error code is logged, `speakerLabelFailed` is set in the metrics and every
+    segment stays unlabelled. Counts per outcome go into the processing metrics.
+    """
+    if project.media_asset is None:
+        return None
+    tracks = speaker_tracks_for(project.media_asset, settings.data_root)
+    if tracks is None:
+        return None
+    metrics.start_stage("speaker_labels")
+    try:
+        labels = label_segments(
+            tracks,
+            [(segment.start_seconds, segment.end_seconds) for segment in transcription.segments],
+            processing_root / "speakers",
+            config=settings,
+        )
+    except MediaServiceError as error:
+        # Only the code is logged: FFmpeg diagnostics may contain local paths.
+        logger.warning("Speaker labels skipped for project %s (%s).", project.id, error.code)
+        metrics.set("speakerLabelFailed", 1)
+        metrics.finish_stage("speaker_labels", logger)
+        return None
+    metrics.set("speakerLabelYouCount", labels.count(SpeakerLabel.YOU))
+    metrics.set("speakerLabelOthersCount", labels.count(SpeakerLabel.OTHERS))
+    metrics.set("speakerLabelUnlabelledCount", labels.count(None))
+    metrics.finish_stage("speaker_labels", logger)
+    return labels
+
+
 def _replace_review_evidence(
     session: Session,
     project_id: str,
@@ -855,8 +904,13 @@ def _replace_review_evidence(
     transcription: TranscriptionResult,
     candidates: list[PersistedFrameCandidate],
     settings: Settings,
+    speakers: list[SpeakerLabel | None] | None = None,
 ) -> None:
-    """Replace derived rows and files while preserving the validated source video."""
+    """Replace derived rows and files while preserving the validated source video.
+
+    `speakers`, when given, holds one automatic label (or None) per transcribed segment in the
+    same order; without it every segment is stored unlabelled.
+    """
     session.execute(
         delete(SegmentLineage).where(
             SegmentLineage.child_segment_id.in_(
@@ -878,7 +932,10 @@ def _replace_review_evidence(
     screenshot_root.mkdir(parents=True, exist_ok=True)
 
     domain_segments: list[TranscriptSegment] = []
-    for source in transcription.segments:
+    if speakers is not None and len(speakers) != len(transcription.segments):
+        raise ValueError("Speaker labels must match the transcribed segments one to one.")
+    for index, source in enumerate(transcription.segments):
+        speaker = speakers[index] if speakers is not None else None
         segment = TranscriptSegment(
             project_id=project_id,
             sequence=source.source_index,
@@ -888,7 +945,8 @@ def _replace_review_evidence(
             reviewed_text=source.text,
             raw_words=[word.to_dict() for word in source.words],
             confidence=source.confidence,
-            speaker=None,
+            speaker=speaker,
+            speaker_source=SpeakerSource.AUTOMATIC if speaker is not None else None,
         )
         session.add(segment)
         domain_segments.append(segment)

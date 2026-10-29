@@ -2,8 +2,8 @@
 
 Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording session API with
 per-track chunk storage, resume and discard (P05.1), the completion into a validated source video
-with the kept microphone track (P05.2) and the recorder screen (P05.3) are implemented; speaker
-labels (P05.5) and the manual test with a real call (P05.6) are planned. The desktop window's own
+with the kept microphone track (P05.2), the recorder screen (P05.3) and the You / Others speaker
+labels (P05.5) are implemented; the manual test with a real call (P05.6) is planned. The desktop window's own
 source picker and Windows loopback audio arrive with the desktop shell (P07); until then the
 recorder uses the browser picker.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
@@ -62,7 +62,8 @@ Recording only captures and saves. It never starts processing.
 6. **Completion (server).** The API checks that each track's chunk sequence has no gaps, joins the
    chunks, and with FFmpeg aligns the tracks by their offsets and mixes the microphone into the
    screen audio. The result is the project source video, validated with FFprobe. The microphone
-   track is kept next to it as `source/microphone.webm` for speaker labels.
+   track is kept next to it as `source/microphone.webm` and, with system audio, the system audio
+   alone as `source/system.webm`, both for speaker labels.
 7. **Later.** When the user selects **Process** on the Not processed project, the Process dialog
    asks for the project type ([ADR 0009](decisions/0009-project-types.md)) and the API starts the
    normal processing flow with it (P05.4). Without a type the API refuses to process the project
@@ -91,18 +92,47 @@ The existing upload size limit and free-disk reserve also apply to recordings.
 
 ## Speaker labels
 
-Recordings made in Narrastep label each transcript segment **You** (*Tu*) or **Others**
-(*Altri*) without a diarization model:
+Implemented in P05.5 (`backend/app/services/speaker_labels.py`). Recordings made in Narrastep
+label each transcript segment **You** (*Tu*) or **Others** (*Altri*) without a diarization model:
 
-- During processing, the worker measures the loudness (RMS) of the microphone track and of the
-  system audio over each segment's time range.
-- A segment is **You** when the microphone is clearly louder, **Others** when the system audio is
-  clearly louder, and has no label when both are close (people talking over each other, or echo
-  from speakers). The thresholds are documented and tested in P05.
-- The user can change or clear a label in Review. The raw evidence is not changed.
-- Labels appear in the transcript, in the export and in the generation input, so meeting action
-  items can say "You" when the user took them.
-- Uploaded videos (for example from OBS) have one mixed track and get no labels.
+- **Inputs.** Saving a recording keeps two aligned tracks next to the source video:
+  `source/microphone.webm` (P05.2) and, when the recording has both a microphone and system audio,
+  `source/system.webm` with the system audio alone (P05.5). Both are Opus at 96 kbit/s on the
+  source video's timeline, so time `t` is the same moment in both. The asset's
+  `metadataJson.recording.systemTrack` says whether the system track was kept.
+- **Measurement.** After transcription the worker decodes both tracks with FFmpeg to mono 16-bit
+  PCM at 8 kHz in the job's `.processing/{jobId}/speakers/` folder, keeps the mean square level of
+  every 50 ms frame (72,000 numbers per track for an hour; the WAV files are removed right after)
+  and computes each segment's RMS level in dBFS (a full-scale square wave is 0 dBFS, a full-scale
+  sine about −3 dBFS) over every frame that overlaps the segment. Time past the end of a track
+  counts as silence; digital silence counts as −100 dBFS.
+- **Decision.** A segment is **You** when the microphone is at least **10 dB** louder than the
+  system audio (about three times the amplitude), **Others** when the system audio is at least
+  10 dB louder, and has **no label** when the levels are closer (people talking over each other,
+  or the call heard again through speakers) or when the louder track is below **−50 dBFS** (no
+  audible speech on either track). The values are constants in the module and are tested.
+- **When labels are computed.** Only when both kept tracks exist: uploaded videos (for example
+  from OBS) have one mixed track, a recording without system audio cannot tell the user from the
+  call heard through speakers, and a recording without a microphone has no "You". Recordings
+  saved before P05.5 kept no system track, so they get no automatic labels; the user can still
+  set labels in Review. If a track cannot be decoded, processing continues without labels and the
+  job metrics report `speakerLabelFailed: 1`; otherwise they report `speakerLabelYouCount`,
+  `speakerLabelOthersCount` and `speakerLabelUnlabelledCount`.
+- **Review.** The user can change or clear a label in Review (a **Speaker** select on the segment,
+  saved immediately); the raw transcript is not changed. An automatic label shows "Set from the
+  audio levels"; a changed or cleared label is stored with `speakerSource: user`. Split parts keep
+  the label; a merge keeps it only when every part has the same one.
+- **Export.** `reviewed-transcript.md` shows `**Speaker:** You` above a labelled step,
+  `subtitles.srt` starts the text with `You:` or `Others:`, and `llm-input.md` and every
+  `batch-input.md` add a `Speaker:` line to labelled steps with one note explaining that "You" is
+  the person who made the recording and that an unlabelled step must not be attributed by
+  guessing. `manifest.json` keeps the stored values `you` and `others`. The local generation
+  input (P06) will use the same labels.
+
+Measured on synthetic Opus tracks (2026-10-29, FFmpeg 7.1): a 1/8-amplitude tone measures
+−21.1 dBFS, the same tone 20 dB lower on the microphone (echo from speakers) −41.1 dBFS and is
+labelled Others, a quiet microphone at −43 dBFS over a silent system track is You, and noise at
+−63 dBFS is unlabelled. A real call is measured with P05.6.
 
 ## Recorder screen (P05.3)
 
@@ -247,8 +277,11 @@ All endpoints are in [openapi.json](openapi.json); request and response fields a
    other video (for example H.264 from `video/webm;codecs=h264`) into `source/source.mkv`.
 7. **Keep the microphone.** The aligned microphone alone is written to `source/microphone.webm`
    (Opus, 96 kbit/s). Time `t` in it is time `t` in the source video, which speaker labels (P05.5)
-   rely on. The asset's `metadataJson.recording` records the chunk counts, the applied shift,
-   whether system audio existed and whether the microphone was kept.
+   rely on. With both audio sources, the system audio alone is also written to
+   `source/system.webm` (Opus, 96 kbit/s, the same `aresample=async=1` as the mix and the screen
+   track's start), for the same reason. The asset's `metadataJson.recording` records the chunk
+   counts, the applied shift, whether system audio existed, whether the microphone was kept and
+   whether the system track was kept (`systemTrack`).
 8. **Validate and save.** The source video passes the same FFprobe validation as an upload
    (container, video and audio stream, duration, size). Then one transaction marks the session
    `completed` as its first write (which waits for and then blocks chunk uploads), refuses with
@@ -283,6 +316,14 @@ recorder can upload what is missing and save again, or discard.
   offsets and measure tones in the result: a later and an earlier microphone, mix levels, the kept
   microphone, system audio only, no audio, `stopAtGap`, H.264 into Matroska, a chunk stored during
   the conversion and FFprobe failure. They are skipped when FFmpeg or FFprobe is not on `PATH`.
-- Speaker-label tests on synthetic audio: microphone only, system only, both at once, silence.
+- Speaker-label tests (`backend/tests/test_speaker_labels.py`, P05.5): thresholds, frame
+  measurement, and Opus tracks generated with FFmpeg at test time with the microphone only, the
+  system audio only, both at once, echo from speakers, a quiet microphone, noise and silence; a
+  recording uploaded, saved and processed through the API (mock transcription) is labelled You,
+  Others and unlabelled, and the labels are changed and cleared through `PATCH /segments`; a track
+  that cannot be measured leaves processing completed without labels; split and merge rules. The
+  media tests are skipped when FFmpeg or FFprobe is not on `PATH`. `apps/web/tests/e2e/speaker-labels.spec.ts`
+  changes and clears a label with the keyboard in Review, reports a refused save, and checks
+  contrast and 320 px and 200% zoom in English and Italian.
 - Manual test on the owner's computer with a real Teams call; the result is recorded in
   [Status](STATUS.md) with the date and browser version.

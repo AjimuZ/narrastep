@@ -65,6 +65,16 @@ All notable changes to Narrastep are documented in this file.
   Italian). `POST /api/v1/projects` without `mode` creates a project without a type, where it used
   to default to `tutorial`; `POST /api/v1/projects/{id}/process` accepts an optional
   `{mode, sourceLanguage}` body. English and Italian.
+- Speaker labels for recordings made in Narrastep: processing labels each transcript segment
+  **You** when the microphone is clearly louder (at least 10 dB) and **Others** when the computer
+  sound is clearly louder, and leaves it unlabelled when both are close or nothing is audible.
+  Saving a recording with both sound sources now also keeps the computer sound alone as
+  `source/system.webm`. In Review a **Speaker** select (No label, You, Others) changes or clears
+  the label at once, without touching unsaved text, and the Segments list shows it. The labels
+  appear in the package's reviewed transcript, subtitles and AI input. `PATCH
+  /api/v1/segments/{id}` accepts `speakerLabel` (`you`, `others` or null) alone or with
+  `reviewedText`, and segment responses add `speakerSource` (`automatic` or `user`). Uploaded
+  videos and recordings saved before this change get no automatic labels. English and Italian.
 - New settings `NARRASTEP_RECORDING_CHUNK_SECONDS` (5), `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND`
   (2500000) and `NARRASTEP_RECORDING_MAX_FRAME_RATE` (15), sent to the recorder in the new
   `capture` field of recording session responses.

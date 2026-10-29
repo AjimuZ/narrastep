@@ -176,6 +176,7 @@ function segment(id: string, index: number, start: number, end: number, text: st
     startSeconds: start,
     endSeconds: end,
     speakerLabel: null,
+    speakerSource: null,
     rawText: text,
     reviewedText: text,
     confidence: 0.92,

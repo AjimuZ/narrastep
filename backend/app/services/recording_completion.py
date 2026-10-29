@@ -48,8 +48,11 @@ CONCAT_PROTOCOLS = "concatf,file"
 # `video/webm;codecs=h264`); its video is then copied into Matroska instead of WebM.
 WEBM_VIDEO_CODECS = frozenset({"vp8", "vp9", "av1"})
 MIXED_AUDIO_BITRATE = "128k"
-MICROPHONE_AUDIO_BITRATE = "96k"
+# The kept microphone and system audio tracks use the same bitrate; speaker labels (P05.5)
+# compare their loudness, and both stay on the source video's timeline.
+TRACK_AUDIO_BITRATE = "96k"
 MICROPHONE_FILENAME = "microphone.webm"
+SYSTEM_AUDIO_FILENAME = "system.webm"
 # Every temporary file of a completion carries this prefix inside `source/`, which the startup
 # reconciliation already removes for interrupted uploads (`.upload-*.partial*`).
 PARTIAL_PREFIX = ".upload-"
@@ -82,10 +85,11 @@ class TrackPlan:
 
 @dataclass(frozen=True, slots=True)
 class CompletionResult:
-    """Describe a saved recording: its validated source video and whether a microphone was kept."""
+    """Describe a saved recording: its validated source video and which audio tracks were kept."""
 
     asset: MediaAsset
     microphone_kept: bool
+    system_audio_kept: bool = False
 
 
 def plan_track(
@@ -214,7 +218,39 @@ def build_microphone_command(
         "-c:a",
         "libopus",
         "-b:a",
-        MICROPHONE_AUDIO_BITRATE,
+        TRACK_AUDIO_BITRATE,
+        "-f",
+        "webm",
+        str(output),
+    ]
+
+
+def build_system_audio_command(ffmpeg: str, screen_input: str, *, output: Path) -> list[str]:
+    """Return the argument array that writes the screen track's system audio alone as WebM Opus.
+
+    It uses the same `aresample=async=1` as the mix and starts at the screen track's first
+    timestamp, like the video, so time `t` in it is time `t` in the source video. Speaker labels
+    (P05.5) compare its loudness with the kept microphone. Requires system audio in the screen
+    track.
+    """
+    return [
+        ffmpeg,
+        "-nostdin",
+        "-v",
+        "error",
+        "-y",
+        "-protocol_whitelist",
+        CONCAT_PROTOCOLS,
+        "-i",
+        screen_input,
+        "-map",
+        "0:a:0",
+        "-af",
+        "aresample=async=1",
+        "-c:a",
+        "libopus",
+        "-b:a",
+        TRACK_AUDIO_BITRATE,
         "-f",
         "webm",
         str(output),
@@ -238,11 +274,12 @@ def complete_recording(
     project without a video. Steps: plan both tracks from SQLite (a screen chunk 0 is required),
     check free disk space for a copy of the stored bytes, join each track's chunks with FFmpeg's
     `concatf` protocol, probe them, write `source/source.webm` (`.mkv` for non-WebM video) with
-    the aligned mix and `source/microphone.webm` with the aligned microphone, validate the source
-    video with the upload rules, then commit in one transaction: the session becomes `completed`,
-    its chunk rows are deleted, the `MediaAsset` is created and the project becomes `uploaded`
-    (renamed when `name` is sent). No processing job is created. After the commit the chunk files
-    are removed.
+    the aligned mix, `source/microphone.webm` with the aligned microphone and, when both audio
+    sources exist, `source/system.webm` with the system audio alone (for speaker labels), validate
+    the source video with the upload rules, then commit in one transaction: the session becomes
+    `completed`, its chunk rows are deleted, the `MediaAsset` is created and the project becomes
+    `uploaded` (renamed when `name` is sent). No processing job is created. After the commit
+    the chunk files are removed.
 
     Raises `RECORDING_INCOMPLETE` (409) for missing chunks or chunks that arrived meanwhile,
     `INVALID_PROJECT_STATE` / `SOURCE_VIDEO_ALREADY_EXISTS` (409) for a saved session or a
@@ -325,12 +362,25 @@ def complete_recording(
                     output=microphone_partial,
                 ),
             )
+        # The system audio alone is only needed to tell the microphone apart from the call, so it
+        # is kept only when both sources exist.
+        system_partial: Path | None = None
+        if microphone_input is not None and screen_has_audio:
+            system_partial = source_dir / f"{PARTIAL_PREFIX}{token}.partial-system.webm"
+            temporary.append(system_partial)
+            _run_ffmpeg(
+                settings,
+                build_system_audio_command(
+                    settings.ffmpeg_path, _concat_url(screen_input), output=system_partial
+                ),
+            )
         metadata = _validate_source(settings, source_partial)
 
         project_name = name or project.name
         stored_filename = f"source{extension}"
         destination = source_dir / stored_filename
         microphone_destination = source_dir / MICROPHONE_FILENAME
+        system_destination = source_dir / SYSTEM_AUDIO_FILENAME
         _lock_for_completion(session, recording.id)
         if _chunk_count(session, recording.id) != stored_chunks:
             raise ApiError(
@@ -361,6 +411,8 @@ def complete_recording(
                     ),
                     "systemAudio": screen_has_audio,
                     "microphoneTrack": microphone_partial is not None,
+                    # True when `source/system.webm` holds the system audio alone (P05.5).
+                    "systemTrack": system_partial is not None,
                 },
             },
         )
@@ -373,6 +425,9 @@ def complete_recording(
         if microphone_partial is not None:
             os.replace(microphone_partial, microphone_destination)
             promoted.append(microphone_destination)
+        if system_partial is not None:
+            os.replace(system_partial, system_destination)
+            promoted.append(system_destination)
         session.commit()
     except Exception:
         session.rollback()
@@ -384,7 +439,11 @@ def complete_recording(
             path.unlink(missing_ok=True)
     _remove_chunk_storage(settings.data_root, recording.project_id)
     session.refresh(asset)
-    return CompletionResult(asset=asset, microphone_kept=microphone_partial is not None)
+    return CompletionResult(
+        asset=asset,
+        microphone_kept=microphone_partial is not None,
+        system_audio_kept=system_partial is not None,
+    )
 
 
 def _plan_tracks(

@@ -32,6 +32,16 @@ from app.services.screenshot_materialization import decode_exact_frame, write_pn
 # `chatgpt-batches`, `metadata`, manifest at the root, no root folder) are never rewritten; every
 # new export is 0.3.0 (ADR 0013). Manifest `paths` are relative to the archive root folder.
 MANIFEST_SCHEMA_VERSION = "0.3.0"
+# English names of the speaker labels of in-app recordings (P05.5) in the transcript files and
+# the AI input; the manifest keeps the stored values `you` and `others`.
+SPEAKER_NAMES = {"you": "You", "others": "Others"}
+# Explains the labels to the reader of the AI input, so "You" is not read as the reader itself
+# and an unlabelled step is not attributed by guessing.
+SPEAKER_NOTE = (
+    'Speaker labels: "You" is the person who made the recording (their microphone); "Others" '
+    "are the people heard through the computer audio, such as the other participants of a call. "
+    "A step without a Speaker line has no label: do not guess who spoke."
+)
 
 # Numbered folders of the archive, in reading order (docs/DATA_MODEL.md, "Export layout").
 AI_INPUT_DIR = "01-ai-input"
@@ -54,6 +64,7 @@ class ExportSegment:
     end_seconds: float
     raw_text: str
     reviewed_text: str
+    # `you`, `others` or None (P05.5).
     speaker: str | None
     confidence: float | None
     screenshot_id: str | None = None
@@ -587,6 +598,7 @@ def _build_chatgpt_batch_input(
         f"Requested document mode: {request.output_mode}",
         "",
         *build_batch_task(request.output_mode, batch_index, batch_count),
+        *_speaker_note([item.segment for item in batch.rendered_segments]),
     ]
     for rendered_segment in batch.rendered_segments:
         segment = rendered_segment.segment
@@ -599,6 +611,7 @@ def _build_chatgpt_batch_input(
             [
                 f"## Evidence step {segment.sequence + 1}",
                 f"Time: {segment.start_seconds:.3f}s–{segment.end_seconds:.3f}s",
+                *_speaker_line(segment),
                 f"Transcript: {segment.reviewed_text}",
                 f"Screenshot: {screenshot_name or 'none included'}",
                 "",
@@ -819,7 +832,11 @@ def _build_reviewed_markdown(request: ExportRequest, rendered: list[RenderedExpo
         screenshot_path = (
             rendered_segment.screenshot.relative_path if rendered_segment.screenshot else None
         )
-        lines.extend([f"## Step {segment.sequence + 1}", "", segment.reviewed_text, ""])
+        lines.extend([f"## Step {segment.sequence + 1}", ""])
+        speaker = speaker_name(segment.speaker)
+        if speaker:
+            lines.extend([f"**Speaker:** {speaker}", ""])
+        lines.extend([segment.reviewed_text, ""])
         if screenshot_path:
             lines.extend([f"![Step {segment.sequence + 1}](../{screenshot_path})", ""])
         else:
@@ -828,13 +845,18 @@ def _build_reviewed_markdown(request: ExportRequest, rendered: list[RenderedExpo
 
 
 def _build_srt(rendered: list[RenderedExportSegment]) -> str:
-    """Render reviewed segment text as a standards-compatible SRT transcript."""
+    """Render reviewed segment text as a standards-compatible SRT transcript.
+
+    A labelled segment starts with its speaker name, for example `You: …`.
+    """
     entries = []
     for index, rendered_segment in enumerate(rendered, start=1):
         segment = rendered_segment.segment
+        speaker = speaker_name(segment.speaker)
+        text = f"{speaker}: {segment.reviewed_text}" if speaker else segment.reviewed_text
         entries.append(
             f"{index}\n{_srt_time(segment.start_seconds)} --> {_srt_time(segment.end_seconds)}\n"
-            f"{segment.reviewed_text}\n"
+            f"{text}\n"
         )
     return "\n".join(entries)
 
@@ -857,6 +879,7 @@ def _build_llm_input(request: ExportRequest, rendered: list[RenderedExportSegmen
         "",
         f"Requested document mode: {request.output_mode}",
         "",
+        *_speaker_note([item.segment for item in rendered]),
     ]
     for rendered_segment in rendered:
         segment = rendered_segment.segment
@@ -867,12 +890,31 @@ def _build_llm_input(request: ExportRequest, rendered: list[RenderedExportSegmen
             [
                 f"## Evidence step {segment.sequence + 1}",
                 f"Time: {segment.start_seconds:.3f}s–{segment.end_seconds:.3f}s",
+                *_speaker_line(segment),
                 f"Transcript: {segment.reviewed_text}",
                 f"Screenshot: {f'../{screenshot_path}' if screenshot_path else 'none included'}",
                 "",
             ]
         )
     return "\n".join(lines).rstrip() + "\n"
+
+
+def speaker_name(speaker: str | None) -> str | None:
+    """Return the English name of a stored speaker label, or None for no or an unknown label."""
+    return SPEAKER_NAMES.get(speaker) if speaker else None
+
+
+def _speaker_line(segment: ExportSegment) -> list[str]:
+    """Return the `Speaker: …` line of an AI-input step, or nothing for an unlabelled step."""
+    speaker = speaker_name(segment.speaker)
+    return [f"Speaker: {speaker}"] if speaker else []
+
+
+def _speaker_note(segments: list[ExportSegment]) -> list[str]:
+    """Return the speaker-label explanation and a blank line when any step is labelled."""
+    if any(speaker_name(segment.speaker) for segment in segments):
+        return [SPEAKER_NOTE, ""]
+    return []
 
 
 def _write_json(path: Path, value: Any) -> None:

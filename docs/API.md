@@ -36,7 +36,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | POST | `/api/v1/jobs/{jobId}/cancel` | Request cooperative cancellation | 202 |
 | GET | `/api/v1/projects/{projectId}/segments` | List active reviewed segments in order | 200 |
 | GET | `/api/v1/segments/{segmentId}` | Read one active segment | 200 |
-| PATCH | `/api/v1/segments/{segmentId}` | Update `reviewedText` only | 200 |
+| PATCH | `/api/v1/segments/{segmentId}` | Update `reviewedText`, `speakerLabel` or both | 200 |
 | POST | `/api/v1/segments/{segmentId}/split` | Derive two active segments | 200 |
 | POST | `/api/v1/segments/merge` | Merge ordered contiguous active segments | 200 |
 | GET | `/api/v1/projects/{projectId}/screenshots` | List retained project candidates | 200 |
@@ -60,6 +60,26 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 ## Important requests
 
 Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general`, or absent: a project has no type (`mode: null`) until the user chooses one, at the latest when processing starts (P05.4). Projects made by the recorder have none; the new-project form still sends one. `PATCH` can set or change the type but not clear it. The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code.
+
+A segment save (`PATCH /segments/{segmentId}`) accepts `reviewedText`, `speakerLabel` or both;
+a body with neither answers `422 VALIDATION_ERROR`:
+
+```json
+{
+  "reviewedText": "Open the contract page.",
+  "speakerLabel": "you"
+}
+```
+
+`speakerLabel` is `you`, `others` or `null` (clears the label); leaving it out keeps the label,
+and any other value answers `422 VALIDATION_ERROR`. A sent label is stored with
+`speakerSource: user`. Raw text, words and timing never change, and a `completed` project returns
+to `review`. Segment responses carry `speakerLabel` (`you`, `others` or null) and `speakerSource`:
+`automatic` when processing set it from the loudness of an in-app recording's microphone and
+system audio, `user` when it was set or cleared in Review, and null when no label was ever set
+(P05.5, [Recording](RECORDING.md#speaker-labels)). A split copies the label and its source to both
+parts; a merge keeps a label only when every part has the same one, with source `user` when the
+user set any part, and is unlabelled otherwise.
 
 Split accepts:
 

@@ -65,6 +65,10 @@ def test_initial_revision_matches_metadata_and_round_trips(
         assert {item["name"] for item in schema.get_check_constraints("recording_chunks")} == {
             "recording_track"
         }
+        assert {item["name"] for item in schema.get_check_constraints("transcript_segments")} == {
+            "speaker_label",
+            "speaker_source",
+        }
         assert [
             item["column_names"] for item in schema.get_unique_constraints("recording_chunks")
         ] == [["recording_id", "track", "sequence"]]
@@ -419,6 +423,97 @@ def test_optional_project_type_revision_keeps_types_and_allows_none(
             modes = dict(connection.execute(text("SELECT id, output_mode FROM projects")).all())
         engine.dispose()
         assert modes == {"meeting-project": "meeting", "no-type": "general"}
+    finally:
+        get_settings.cache_clear()
+
+
+def test_speaker_label_revision_constrains_labels_and_keeps_child_rows(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Constrain `speaker` to `you` / `others`, add `speaker_source`, and downgrade cleanly.
+
+    An unexpected stored speaker is cleared rather than blocking the upgrade, associations and
+    lineage survive the table rebuild, and the downgrade keeps stored labels as plain text.
+    """
+    data_root = tmp_path / "migration-speaker-labels"
+    database_url = f"sqlite:///{(data_root / 'narrastep.db').as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    insert_segment = text(
+        "INSERT INTO transcript_segments (id, project_id, sequence, start_seconds, end_seconds,"
+        " raw_text, reviewed_text, raw_words, speaker, active, created_at, updated_at) VALUES"
+        " (:id, 'project', :sequence, 0, 1, 'text', 'text', '[]', :speaker, 1, '2026-10-29',"
+        " '2026-10-29')"
+    )
+
+    try:
+        command.upgrade(alembic_config, "20261029_0006")
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projects (id, name, source_language, output_mode, state,"
+                    " created_at, updated_at) VALUES ('project', 'P', 'auto', 'meeting', 'review',"
+                    " '2026-10-29', '2026-10-29')"
+                )
+            )
+            connection.execute(insert_segment, {"id": "plain", "sequence": 0, "speaker": None})
+            connection.execute(insert_segment, {"id": "odd", "sequence": 1, "speaker": "Speaker 1"})
+            connection.execute(
+                text(
+                    "INSERT INTO segment_lineage (id, child_segment_id, source_segment_id,"
+                    " operation, created_at) VALUES ('lineage', 'plain', 'odd', 'split',"
+                    " '2026-10-29')"
+                )
+            )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        command.check(alembic_config)
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            connection.execute(insert_segment, {"id": "you", "sequence": 2, "speaker": "you"})
+            connection.execute(
+                text("UPDATE transcript_segments SET speaker_source = 'automatic' WHERE id = 'you'")
+            )
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(insert_segment, {"id": "bad", "sequence": 3, "speaker": "me"})
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(
+                text("UPDATE transcript_segments SET speaker_source = 'guess' WHERE id = 'you'")
+            )
+        with engine.connect() as connection:
+            rows = {
+                row.id: (row.speaker, row.speaker_source)
+                for row in connection.execute(
+                    text("SELECT id, speaker, speaker_source FROM transcript_segments")
+                )
+            }
+            lineage = connection.execute(text("SELECT count(*) FROM segment_lineage")).scalar()
+        assert rows == {
+            "plain": (None, None),
+            "odd": (None, None),
+            "you": ("you", "automatic"),
+        }
+        assert lineage == 1
+        engine.dispose()
+
+        command.downgrade(alembic_config, "20261029_0006")
+        engine = create_engine(database_url)
+        schema = inspect(engine)
+        assert "speaker_source" not in {
+            column["name"] for column in schema.get_columns("transcript_segments")
+        }
+        with engine.begin() as connection:
+            connection.execute(insert_segment, {"id": "free", "sequence": 4, "speaker": "Anna"})
+            speakers = dict(
+                connection.execute(text("SELECT id, speaker FROM transcript_segments")).all()
+            )
+        engine.dispose()
+        assert speakers == {"plain": None, "odd": None, "you": "you", "free": "Anna"}
     finally:
         get_settings.cache_clear()
 

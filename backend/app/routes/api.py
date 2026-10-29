@@ -103,6 +103,7 @@ from app.services.reviewing import (
     segment_response_data,
     select_primary_screenshot,
     split_segment,
+    update_segment_review,
 )
 from app.services.screenshot_materialization import (
     decode_exact_frame,
@@ -842,7 +843,12 @@ def update_segment(
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, object]:
-    """Save reviewed text explicitly while never modifying raw transcript evidence."""
+    """Save reviewed text and/or the speaker label while never modifying raw transcript evidence.
+
+    Either field can be sent alone; `speakerLabel: null` clears the label. Raises 404 for an
+    unknown segment, 409 for an archived segment or a busy project, and 422 for an empty body or
+    a label other than `you` / `others`.
+    """
     segment = _require_segment(session, segment_id)
     reservation = acquire_project_operation(settings.data_root, segment.project_id, "review")
     try:
@@ -852,8 +858,7 @@ def update_segment(
                 "INVALID_SEGMENT_OPERATION", "Only an active segment can be edited.", 409
             )
         _reject_busy_project(segment.project)
-        segment.reviewed_text = request.reviewed_text
-        mark_project_review_changed(segment.project)
+        update_segment_review(segment, request)
         session.commit()
         session.refresh(segment)
         return segment_response_data(segment)

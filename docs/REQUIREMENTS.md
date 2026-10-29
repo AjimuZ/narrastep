@@ -26,7 +26,7 @@ Status: **Implemented** in Version 0.2, **Partial** when only the named package 
 | R02 | Choose one of four project types (task briefing, meeting, tutorial, generic) at creation or, at the latest, when processing starts | Implemented: four types chosen with cards at creation (P02.1, P02.3) or in the Process dialog of a Not processed project, which the API requires when the project has no type (P05.4) |
 | R03 | Upload one MP4, WebM, MOV or MKV video per project, validated with FFprobe | Implemented |
 | R04 | Record screen, system audio and microphone in the browser; saving stores the project with an optional name and never starts processing | Planned (P05) |
-| R04a | Label transcript segments of in-app recordings as You or Others, editable in review | Planned (P05.5) |
+| R04a | Label transcript segments of in-app recordings as You or Others, editable in review | Implemented (P05.5): loudness comparison of the kept microphone and system audio tracks, Speaker select in Review; a real call is checked in P05.6 |
 | R05 | Transcribe locally with word timestamps, without network access | Implemented |
 | R06 | Select, deduplicate and associate screenshots with transcript segments | Implemented |
 | R07 | Review and edit the transcript, split and merge segments, change screenshots | Implemented |

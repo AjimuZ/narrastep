@@ -15,9 +15,11 @@ from app.models import (
     Screenshot,
     SegmentLineage,
     SegmentScreenshotAssociation,
+    SpeakerLabel,
+    SpeakerSource,
     TranscriptSegment,
 )
-from app.schemas import SegmentMergeRequest, SegmentSplitRequest
+from app.schemas import SegmentMergeRequest, SegmentSplitRequest, SegmentUpdate
 
 
 def segment_response_data(segment: TranscriptSegment) -> dict[str, Any]:
@@ -41,6 +43,7 @@ def segment_response_data(segment: TranscriptSegment) -> dict[str, Any]:
         "reviewedText": segment.reviewed_text,
         "words": words,
         "speakerLabel": segment.speaker,
+        "speakerSource": segment.speaker_source,
         "confidence": segment.confidence,
         "createdAt": segment.created_at,
         "updatedAt": segment.updated_at,
@@ -51,6 +54,21 @@ def mark_project_review_changed(project: Project) -> None:
     """Return completed work to review while preserving immutable export history."""
     if project.state == ProjectState.COMPLETED:
         project.state = ProjectState.REVIEW
+
+
+def update_segment_review(segment: TranscriptSegment, request: SegmentUpdate) -> None:
+    """Apply a review save to an active segment; the caller checks state and commits.
+
+    Sets the reviewed text when sent. A sent speaker label (`you`, `others` or null to clear it)
+    is stored with `speakerSource: user`, so a later reader knows a person chose it. Raw text,
+    words and timing never change. Returns completed work to review.
+    """
+    if request.reviewed_text is not None:
+        segment.reviewed_text = request.reviewed_text
+    if request.updates_speaker:
+        segment.speaker = request.speaker_label
+        segment.speaker_source = SpeakerSource.USER
+    mark_project_review_changed(segment.project)
 
 
 def split_segment(
@@ -95,6 +113,7 @@ def split_segment(
         reviewed_text=request.left_reviewed_text,
         raw_words=left_words,
         speaker=segment.speaker,
+        speaker_source=segment.speaker_source,
         confidence=segment.confidence,
     )
     right = TranscriptSegment(
@@ -106,6 +125,7 @@ def split_segment(
         reviewed_text=request.right_reviewed_text,
         raw_words=right_words,
         speaker=segment.speaker,
+        speaker_source=segment.speaker_source,
         confidence=segment.confidence,
     )
     session.add_all([left, right])
@@ -161,7 +181,7 @@ def merge_segments(session: Session, request: SegmentMergeRequest) -> Transcript
     associations = _unique_associations(ordered)
     duration_total = sum(max(0, item.end_seconds - item.start_seconds) for item in ordered)
     confidence = _duration_weighted_confidence(ordered, duration_total)
-    speakers = {item.speaker for item in ordered}
+    speaker, speaker_source = _merged_speaker(ordered)
     merged = TranscriptSegment(
         project_id=project_id,
         sequence=ordered[0].sequence,
@@ -170,7 +190,8 @@ def merge_segments(session: Session, request: SegmentMergeRequest) -> Transcript
         raw_text=" ".join(item.raw_text.strip() for item in ordered if item.raw_text.strip()),
         reviewed_text="\n".join(item.reviewed_text for item in ordered),
         raw_words=[word for item in ordered for word in item.raw_words],
-        speaker=speakers.pop() if len(speakers) == 1 else None,
+        speaker=speaker,
+        speaker_source=speaker_source,
         confidence=confidence,
     )
     for segment in ordered:
@@ -272,6 +293,25 @@ def _partition_raw_text(
     ratio = (split_seconds - segment.start_seconds) / duration if duration > 0 else 0.5
     boundary = round(len(segment.raw_text) * ratio)
     return segment.raw_text[:boundary].rstrip(), segment.raw_text[boundary:].lstrip()
+
+
+def _merged_speaker(
+    segments: list[TranscriptSegment],
+) -> tuple[SpeakerLabel | None, SpeakerSource | None]:
+    """Return the label and source of a merge: kept only when every part has the same label.
+
+    Different labels (or a labelled and an unlabelled part) leave the merge unlabelled with no
+    source. Equal labels keep the label; the source is `user` when the user set any part, so a
+    choice made in Review is not reported as automatic.
+    """
+    speakers = {segment.speaker for segment in segments}
+    if len(speakers) != 1:
+        return None, None
+    speaker = speakers.pop()
+    sources = {segment.speaker_source for segment in segments}
+    if SpeakerSource.USER in sources:
+        return speaker, SpeakerSource.USER
+    return speaker, sources.pop() if len(sources) == 1 else None
 
 
 def _duration_weighted_confidence(
