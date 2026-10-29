@@ -1,4 +1,4 @@
-// Window tests in the pinned Electron: isolation, loopback-only loading, fallback page and single instance.
+// Opt-in window tests in the pinned Electron: isolation, loopback-only loading, fallback page and single instance.
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -29,10 +29,14 @@ function electronExecutable() {
   }
 }
 
-const executable = electronExecutable();
-const skip = executable
+// The suite is opt-in, like the backend's real-model test: the Electron binary also needs the
+// host's GUI libraries and, on Linux, a usable Chromium sandbox, which a plain `npm test` cannot
+// assume. Once requested, a missing binary fails the suite instead of skipping it.
+const requested = process.env.NARRASTEP_RUN_DESKTOP_WINDOW_TESTS === '1';
+const executable = requested ? electronExecutable() : null;
+const skip = requested
   ? false
-  : 'Electron is not installed in desktop/node_modules; run `node node_modules/electron/install.js`.';
+  : 'Set NARRASTEP_RUN_DESKTOP_WINDOW_TESTS=1 to run the window tests in the real Electron.';
 
 /**
  * Starts an HTTP server on 127.0.0.1 that answers with `handler` and records each request's path
@@ -158,11 +162,17 @@ describe('desktop window in Electron', { skip }, () => {
   let workDirectory;
 
   before(() => {
+    assert.ok(
+      executable,
+      'Electron is not installed in desktop/node_modules; run `node node_modules/electron/install.js`.',
+    );
     workDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'narrastep-desktop-test-'));
   });
 
   after(() => {
-    fs.rmSync(workDirectory, { recursive: true, force: true });
+    if (workDirectory) {
+      fs.rmSync(workDirectory, { recursive: true, force: true });
+    }
   });
 
   it('isolates the page and keeps every load and request on the loopback app origin', async () => {

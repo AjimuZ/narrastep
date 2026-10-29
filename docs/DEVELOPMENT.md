@@ -114,15 +114,25 @@ origin that must never receive a request. It checks the web preferences, that th
 and requests to another port or to `localhost` are blocked, that the microphone, screen capture
 and notifications are denied and full screen is allowed, the Italian fallback page, and that a
 second launch exits while the first window loads the app again. Closing the window must end the
-process with code 0. These two tests are skipped, with a message, when the Electron binary is not
-installed.
+process with code 0.
 
-On Linux the window tests use Chromium's headless platform, so no display is needed, but Electron
-still needs the GTK 3, NSS and X11 client libraries. Chromium's sandbox also needs unprivileged
-user namespaces or a root-owned `chrome-sandbox`; in a container without either, set
-`NARRASTEP_DESKTOP_TEST_NO_SANDBOX=1` to add `--no-sandbox` to the test launches only. The shell
-itself never disables the sandbox. CI runs `npm ci --ignore-scripts` and `npm test`, so it runs
-the stand-in tests and skips the window tests.
+These two window tests are opt-in, like the backend's real-model test, because the Electron binary
+also needs the host's graphical libraries: a plain `npm test` skips them with a message. Install the
+binary with `install.js`, then set `NARRASTEP_RUN_DESKTOP_WINDOW_TESTS=1`. Once requested, a missing
+binary fails the suite instead of skipping it, and an Electron that cannot start fails the tests
+with its error output. In PowerShell:
+
+```powershell
+$env:NARRASTEP_RUN_DESKTOP_WINDOW_TESTS = '1'
+npm test
+```
+
+On POSIX shells, run `NARRASTEP_RUN_DESKTOP_WINDOW_TESTS=1 npm test`. On Linux the window tests use
+Chromium's headless platform, so no display is needed, but Electron still needs the GTK 3, NSS and
+X11 client libraries. Chromium's sandbox also needs unprivileged user namespaces or a root-owned
+`chrome-sandbox`; in a container without either, also set `NARRASTEP_DESKTOP_TEST_NO_SANDBOX=1` to
+add `--no-sandbox` to the test launches only. The shell itself never disables the sandbox. CI runs
+`npm ci --ignore-scripts` and `npm test`, so it runs the stand-in tests and skips the window tests.
 
 Formatting follows the web app's Prettier settings (`desktop/.prettierrc.json`) and uses its
 Prettier from the repository root:
