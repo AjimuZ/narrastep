@@ -112,6 +112,15 @@ header buttons, checks that the choice survives a reload and that nothing overfl
 Unit tests run in English; Italian rendering is covered by `core/i18n/italian.spec.ts`, which loads
 the Italian catalog for that file only.
 
+`tests/e2e/accessibility.spec.ts` is the accessibility and responsive pass (P04.5). It uses
+`tests/e2e/support/fake-api.ts` (one deterministic project per scenario, no backend) and
+`tests/e2e/support/contrast.ts` (reads painted colors in the browser, applies the WCAG formulas in
+Node) and covers every screen in English and Italian: text, placeholder and field-frame contrast,
+Tab order with a visible-focus screenshot comparison, dialog focus handling, reduced motion, and
+reflow at 320 to 1440 px and at 200% and 400% zoom. `npx playwright test tests/e2e/accessibility.spec.ts`
+runs it alone; [UI](UI.md#verification) lists exactly what each check asserts and what it does not.
+When a new screen or dialog is added, add it to `SCREENS` or to the dialog tests there.
+
 The responsive Review Studio contract covers 320, 390, 768, 1024, 1280, and 1440 pixels. The
 desktop editor width is stored only in browser local storage. Keyboard checks cover save, segment
 navigation, native playback, two-second seeking, search focus, merge selection, exact-frame

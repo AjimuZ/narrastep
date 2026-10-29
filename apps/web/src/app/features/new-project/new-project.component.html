@@ -62,7 +62,7 @@
           <div class="type-grid">
             @for (type of projectTypes; track type.value) {
               <label class="ns-row type-card">
-                <input type="radio" formControlName="mode" [value]="type.value" />
+                <input type="radio" name="mode" formControlName="mode" [value]="type.value" />
                 <span class="type-card__text">
                   <strong>{{ type.label }}</strong>
                   <small>{{ type.help }}</small>

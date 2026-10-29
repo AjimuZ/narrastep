@@ -40,6 +40,7 @@
   // Borders and frame
   --color-border: rgba(247, 230, 234, 0.12);
   --color-border-strong: rgba(247, 230, 234, 0.22);
+  --color-field-border: #9a97a9; // frame of inputs, selects and textareas: 3:1 on every surface that holds them
   --color-border-accent: rgba(246, 121, 140, 0.56);
   --color-separator: rgba(247, 230, 234, 0.08);
   --frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent);

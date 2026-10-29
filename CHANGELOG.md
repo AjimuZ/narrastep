@@ -29,6 +29,12 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- Accessibility pass in English and Italian: placeholder text and the danger button text now
+  reach 4.5:1, input, select and textarea frames and the project-type radios 3:1 (new
+  `--color-field-border`), project types form one radio group that moves with the arrow keys, the
+  "More options" toggle is at least 24 px high, dialogs are announced as modal and the confirm and
+  split dialogs close with Escape. A browser check runs every screen at 320 to 1440 px and at 200%
+  and 400% zoom, for contrast, keyboard use, visible focus and reduced motion.
 - New pixel interface: a compact header with the product name and a service status (for example
   "Services ready" or "Services offline"), and a menu on the left with Projects and New project
   that becomes a bar at the top on narrow screens. Every screen and dialog now uses flat framed

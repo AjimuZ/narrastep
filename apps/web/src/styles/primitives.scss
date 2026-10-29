@@ -169,22 +169,35 @@
 
 .ns-button--danger {
   border-color: var(--color-danger);
+  background: var(--color-bg-deep);
   color: var(--color-danger);
+}
+
+// The danger text stays at 4.5:1 only on the darker surfaces, so hover steps to the elevated surface.
+.ns-button--danger:hover:not(:disabled) {
+  background: var(--color-bg-elevated);
 }
 
 // Field: input, select and textarea on the deep surface; the focus ring comes from :focus-visible.
 .ns-field {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--frame);
+  border: 1px solid var(--color-field-border);
   border-radius: var(--radius);
   background: var(--color-bg-deep);
   color: var(--color-text);
   font: inherit;
 }
 
+// Placeholder text is hint text, not decoration: it keeps 4.5:1 on the deep surface (docs/UI.md).
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-subtle);
+  opacity: 1;
+}
+
 .ns-field:hover:not(:disabled) {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-text-muted);
 }
 
 .ns-field:disabled {

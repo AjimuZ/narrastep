@@ -11,7 +11,8 @@ export interface ConfirmDialogData {
 
 /**
  * Modal confirmation for destructive or irreversible actions. Closes with `true` only when the user
- * presses the confirm button; Cancel closes with `false`.
+ * presses the confirm button; Cancel and Escape close with `false`. The caller sets `disableClose`
+ * so a click on the backdrop never decides, which also stops CDK from handling Escape itself.
  */
 @Component({
   selector: 'ns-confirm-dialog',
@@ -37,6 +38,7 @@ export interface ConfirmDialogData {
       </div>
     </section>
   `,
+  host: { '(keydown.escape)': 'close(false)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDialogComponent {

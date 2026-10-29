@@ -122,6 +122,7 @@ export interface SplitSegmentDialogData extends SplitSegmentRequest {
       margin: 0;
     }
   `,
+  host: { '(keydown.escape)': 'cancel()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SplitSegmentDialogComponent {

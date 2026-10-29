@@ -1,7 +1,8 @@
 # User interface
 
 Status: **implemented in English and Italian** for the shell and every existing screen (P04.3 and
-P04.4 in the [roadmap](ROADMAP.md)); the browser accessibility pass in both languages is P04.5.
+P04.4 in the [roadmap](ROADMAP.md)); the browser accessibility and responsive pass in both
+languages ran in P04.5 (see [Verification](#verification)).
 Decisions: [ADR 0012](decisions/0012-pixel-ui-design-system.md),
 [ADR 0015](decisions/0015-english-and-italian-interface.md).
 
@@ -145,6 +146,7 @@ roles are defined:
 | Focus ring | `--color-focus-ring` |
 | Success, warning, danger, info | `--color-success`, `--color-warning`, `--color-danger`, `--color-info` |
 | Border and frame | `--color-border`, `--color-border-strong`, `--color-border-accent`, `--color-separator`, `--frame: color-mix(in srgb, var(--color-text-muted) 28%, transparent)` |
+| Frame of a field | `--color-field-border` (3:1 on every surface that holds a field; P04.5) |
 
 Non-color tokens: `--px: 2px`, `--radius: 2px`, `--quick: 120ms`, `--motion-base: 180ms`,
 `--font-ui`, `--font-mono`, `--font-pixel` (the bundled Pixelify Sans, then `--font-ui`), the text scale `--text-xs` to `--text-2xl`, the spacing scale `--space-1` to
@@ -161,8 +163,8 @@ Built once under `apps/web/src/app/shared/ui/` and used on every screen:
 | --- | --- |
 | Window | Bounded panel with a title bar; stepped corner marks on primary windows only |
 | Menu entry | Sidebar and list item with the stepped pixel cursor for current, hover and focus |
-| Button | Default, primary and danger; 1 px frame; 1 px press offset |
-| Field | Input, select and textarea on the deep surface; visible 2 px focus ring |
+| Button | Default, primary and danger; 1 px frame; 1 px press offset. The danger text sits on the deep surface (elevated on hover) because `--color-danger` reaches 4.5:1 only there |
+| Field | Input, select and textarea on the deep surface with a `--color-field-border` frame and 4.5:1 placeholder text; visible 2 px focus ring |
 | Tabs | Review inspector and settings sections |
 | Segmented gauge | Processing stages, upload, model download and recording level |
 | Status pill | Project, job, export and model states, always with a word |
@@ -269,12 +271,42 @@ The table above is the target. What the English interface does today:
 
 ## Verification
 
+The browser checks live in `apps/web/tests/e2e/accessibility.spec.ts` (with `support/fake-api.ts` and
+`support/contrast.ts`) and run with `npx playwright test`, in desktop and mobile Chromium. They
+open all seven screens (Projects, New project, Processing, Processing failed, Review, Export, Not
+found) in English and Italian against a deterministic fake API, and run the confirm, split and
+screenshot-preview dialogs on top of them. The last full run (2026-10-29) passed 314 tests, 154 of
+them in this file per Chromium project.
+
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).
-- Text contrast is at least 4.5:1; large text, focus rings and control borders at least 3:1.
-- Every action works with the keyboard in a logical order, with a visible focus ring.
-- No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px, and at 200% zoom, in
-  English and in Italian (the browser-contract journey runs in both).
+- **Contrast.** Every visible text run, placeholder, hovered button, row and menu entry, and each
+  dialog is at least 4.5:1 against the colors painted behind it, or 3:1 for text of 24 px (18.66 px
+  bold). Field frames (inputs, selects, textareas and the drawn project-type radios) and the focus
+  ring are at least 3:1 on every surface token. Button frames are not measured: the button text and
+  fill identify them (WCAG 1.4.11 asks for a boundary only where it is the sole identification).
+  Native sliders, checkboxes and the file input are drawn by the browser. Text over an image is not
+  measured by color; no screen has any.
+- **Keyboard.** Tab visits every visible control once, in document order (the menu first, then the
+  page; read against the layouts by eye), with
+  an accessible name, never covered when focused and never trapping; a screenshot of each focused
+  control differs from the unfocused one, so the focus is visible (project-type cards, the Review
+  view switcher and the file picker show it on their label or card). Radio groups share one `name`
+  and move with the arrow keys. Dialogs are modal (`aria-modal`), keep Tab and Shift+Tab inside,
+  return focus to the control that opened them and close with Escape (confirm and split dialogs
+  take Escape as Cancel even though a backdrop click never closes them).
+- **Reduced motion.** With `prefers-reduced-motion: reduce` no element or pseudo-element keeps an
+  animation or transition longer than a frame, hover included; without the preference the
+  processing screen does animate, so the check can fail.
+- **Reflow, zoom and size.** No horizontal page scroll, no control cut off at a side and no text
+  cut off by `overflow: hidden` at 320, 390, 768, 1024 and 1440 px, at 200% zoom of a 1280 px
+  window (640 px at device scale 2) and at 400% (320 px at scale 4), in English and Italian. At 390
+  px and below every control is at least 24 × 24 px (WCAG 2.5.8). Every media and container query
+  is written in `rem`, so a larger browser font size moves the breakpoints like zoom does. Headless
+  Chromium here ignores the default-font-size preference, so a 200% *font size* setting is covered
+  through that rule and the 640 px case, not by a run with the preference itself.
+- No horizontal page scroll at 320, 390, 768, 1024, 1280 and 1440 px in the browser-contract
+  journey, in English and in Italian.
 - The Playwright browser-contract journey passes in English and in Italian, and the language
   switch test passes.
 - `npm run check:i18n` reports no message missing in either language.

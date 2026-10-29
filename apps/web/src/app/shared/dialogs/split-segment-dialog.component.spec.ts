@@ -77,4 +77,15 @@ describe('SplitSegmentDialogComponent', () => {
     component.confirm();
     expect(close).not.toHaveBeenCalled();
   });
+
+  it('closes without a request when Escape is pressed inside the dialog', async () => {
+    const { root, close } = await setup();
+
+    root
+      .querySelector('#split-seconds')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledWith();
+  });
 });

@@ -51,7 +51,7 @@
 
 .step--current {
   border-color: var(--color-border-accent);
-  background: var(--color-bg-raised);
+  background: var(--color-bg-elevated);
   color: var(--color-text-strong);
 }
 
@@ -118,7 +118,7 @@
   flex: 0 0 auto;
   margin: 0.15rem 0 0;
   padding: 2px;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-field-border);
   border-radius: 0;
   background: var(--color-bg-deep);
   background-clip: content-box;
@@ -159,6 +159,9 @@
 }
 
 .more-options summary {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
   color: var(--color-text-strong);
   cursor: pointer;
   font-weight: 600;
