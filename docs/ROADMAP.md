@@ -69,7 +69,8 @@ open "More options" before filling the language and description and were only ty
 **Depends on:** P02.1. **Areas:** export, API.
 Decision: [ADR 0013](decisions/0013-descriptive-export-names.md).
 
-- [ ] P03.1 Slug and file-name builder with edge-case tests.
+- [x] P03.1 Slug and file-name builder with edge-case tests.
+  Evidence (2026-10-29): `backend/app/services/export_names.py` (`slugify_project_name`, `export_archive_name`, `export_zip_file_name`, `screenshot_file_name`) is pure and not yet wired into the export; `backend/tests/test_export_names.py` (32 cases: accents, emoji, empty, 200-character, Windows reserved names, path syntax, ADR pattern, screenshot names) passed; backend suite 100 passed plus the new tests, ruff, ruff format and mypy clean.
 - [ ] P03.2 New archive layout and manifest schema version.
 - [ ] P03.3 Download uses the stored name; history shows it.
 

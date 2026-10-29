@@ -18,6 +18,8 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- Added tested builders for descriptive export names (project slug, archive name, screenshot file name); the export does not use them yet.
+
 - The new-project form now starts with the four project-type cards. The project name is optional
   and defaults to the type and the local date (for example "Meeting 2026-10-29"); the spoken
   language and the description moved under "More options".

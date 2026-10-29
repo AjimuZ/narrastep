@@ -24,6 +24,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Screenshot reassignment and recovery | Implemented | Primary and alternatives; exact-frame recovery |
 | ZIP export | Implemented | Transcript, distinct primary screenshots, ChatGPT upload batches; file named `narrastep-{UUID}.zip` |
 | Project types | Implemented | `task_briefing`, `meeting`, `tutorial`, `general` (P02.1); migration `20261029_0003` maps `technical_walkthrough` to `task_briefing`. Type-specific screenshot profile, export guide, generation prompt and batch evidence prompts (P02.2); new-project form with type cards, optional default name and "More options" (P02.3) |
+| Export name builders | Implemented | Slug, archive and screenshot names (P03.1); pure functions, not yet used by the export (P03.2, P03.3) |
 | Docker local stack | Implemented | Web, API, single worker, Redis, named volumes |
 | Automated unit, API and UI tests | Implemented | Last recorded floor (2026-10-29): 100 backend passed, 1 opt-in integration skipped; 38 frontend passed |
 | Browser contract journey | Implemented | Desktop and mobile Chromium, six responsive widths |
