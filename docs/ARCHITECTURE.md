@@ -184,8 +184,13 @@ flowchart LR
   Closing the window quits the shell; the shell never starts, stops or calls Docker, so containers
   and running jobs continue. `src/window.cjs` shows a local English or Italian page when the app
   does not answer and a native confirmation when the page's `beforeunload` asks to stay.
-- **Not yet wired.** `start.sh` does not open the window until P07.2; it is started with
-  `npm --prefix desktop start` ([Development](DEVELOPMENT.md#desktop-window)).
+- **Launcher (P07.2).** `start.sh` stays the foreground Compose process and, unless `--headless`
+  is given, starts a background watcher that runs `desktop/launch.cjs`. The launcher waits for
+  `/api/v1/health` through the web container, installs the pinned Electron into
+  `desktop/node_modules` on the first launch with isolated npm settings (the one moment the
+  desktop part uses the Internet: the npm registry and GitHub releases), then runs the shell and
+  exits when the window closes. A launcher problem never stops the stack
+  ([Development](DEVELOPMENT.md#launcher-p072)).
 
 ## Planned boundaries
 
@@ -216,8 +221,9 @@ flowchart LR
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It
   has no other host bridge, and closing it never stops the containers. The shell with its
-  loopback-only loading, isolation and single instance exists since P07.1 ("Desktop shell"
-  above); the launcher, picker, microphone and downloads are still planned (P07.2–P07.4).
+  loopback-only loading, isolation and single instance exists since P07.1 and the launcher since
+  P07.2 ("Desktop shell" above); the picker, microphone and downloads are still planned
+  (P07.3–P07.4).
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it

@@ -83,3 +83,33 @@ The shell in `desktop/` applies this decision with these details:
 - On Linux, Chromium's sandbox needs unprivileged user namespaces or a root-owned `chrome-sandbox`
   helper. The window tests ran on a build worker without either, with `--no-sandbox` added by the
   test only; the shell never disables the sandbox.
+
+## Implementation notes (P07.2, 2026-10-29)
+
+`start.sh` and `desktop/launch.cjs` apply the launcher part of this decision:
+
+- `start.sh` keeps Compose as its foreground process (`exec docker compose up`) and, unless
+  `--headless` is given, starts a background watcher first. This keeps log output and `Ctrl+C`
+  identical to the headless mode. The watcher stops the launcher when Compose exits.
+- "Real health" is `GET http://127.0.0.1:{NARRASTEP_WEB_PORT}/api/v1/health` through the `web`
+  container, with `status: "ok"` (database, Redis and worker). `degraded` is accepted after 60
+  seconds so the window can show what is missing; one hour without an answer stops the launcher.
+  The check uses the host Node.js, so no `curl` is required.
+- `NARRASTEP_WEB_PORT` comes from the environment, then from `.env`, then 4200, the order Compose
+  uses to publish the port. The launcher passes the result to the shell.
+- First-launch install: `npm ci --ignore-scripts --no-audit --no-fund` and then Electron's
+  `install.js` in `desktop/`, when the installed `electron` is not exactly the pinned version or has
+  no downloaded binary. The environment is isolated: empty user and global npm configuration files
+  (npm rejects one file for both), no `npm_config_*` or Electron mirror variables, the public npm
+  registry, audit, fund and update checks off, proxy variables kept. The launcher announces the
+  download before it starts. A custom registry or mirror is deliberately not supported, so a
+  configuration file or variable cannot redirect where executable code is fetched from.
+- Failures (Node.js too old, no `npm`, no display on Linux, no Internet, a shell that exits with an
+  error, such as Chromium's sandbox on some Linux systems) leave the stack running; the message
+  names the browser address and `./start.sh --headless`. Exit code 2 of the shell means an invalid
+  port.
+- Closing the window ends only the launcher. `Ctrl+C` stops Compose; a launcher still waiting for
+  health is stopped by the watcher. What happens to an open window when Compose stops was not
+  tested.
+- Not covered: Windows PowerShell (candidate I-01), a Docker-based smoke test on this build worker
+  (no Docker), and the Windows and macOS behavior of the launcher.

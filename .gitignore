@@ -21,6 +21,7 @@ dist/
 coverage/
 playwright-report/
 test-results/
+desktop/test/.start-test-*/
 
 # Local application data and models
 /data/*

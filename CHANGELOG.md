@@ -85,7 +85,11 @@ All notable changes to Narrastep are documented in this file.
   brings the open window to the front, and closing it leaves Docker and running jobs alone. When
   Narrastep is not running the window says so with **Try again**, it asks before closing during a
   recording, an upload or unsaved edits, and Ctrl `+`, `-` and `0` zoom. English and Italian.
-  `start.sh` does not open it yet.
+- `./start.sh` opens that window when the stack is healthy. It needs Node.js 22.12 or newer with
+  npm; the first launch downloads the pinned Electron into `desktop/node_modules` (the npm
+  registry and GitHub releases, once, no administrator rights). `./start.sh --headless` starts only
+  the Docker stack, as before. If the window cannot open (no Node.js, no display, no Internet),
+  Narrastep keeps running and the script says how to use it in a browser.
 
 ### Changed
 

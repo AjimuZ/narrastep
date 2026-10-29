@@ -57,10 +57,16 @@ The exact state of each capability is in [Status](docs/STATUS.md); the plan is i
    ./start.sh
    ```
 
-   `./start.sh -r` reuses existing images and fails instead of building when one is missing. Both
-   modes show the logs until `Ctrl+C`.
+   `./start.sh -r` reuses existing images and fails instead of building when one is missing. Every
+   mode shows the logs until `Ctrl+C`.
 
-3. Open `http://127.0.0.1:4200`.
+   When the stack answers its health check, `start.sh` opens Narrastep in its own desktop window.
+   That needs Node.js 22.12 or newer with npm on your computer; the first launch downloads the
+   pinned Electron into `desktop/node_modules` (Internet access once, no administrator rights).
+   `./start.sh --headless` starts only the Docker stack, for use with a browser. If the window
+   cannot open, the stack keeps running and `start.sh` says why.
+
+3. Use the desktop window, or open `http://127.0.0.1:4200` in a browser.
 
 The API is at `http://127.0.0.1:8002/api/v1`, with interactive documentation at
 `http://127.0.0.1:8002/api/docs`. Stop the stack with `docker compose down`. Adding `-v` deletes

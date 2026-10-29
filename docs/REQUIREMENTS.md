@@ -38,7 +38,7 @@ Status: **Implemented** in Version 0.2, **Partial** when only the named package 
 | R13 | Present every screen with the pixel design system and plain text | Planned (P04) |
 | R12a | Open the video at the time of any `[mm:ss]` reference in review and in the generated document | Planned (P06.6) |
 | R14 | Switch the interface between English and Italian at any time | Planned (P04) |
-| R15 | `start.sh` opens Narrastep in its own desktop window; `--headless` keeps browser-only use | In progress: the window exists in `desktop/` (P07.1); `start.sh` opens it with P07.2 ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
+| R15 | `start.sh` opens Narrastep in its own desktop window; `--headless` keeps browser-only use | In progress: the window exists in `desktop/` (P07.1); `start.sh` opens it after health and `--headless` skips it (P07.2, verified with a fake Docker and a stand-in API, not yet on the Docker stack) ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
 
 ## Constraints
 

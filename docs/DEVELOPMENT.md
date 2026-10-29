@@ -10,7 +10,10 @@ The primary workflow is:
 
 Run it from a POSIX-compatible shell, such as Git Bash or WSL on Windows. The script runs the stack
 in the foreground and builds its images. Use `./start.sh -r` to reuse existing images with Compose
-`--no-build`; it intentionally fails when any required image is missing. The first build downloads
+`--no-build`; it intentionally fails when any required image is missing. Once the stack is healthy
+the script also opens the desktop window ([Desktop window](#desktop-window)); `./start.sh
+--headless` skips the window and keeps the browser-only mode used in CI and on computers without
+Node.js. The first build downloads
 dependencies and the configured Whisper model. Subsequent runtime processing is offline. The web
 application is available at `127.0.0.1:4200`, the API at `127.0.0.1:8002`, and Redis is not
 published.
@@ -71,8 +74,43 @@ python -m celery -A app.tasks.celery_app:celery_app worker --loglevel=INFO --con
 ## Desktop window
 
 `desktop/` is the Electron shell of [ADR 0014](decisions/0014-desktop-app-shell.md) (P07.1). It
-uses the host Node.js 22.12 or newer and keeps Electron inside `desktop/node_modules`. Until P07.2
-`start.sh` does not open it; start the stack first, then:
+uses the host Node.js 22.12 or newer and keeps Electron inside `desktop/node_modules`.
+
+### Launcher (P07.2)
+
+`./start.sh` starts the window like this:
+
+1. `start.sh` checks Docker Compose, then, unless `--headless` is given, starts a background
+   watcher and replaces itself with `docker compose up` (so Compose output and `Ctrl+C` behave as in
+   headless mode). When `node` or `npm` is missing the watcher is not started and the script says
+   so; the stack still runs.
+2. The watcher runs `node desktop/launch.cjs` (`src/launcher.cjs`). The launcher checks Node.js
+   22.12 or newer and, on Linux, a graphical session (`DISPLAY` or `WAYLAND_DISPLAY`); takes
+   `NARRASTEP_WEB_PORT` from the environment or `.env` (the environment wins, as in Compose; an
+   invalid value exits with code 2); and polls `http://127.0.0.1:{port}/api/v1/health` through the
+   web container every second. It continues when the API reports `status: "ok"` (database, Redis and
+   worker), or when it has reported `degraded` for 60 seconds, because the app shows what is missing.
+   It gives up after one hour; the watcher also stops it when Compose has exited, for example after
+   a failed build.
+3. If `desktop/node_modules/electron` is missing or not the version pinned in `package.json` (first
+   launch, or after a version bump), it prints what will be downloaded and runs, in `desktop/`,
+   `npm ci --ignore-scripts --no-audit --no-fund` and then `node node_modules/electron/install.js`.
+   These run with isolated npm settings: the user and global `.npmrc` files are replaced by empty
+   ones, every `npm_config_*` variable and the Electron mirror variables (`ELECTRON_MIRROR`,
+   `ELECTRON_CUSTOM_DIR`, `ELECTRON_CUSTOM_FILENAME`, `ELECTRON_SKIP_BINARY_DOWNLOAD`,
+   `ELECTRON_OVERRIDE_DIST_PATH`) are dropped, the registry is `https://registry.npmjs.org/`, and
+   audit, fund and update checks are off. `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` are kept.
+   Requests: the locked packages from the npm registry and the Electron binary from GitHub releases,
+   checked against the SHA-256 sums in the package's `checksums.json`; nothing else.
+4. It runs the Electron binary on `desktop/` (without `ELECTRON_RUN_AS_NODE`) and exits when the
+   window closes: code 0 for a normal close, 2 for an invalid port, 1 for every other problem. A
+   problem never stops the stack; the launcher prints the cause and the browser address, and
+   `./start.sh --headless` is the way to run without a window.
+
+Closing the window leaves the containers running. `Ctrl+C` in the terminal stops Compose; a
+launcher that is still waiting for health is then stopped by the watcher within a few seconds.
+
+To run the shell alone against an already running stack:
 
 ```bash
 cd desktop
@@ -91,6 +129,7 @@ download an explicit step.
 
 | Module | Responsibility |
 | --- | --- |
+| `launch.cjs`, `src/launcher.cjs` | Host command started by `start.sh`: health wait, pinned first-launch install, runs the shell |
 | `src/main.cjs` | Electron entry: starts the shell or prints the configuration error |
 | `src/shell.cjs` | Single instance, sandbox, guards before the first load, quit when the window closes |
 | `src/policy.cjs` | The loopback origin, URL, request and permission rules and the window's web preferences |
@@ -107,6 +146,13 @@ npm test
 
 `test/policy.test.cjs`, `test/guards.test.cjs` and `test/shell.test.cjs` run the rules and the
 lifecycle against in-memory Electron stand-ins (`test/support/fake-electron.cjs`).
+`test/launcher.test.cjs` covers the launcher with injected stand-ins (`.env` port, health states,
+timeout, isolated install environment, install steps and failures, exit codes) and a real local
+HTTP server for the health request. `test/start-script.test.cjs` runs the real `start.sh` with a
+fake `docker` and a fake `desktop/launch.cjs` on a POSIX shell: `--headless`, `-r`, `-h`, unknown
+options, missing Compose, missing Node.js or npm, the Compose exit code, and the watcher stopping
+the launcher when Compose exits. It creates its fakes in a git-ignored `desktop/test/.start-test-*`
+folder because `/tmp` may be mounted `noexec`.
 `test/electron-window.test.cjs` starts the real Electron with `test/support/electron-harness.cjs`,
 which runs the production shell against two local HTTP servers: a stand-in app and a second
 origin that must never receive a request. It checks the web preferences, that the page has no
