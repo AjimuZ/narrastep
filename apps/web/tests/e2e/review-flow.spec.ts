@@ -206,6 +206,7 @@ for (const language of ['en', 'it'] as const) {
         description: 'Search workflow',
         mode: 'tutorial',
         sourceLanguage: 'en',
+        glossary: [],
         detectedLanguage: 'en',
         status: projectStatus,
         createdAt: timestamp,

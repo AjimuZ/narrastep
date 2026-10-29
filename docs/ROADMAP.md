@@ -216,12 +216,29 @@ is generated and an existing one is untouched; the owner smoke test on Podman is
 ## P09 — Owner-selected improvements
 
 **Depends on:** P02, P03. **Areas:** backend, frontend, documentation.
-Chosen by the owner on 2026-10-29 (Q2). Planned, not delivered.
+Chosen by the owner on 2026-10-29 (Q2). P09.1 is delivered; P09.2 is planned.
 
-- [ ] P09.1 Glossary per project passed to Whisper as hints (I-02).
+- [x] P09.1 Glossary per project passed to Whisper as hints (I-02).
   Exit: names and terms saved in a project are sent to the transcriber as hints in both languages; tests cover an empty glossary and a long one; API, OpenAPI, PROCESSING_PIPELINE and UI documents updated.
 - [ ] P09.2 Storage view and cleanup after export (I-07).
   Exit: the interface shows the space each project uses and removes the original video only after the package exists and the user confirms; tests cover refusal before an export; API, OpenAPI and UI documents updated.
+
+P09.1 evidence (2026-10-29): `projects.glossary` (migration `20261029_0008`) holds the terms; the API
+normalizes them on create, `PATCH` and process start (`backend/app/services/glossary.py`: at most 200
+terms of 80 characters, `422 VALIDATION_ERROR` beyond that), refuses a change after transcription
+with `409 INVALID_PROJECT_STATE`, and `transcribe_audio` passes the first terms that fit 500
+characters to faster-whisper 1.2.1 as `hotwords` (read in the installed source: applied before the
+previous text of every window, kept from the start when too long); an empty glossary sends no
+option. The New project form and the Process dialog have a Glossary field in English and Italian.
+Checks: `backend/tests/test_glossary.py` (19) covers an empty glossary, an English and an Italian one,
+a 200-term glossary cut between whole terms, the limits, the 409, the process body, the terms reaching
+the transcriber and the migration; backend `python -B -m pytest` 258 passed, 27 skipped (no FFmpeg),
+ruff check and format, `mypy app`, `scripts/export_openapi.py --check`; `apps/web` `npm run build`
+(i18n check, 489 messages in both languages), `npm run test` 172 passed, `npm run lint`,
+`npx prettier --check .`, `npm run typecheck:e2e`; `desktop` `npm run test` 127 passed;
+`python3 scripts/check_docs.py` valid; `git diff --check HEAD` clean. Not run: the Playwright journeys
+(no Chromium on the build worker; their fixtures now carry `glossary: []`) and a real Whisper model with
+a glossary (none available), so the effect on accuracy is not measured.
 
 ## Improvement candidates
 

@@ -59,7 +59,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 
 ## Important requests
 
-Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general`, or absent: a project has no type (`mode: null`) until the user chooses one, at the latest when processing starts (P05.4). Projects made by the recorder have none; the new-project form still sends one. `PATCH` can set or change the type but not clear it. The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code.
+Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general`, or absent: a project has no type (`mode: null`) until the user chooses one, at the latest when processing starts (P05.4). Projects made by the recorder have none; the new-project form still sends one. `PATCH` can set or change the type but not clear it. The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code. `glossary` is an optional list of names and terms the speakers use (P09.1); see [Glossary](#glossary-p091).
 
 A segment save (`PATCH /segments/{segmentId}`) accepts `reviewedText`, `speakerLabel` or both;
 a body with neither answers `422 VALIDATION_ERROR`:
@@ -185,11 +185,28 @@ VIDEO_AUDIO_TRACK_MISSING` without system audio and microphone; `507 INSUFFICIEN
 chunks are deleted, so `GET` reports the saved session with empty tracks. The conversion rules are
 in [Recording](RECORDING.md#completion-rules-p052).
 
+### Glossary (P09.1)
+
+Every project response carries `glossary`, a list of strings (empty by default, never null).
+`POST /projects`, `PATCH /projects/{projectId}` and the body of `POST /projects/{projectId}/process`
+accept `glossary` as a list of names and terms. The API normalizes the list before storing it: each
+term is trimmed and its inner whitespace collapsed to single spaces, blank terms are dropped, and a
+term that repeats an earlier one without regard to case is dropped; order is kept. After
+normalization at most 200 terms of at most 80 characters each are accepted, otherwise
+`422 VALIDATION_ERROR`; `null` is rejected on `PATCH`. `PATCH` replaces the whole list, and an empty
+list clears it.
+
+The glossary reaches the transcriber, so like `sourceLanguage` it can only change while the project
+is `draft`, `uploaded` or `failed` (a retry uses the current glossary). Changing it in another state
+answers `409 INVALID_PROJECT_STATE`; sending the stored list again is accepted. How the terms are
+used is described in [Processing pipeline](PROCESSING_PIPELINE.md#glossary-hints-p091).
+
 ### Starting processing (P05.4)
 
-`POST /api/v1/projects/{projectId}/process` accepts an optional JSON body `{mode?, sourceLanguage?}`
-(an empty body or `{}` is still valid). `mode` is a project type and `sourceLanguage` is `auto` or a
-Whisper language code; both are validated like on creation (`422 VALIDATION_ERROR`). They are stored
+`POST /api/v1/projects/{projectId}/process` accepts an optional JSON body
+`{mode?, sourceLanguage?, glossary?}` (an empty body or `{}` is still valid). `mode` is a project
+type, `sourceLanguage` is `auto` or a Whisper language code and `glossary` replaces the project's
+glossary (an empty list clears it); all are validated like on creation (`422 VALIDATION_ERROR`). They are stored
 in the same statement that moves the project to `queued`, so a refused start (busy project, wrong
 state, no worker) changes neither. A project without a type and without `mode` in the body is
 refused with `409 PROJECT_TYPE_REQUIRED` before anything is queued; the job's configuration snapshot

@@ -176,6 +176,7 @@ def create_project(
         description=request.description,
         source_language=request.source_language,
         output_mode=request.mode,
+        glossary=request.glossary,
     )
     session.add(project)
     session.flush()
@@ -215,19 +216,32 @@ def update_project(
         _reject_busy_project(project)
         updates = request.model_dump(exclude_unset=True)
         requested_language = updates.get("source_language")
+        transcription_inputs_open = project.state in {
+            ProjectState.DRAFT,
+            ProjectState.UPLOADED,
+            ProjectState.FAILED,
+        }
         if (
             requested_language is not None
             and requested_language != project.source_language
-            and project.state
-            not in {
-                ProjectState.DRAFT,
-                ProjectState.UPLOADED,
-                ProjectState.FAILED,
-            }
+            and not transcription_inputs_open
         ):
             raise ApiError(
                 "INVALID_PROJECT_STATE",
                 "Source language can only change before processing or before a retry.",
+                409,
+            )
+        # The glossary only reaches the transcriber, so changing it later would not match the
+        # transcript the user is reviewing.
+        requested_glossary = updates.get("glossary")
+        if (
+            requested_glossary is not None
+            and requested_glossary != project.glossary
+            and not transcription_inputs_open
+        ):
+            raise ApiError(
+                "INVALID_PROJECT_STATE",
+                "The glossary can only change before processing or before a retry.",
                 409,
             )
         if "mode" in updates:
@@ -658,6 +672,8 @@ def _queue_processing_job(
     }
     if choices.source_language is not None:
         queued_values["source_language"] = choices.source_language
+    if choices.glossary is not None:
+        queued_values["glossary"] = choices.glossary
     transition = session.execute(
         update(Project)
         .where(
@@ -1454,6 +1470,7 @@ def _project_payload(session: Session, project: Project, settings: Settings) -> 
         "description": project.description,
         "mode": project.output_mode.value if project.output_mode else None,
         "sourceLanguage": project.source_language,
+        "glossary": list(project.glossary or []),
         "detectedLanguage": project.detected_language,
         "status": project.state.value,
         "createdAt": project.created_at,

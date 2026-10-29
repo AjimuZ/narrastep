@@ -21,7 +21,7 @@ erDiagram
 
 ### Project
 
-Stores user metadata, project type (`output_mode`: `task_briefing`, `meeting`, `tutorial` or `general`, enforced by the `output_mode` CHECK constraint; nullable since migration `20261029_0006`: a recording has no type until processing starts, and processing refuses a project without one), requested and detected language, lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
+Stores user metadata, project type (`output_mode`: `task_briefing`, `meeting`, `tutorial` or `general`, enforced by the `output_mode` CHECK constraint; nullable since migration `20261029_0006`: a recording has no type until processing starts, and processing refuses a project without one), requested and detected language, the glossary (`glossary`, a JSON list of terms, never NULL, `[]` by default; migration `20261029_0008`, P09.1; user text kept in SQLite only, never in logs or diagnostics), lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
 
 Statuses are `draft`, `uploaded`, `queued`, `processing`, `review`, `exporting`, `completed`, and `failed`.
 

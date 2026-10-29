@@ -25,6 +25,7 @@ const PROJECT: Project = {
   description: null,
   mode: 'tutorial',
   sourceLanguage: 'en',
+  glossary: [],
   detectedLanguage: 'en',
   status: 'review',
   createdAt: '2026-07-15T10:00:00Z',

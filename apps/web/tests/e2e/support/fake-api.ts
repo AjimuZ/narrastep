@@ -26,6 +26,7 @@ function project(
     description: 'Search workflow',
     mode,
     sourceLanguage: 'en',
+    glossary: [],
     detectedLanguage: 'en',
     status,
     createdAt: timestamp,

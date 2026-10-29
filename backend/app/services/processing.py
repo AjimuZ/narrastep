@@ -137,11 +137,13 @@ def perform_processing(
                 audio_path,
                 config=processing_settings,
                 source_language=project.source_language,
+                glossary=project.glossary or [],
                 duration_seconds=metadata.duration_seconds,
                 cancellation_check=lambda: _raise_if_cancelled(session, job.id),
                 progress_callback=lambda ratio: _update_transcription_progress(session, job, ratio),
             )
             write_raw_transcript(transcription, raw_transcript_path)
+            metrics.set("glossaryTermCount", len(project.glossary or []))
             metrics.set("transcriptSegmentCount", len(transcription.segments))
             metrics.finish_stage("transcription", logger)
             speakers = _speaker_labels(

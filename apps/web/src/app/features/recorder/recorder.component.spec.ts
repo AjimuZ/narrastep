@@ -37,6 +37,7 @@ const SAVED: Project = {
   description: null,
   mode: 'general',
   sourceLanguage: 'auto',
+  glossary: [],
   detectedLanguage: null,
   status: 'uploaded',
   createdAt: '2026-10-29T13:05:00Z',

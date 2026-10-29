@@ -11,6 +11,7 @@ describe('ProcessDialogComponent', () => {
   async function setup(
     mode: ProjectMode | null = null,
     sourceLanguage = 'auto',
+    glossary: string[] = [],
   ): Promise<{
     fixture: ReturnType<typeof TestBed.createComponent<ProcessDialogComponent>>;
     root: HTMLElement;
@@ -20,7 +21,10 @@ describe('ProcessDialogComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProcessDialogComponent],
       providers: [
-        { provide: DIALOG_DATA, useValue: { project: { name: 'Standup', mode, sourceLanguage } } },
+        {
+          provide: DIALOG_DATA,
+          useValue: { project: { name: 'Standup', mode, sourceLanguage, glossary } },
+        },
         { provide: DialogRef, useValue: { close } },
       ],
     }).compileComponents();
@@ -115,6 +119,53 @@ describe('ProcessDialogComponent', () => {
       'not a language code',
     );
     expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  /** Types `text` into the glossary field of the dialog. */
+  function typeGlossary(root: HTMLElement, text: string): void {
+    const field = root.querySelector('#process-glossary') as HTMLTextAreaElement;
+    field.value = text;
+    field.dispatchEvent(new Event('input'));
+  }
+
+  it('shows the saved glossary under More options and sends it only when it changed', async () => {
+    const { fixture, root, close } = await setup('meeting', 'auto', ['Narrastep', 'Valkey']);
+    const field = root.querySelector('#process-glossary') as HTMLTextAreaElement;
+    expect(root.querySelector('details.more-options')?.contains(field)).toBe(true);
+    expect(field.value).toBe('Narrastep\nValkey');
+
+    button(root, 'Start processing').click();
+    expect(close).toHaveBeenLastCalledWith({ mode: 'meeting' });
+
+    typeGlossary(root, ' Valkey\n\nCittà della Pieve ');
+    fixture.detectChanges();
+    button(root, 'Start processing').click();
+    expect(close).toHaveBeenLastCalledWith({
+      mode: 'meeting',
+      glossary: ['Valkey', 'Città della Pieve'],
+    });
+  });
+
+  it('clears a saved glossary with an empty field', async () => {
+    const { root, close } = await setup('meeting', 'auto', ['Narrastep']);
+
+    typeGlossary(root, '  \n ');
+    button(root, 'Start processing').click();
+
+    expect(close).toHaveBeenCalledWith({ mode: 'meeting', glossary: [] });
+  });
+
+  it('opens More options and stays open when the glossary is too long', async () => {
+    const { fixture, root, close } = await setup('general');
+
+    typeGlossary(root, 'x'.repeat(81));
+    button(root, 'Start processing').click();
+    fixture.detectChanges();
+
+    expect(close).not.toHaveBeenCalled();
+    expect(root.querySelector<HTMLDetailsElement>('details.more-options')?.open).toBe(true);
+    expect(root.querySelector('#process-glossary-error')?.textContent).toContain('80 characters');
+    expect(root.querySelector('#process-glossary')?.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('cancels with the Cancel button and with Escape', async () => {

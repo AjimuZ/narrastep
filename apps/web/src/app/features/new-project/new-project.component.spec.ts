@@ -15,6 +15,7 @@ const PROJECT: Project = {
   description: null,
   mode: 'tutorial',
   sourceLanguage: 'auto',
+  glossary: [],
   detectedLanguage: null,
   status: 'draft',
   createdAt: '2026-07-15T10:00:00Z',
@@ -73,6 +74,7 @@ describe('NewProjectComponent', () => {
     expect(details?.open).toBe(false);
     expect(details?.contains(host.querySelector('#source-language'))).toBe(true);
     expect(details?.contains(host.querySelector('#project-description'))).toBe(true);
+    expect(details?.contains(host.querySelector('#project-glossary'))).toBe(true);
     expect(details?.contains(name)).toBe(false);
     expect(host.querySelector('label[for="project-name"]')?.textContent).toContain('optional');
   });
@@ -98,6 +100,7 @@ describe('NewProjectComponent', () => {
         name: 'Meeting 2026-10-05',
         description: null,
         sourceLanguage: 'auto',
+        glossary: [],
         mode: 'meeting',
       });
       expect(component.currentStep()).toBe(2);
@@ -132,6 +135,7 @@ describe('NewProjectComponent', () => {
       name: 'Policy walkthrough',
       description: 'Search for a contract',
       sourceLanguage: 'it',
+      glossary: [],
       mode: 'tutorial',
     });
     expect(component.project()).toEqual(PROJECT);
@@ -249,6 +253,53 @@ describe('NewProjectComponent', () => {
     expect(description.getAttribute('aria-invalid')).toBe('true');
     expect(description.getAttribute('aria-describedby')).toContain('description-error');
     expect(host.querySelector('#description-error')?.textContent).toContain('500 characters');
+  });
+
+  it('sends the glossary as normalized terms, one per line', async () => {
+    const { fixture, component, createProject } = await setup();
+    const field = (fixture.nativeElement as HTMLElement).querySelector(
+      '#project-glossary',
+    ) as HTMLTextAreaElement;
+
+    field.value = '  Narrastep \n\n città   della Pieve\r\nNARRASTEP\nValkey';
+    field.dispatchEvent(new Event('input'));
+    component.createProject();
+
+    expect(createProject).toHaveBeenCalledWith(
+      expect.objectContaining({ glossary: ['Narrastep', 'città della Pieve', 'Valkey'] }),
+    );
+  });
+
+  it.each([
+    [
+      'too many terms',
+      Array.from({ length: 201 }, (_, index) => `term ${index}`).join('\n'),
+      'at most 200',
+    ],
+    ['a term that is too long', 'x'.repeat(81), '80 characters'],
+  ])('opens More options and marks the glossary with %s', async (_name, text, message) => {
+    const { fixture, component, createProject } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    const field = host.querySelector('#project-glossary') as HTMLTextAreaElement;
+
+    component.projectForm.controls.glossary.setValue(text);
+    component.createProject();
+    fixture.detectChanges();
+
+    expect(createProject).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLDetailsElement>('details.more-options')?.open).toBe(true);
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(field.getAttribute('aria-describedby')).toContain('glossary-error');
+    expect(host.querySelector('#glossary-error')?.textContent).toContain(message);
+  });
+
+  it('accepts a glossary term of exactly 80 characters', async () => {
+    const { component, createProject } = await setup();
+
+    component.projectForm.controls.glossary.setValue('x'.repeat(80));
+    component.createProject();
+
+    expect(createProject).toHaveBeenCalledTimes(1);
   });
 
   it('labels step one with the Create project action and the name help', async () => {

@@ -143,6 +143,10 @@ class Project(Base):
     description: Mapped[str | None] = mapped_column(Text)
     source_language: Mapped[str] = mapped_column(String(16), default="auto", nullable=False)
     detected_language: Mapped[str | None] = mapped_column(String(16))
+    # Names and terms the transcriber should favor (P09.1); normalized by `services.glossary`.
+    glossary: Mapped[list[str]] = mapped_column(
+        JSON, default=list, server_default=text("'[]'"), nullable=False
+    )
     # Null until the user chooses a type: recorder projects have none, and processing refuses a
     # project without one (P05.4). Uploaded projects normally get a type at creation.
     output_mode: Mapped[OutputMode | None] = mapped_column(

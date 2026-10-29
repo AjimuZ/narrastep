@@ -94,6 +94,12 @@ All notable changes to Narrastep are documented in this file.
   closes too instead of staying open on a stack that is gone. `./start.sh` now runs directly on a
   fresh Linux or macOS clone; before, Git stored it without the executable bit.
 
+- A glossary per project: names and terms the speakers use, one per line, can be entered under
+  "More options" when creating a project or in the Process dialog (English and Italian). They are
+  sent to the local transcriber as hints that favor their spelling; the API accepts
+  `glossary` on create, update and process start (up to 200 terms of 80 characters). It can change
+  only before processing or before a retry.
+
 ### Changed
 
 - The background queue now runs on Valkey 9.1.3 (BSD-3-Clause) instead of Redis 7.2.14, because

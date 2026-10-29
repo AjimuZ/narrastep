@@ -76,6 +76,47 @@
             This is not a language code. Enter “auto” or a two- or three-letter code.
           </p>
         }
+
+        <div class="ns-form-row">
+          <label class="ns-label" for="process-glossary" i18n="@@new_project.glossary_label"
+            >Glossary <span class="muted">(optional)</span></label
+          >
+          <textarea
+            id="process-glossary"
+            class="ns-field"
+            rows="4"
+            spellcheck="false"
+            [value]="glossary()"
+            [attr.aria-invalid]="showErrors() && glossaryError() ? 'true' : null"
+            [attr.aria-describedby]="
+              showErrors() && glossaryError()
+                ? 'process-glossary-help process-glossary-error'
+                : 'process-glossary-help'
+            "
+            (input)="setGlossary($event)"
+          ></textarea>
+          <p id="process-glossary-help" class="ns-help" i18n="@@new_project.glossary_help">
+            Names and terms the speakers use, one per line. The transcription favors their spelling.
+            Put the most important first: a long list is cut after about 500 characters.
+          </p>
+          @if (showErrors() && glossaryError() === 'count') {
+            <p
+              id="process-glossary-error"
+              class="ns-error"
+              i18n="@@new_project.glossary_error_count"
+            >
+              The glossary has too many terms. Use at most 200.
+            </p>
+          } @else if (showErrors() && glossaryError() === 'length') {
+            <p
+              id="process-glossary-error"
+              class="ns-error"
+              i18n="@@new_project.glossary_error_length"
+            >
+              A term is too long. Use at most 80 characters per line.
+            </p>
+          }
+        </div>
       </div>
     </details>
   </div>

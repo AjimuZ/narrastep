@@ -32,6 +32,23 @@ the versions of faster-whisper, CTranslate2, PyAV, NumPy, ONNX Runtime, `tokeniz
 
 Progress advances as generated segment end times move through the source duration. Confidence is `exp(avg_logprob)` clamped to `[0, 1]` and is explicitly a heuristic rather than a calibrated probability.
 
+#### Glossary hints (P09.1)
+
+The project's glossary (names and terms saved with the project, see [API](API.md#glossary-p091))
+is passed to `transcribe_audio` and from there to faster-whisper as `hotwords`
+(`backend/app/services/glossary.py`). faster-whisper puts hotwords in front of the previous text
+of every decoding window, so the terms keep their effect across a long video, while an
+`initial_prompt` would only seed the first window. The hint is the terms joined with `, ` and no
+other words, so the same text serves English, Italian or any other spoken language and does not
+push the model towards a language. Whisper reads at most 223 prompt tokens and faster-whisper keeps
+the beginning of a longer hotword text, so the hint is limited to about 500 characters: whole terms
+are added in the saved order and the first term that would pass the limit ends the list (a long
+glossary therefore loses its last terms, and the forms tell the user to put the important ones
+first). An empty glossary sends no `hotwords` option, so decoding is unchanged. The hint only
+biases the model: a term is not guaranteed to appear, and the raw transcript is stored as Whisper
+returned it. The mock transcription used by tests ignores the glossary. Job metrics record only
+`glossaryTermCount`; the terms themselves are user text and never go to logs or diagnostics.
+
 #### Speaker labels (in-app recordings, P05.5)
 
 Right after transcription, a project whose video was recorded in Narrastep with both a microphone

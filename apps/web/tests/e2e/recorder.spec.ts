@@ -68,6 +68,7 @@ async function useRecordingApi(
     description: null,
     mode: null,
     sourceLanguage: 'auto',
+    glossary: [],
     detectedLanguage: null,
     status: api.saved ? 'uploaded' : 'draft',
     createdAt: timestamp,

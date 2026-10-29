@@ -9,7 +9,13 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EMPTY, catchError, finalize } from 'rxjs';
 
@@ -18,11 +24,18 @@ import { errorText } from '../../core/i18n/error-text';
 import { formatFileSize } from '../../core/i18n/format';
 import { ApiService } from '../../core/services/api.service';
 import { openProcessDialog } from '../../shared/dialogs/process-dialog.component';
+import { glossaryProblem, glossaryText, parseGlossary } from '../../shared/glossary';
 import { languageSuggestions } from '../../shared/language-options';
 import { projectTypes } from '../../shared/project-types';
 import { PixelIconComponent, SegmentedGaugeComponent, WindowComponent } from '../../shared/ui';
 
 const SUPPORTED_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'mkv']);
+
+/** Flags a glossary field with too many terms or a term that is too long (`errors.glossary`). */
+function glossaryValidator(control: AbstractControl<string>): ValidationErrors | null {
+  const problem = glossaryProblem(control.value);
+  return problem ? { glossary: problem } : null;
+}
 
 @Component({
   selector: 'ns-new-project',
@@ -50,13 +63,14 @@ export class NewProjectComponent implements OnInit {
   readonly isDragging = signal(false);
   readonly isResuming = signal(false);
   readonly showValidationSummary = signal(false);
-  /** Whether the "More options" disclosure (language and description) is expanded. */
+  /** Whether the "More options" disclosure (language, description and glossary) is expanded. */
   readonly moreOptionsOpen = signal(false);
 
   readonly projectForm = inject(FormBuilder).nonNullable.group({
     name: ['', [Validators.maxLength(120)]],
     description: ['', [Validators.maxLength(500)]],
     sourceLanguage: ['auto', [Validators.required, Validators.pattern(/^(auto|[a-z]{2,3})$/i)]],
+    glossary: ['', [glossaryValidator]],
     mode: ['tutorial' as ProjectMode, [Validators.required]],
   });
 
@@ -108,6 +122,7 @@ export class NewProjectComponent implements OnInit {
           name: project.name,
           description: project.description ?? '',
           sourceLanguage: project.sourceLanguage,
+          glossary: glossaryText(project.glossary),
           mode: project.mode ?? this.projectForm.controls.mode.value,
         });
         if (project.status === 'draft') {
@@ -143,8 +158,8 @@ export class NewProjectComponent implements OnInit {
       this.projectForm.markAllAsTouched();
       this.showValidationSummary.set(this.projectForm.invalid);
       // An error inside the collapsed disclosure would otherwise be invisible.
-      const { description, sourceLanguage } = this.projectForm.controls;
-      if (description.invalid || sourceLanguage.invalid) {
+      const { description, glossary, sourceLanguage } = this.projectForm.controls;
+      if (description.invalid || glossary.invalid || sourceLanguage.invalid) {
         this.moreOptionsOpen.set(true);
       }
       return;
@@ -159,6 +174,7 @@ export class NewProjectComponent implements OnInit {
         name: value.name.trim() || this.defaultName(),
         description: value.description.trim() || null,
         sourceLanguage: value.sourceLanguage.trim().toLowerCase(),
+        glossary: parseGlossary(value.glossary),
         mode: value.mode,
       })
       .pipe(

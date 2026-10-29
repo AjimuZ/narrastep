@@ -16,6 +16,8 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
+from app.services.glossary import build_transcription_hint
+
 type Frame = NDArray[np.uint8]
 
 # faster-whisper expects mono float32 samples at this rate; `extract_pcm_audio` produces it.
@@ -293,6 +295,7 @@ def transcribe_audio(
     config: PipelineConfig | None = None,
     model_path: str | Path | None = None,
     source_language: str = "auto",
+    glossary: Sequence[str] = (),
     device: str | None = None,
     compute_type: str | None = None,
     beam_size: int = 5,
@@ -307,6 +310,10 @@ def transcribe_audio(
     samples, not the path, go to Whisper, so the model never decodes media itself. Raises
     `PipelineServiceError` with `TRANSCRIPTION_INPUT_MISSING` or `TRANSCRIPTION_INPUT_INVALID` for
     a missing or malformed file and `TRANSCRIPTION_MODEL_FAILED` when the model cannot run.
+
+    `glossary` lists names and terms the speakers use; they go to Whisper as hotwords (see
+    `build_transcription_hint`) and are omitted entirely when the glossary is empty. The mock
+    transcription ignores them.
     """
 
     audio = Path(audio_path)
@@ -353,12 +360,14 @@ def transcribe_audio(
             compute_type=selected_compute_type,
             local_files_only=True,
         )
+        hint = build_transcription_hint(glossary)
         raw_segments, info = model.transcribe(
             samples,
             language=None if source_language == "auto" else source_language,
             beam_size=beam_size,
             word_timestamps=True,
             vad_filter=True,
+            **({"hotwords": hint} if hint else {}),
         )
         expected_duration = (
             _positive_float(getattr(info, "duration", None))

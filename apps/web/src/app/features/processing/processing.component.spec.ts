@@ -15,6 +15,7 @@ const PROJECT: Project = {
   description: null,
   mode: 'task_briefing',
   sourceLanguage: 'en',
+  glossary: [],
   detectedLanguage: 'en',
   status: 'processing',
   createdAt: '2026-07-15T10:00:00Z',

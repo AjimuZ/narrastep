@@ -13,6 +13,7 @@ terms in every new message and in both catalogs (`messages.en.json`, `messages.i
 | An image taken from the video           | screenshot       | screenshot               |
 | Checking and editing the result         | review           | revisione                |
 | Transcription and screenshot extraction | processing       | elaborazione             |
+| Names and terms for the transcription   | glossary         | glossario                |
 | Reading text in images                  | text recognition | riconoscimento del testo |
 | A group of files for one chat message   | batch            | lotto                    |
 | Transcript                              | transcript       | trascrizione             |

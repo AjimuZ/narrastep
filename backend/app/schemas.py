@@ -24,6 +24,11 @@ from app.models import (
     SpeakerLabel,
     SpeakerSource,
 )
+from app.services.glossary import (
+    MAX_GLOSSARY_TERM_LENGTH,
+    MAX_GLOSSARY_TERMS,
+    normalize_glossary,
+)
 
 SUPPORTED_WHISPER_LANGUAGES = frozenset(
     {
@@ -182,6 +187,23 @@ class HealthResponse(ApiModel):
     worker: str
 
 
+def validate_glossary(value: list[str] | None) -> list[str] | None:
+    """Normalize a glossary and enforce the term count and length limits.
+
+    Returns None for None. Raises `ValueError` (reported as a 422) when more than
+    `MAX_GLOSSARY_TERMS` terms remain after normalization or a term is longer than
+    `MAX_GLOSSARY_TERM_LENGTH` characters.
+    """
+    if value is None:
+        return None
+    terms = normalize_glossary(value)
+    if len(terms) > MAX_GLOSSARY_TERMS:
+        raise ValueError(f"The glossary can hold at most {MAX_GLOSSARY_TERMS} terms.")
+    if any(len(term) > MAX_GLOSSARY_TERM_LENGTH for term in terms):
+        raise ValueError(f"A glossary term can have at most {MAX_GLOSSARY_TERM_LENGTH} characters.")
+    return terms
+
+
 class ProjectCreate(ApiModel):
     """Validate metadata required to create a project workspace."""
 
@@ -189,6 +211,13 @@ class ProjectCreate(ApiModel):
     description: str | None = Field(default=None, max_length=4000)
     source_language: str = Field(default="auto", max_length=16)
     mode: OutputMode | None = None
+    glossary: list[str] = Field(default_factory=list)
+
+    @field_validator("glossary")
+    @classmethod
+    def validate_glossary_terms(cls, value: list[str]) -> list[str]:
+        """Store the glossary normalized: trimmed, single-spaced, without blanks or repeats."""
+        return validate_glossary(value) or []
 
     @field_validator("name")
     @classmethod
@@ -216,8 +245,15 @@ class ProjectUpdate(ApiModel):
     description: str | None = Field(default=None, max_length=4000)
     source_language: str | None = Field(default=None, max_length=16)
     mode: OutputMode | None = None
+    glossary: list[str] | None = None
 
-    @field_validator("name", "source_language", "mode", mode="before")
+    @field_validator("glossary")
+    @classmethod
+    def validate_glossary_terms(cls, value: list[str] | None) -> list[str] | None:
+        """Normalize the replacement glossary; an empty list clears it."""
+        return validate_glossary(value)
+
+    @field_validator("name", "source_language", "mode", "glossary", mode="before")
     @classmethod
     def reject_required_metadata_null(cls, value: object) -> object:
         """Reject explicit null while allowing each non-null metadata field to be omitted."""
@@ -252,11 +288,19 @@ class ProcessStart(ApiModel):
     """Validate the optional choices sent when processing starts (P05.4).
 
     `mode` sets the project type and is required when the project has none; `source_language`
-    replaces the spoken language. Both are stored atomically with the queued state.
+    replaces the spoken language and `glossary` the project's terms. All are stored atomically
+    with the queued state.
     """
 
     mode: OutputMode | None = None
     source_language: str | None = Field(default=None, max_length=16)
+    glossary: list[str] | None = None
+
+    @field_validator("glossary")
+    @classmethod
+    def validate_glossary_terms(cls, value: list[str] | None) -> list[str] | None:
+        """Normalize the replacement glossary; an empty list clears it."""
+        return validate_glossary(value)
 
     @field_validator("source_language")
     @classmethod
@@ -301,6 +345,7 @@ class ProjectResponse(ApiModel):
     description: str | None
     source_language: str
     mode: OutputMode | None
+    glossary: list[str]
     detected_language: str | None
     status: ProjectState
     created_at: datetime

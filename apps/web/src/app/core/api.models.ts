@@ -12,6 +12,8 @@ export interface Project {
   /** Project type; null until the user chooses one, at the latest when processing starts (P05.4). */
   mode: ProjectMode | null;
   sourceLanguage: string;
+  /** Names and terms passed to the transcriber as hints, in priority order (P09.1). */
+  glossary: string[];
   detectedLanguage: string | null;
   status: ProjectStatus;
   createdAt: string;
@@ -54,6 +56,8 @@ export interface CreateProjectRequest {
   description: string | null;
   mode: ProjectMode;
   sourceLanguage: string;
+  /** Terms for the transcriber; the API normalizes them and stores an empty list when omitted. */
+  glossary?: string[];
 }
 
 export type UpdateProjectRequest = Partial<CreateProjectRequest>;
@@ -65,6 +69,8 @@ export type UpdateProjectRequest = Partial<CreateProjectRequest>;
 export interface StartProcessingRequest {
   mode?: ProjectMode;
   sourceLanguage?: string;
+  /** Replaces the project's glossary (an empty list clears it). */
+  glossary?: string[];
 }
 
 export interface MediaAsset {

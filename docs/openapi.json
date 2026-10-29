@@ -336,8 +336,22 @@
         "type": "string"
       },
       "ProcessStart": {
-        "description": "Validate the optional choices sent when processing starts (P05.4).\n\n`mode` sets the project type and is required when the project has none; `source_language`\nreplaces the spoken language. Both are stored atomically with the queued state.",
+        "description": "Validate the optional choices sent when processing starts (P05.4).\n\n`mode` sets the project type and is required when the project has none; `source_language`\nreplaces the spoken language and `glossary` the project's terms. All are stored atomically\nwith the queued state.",
         "properties": {
+          "glossary": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glossary"
+          },
           "mode": {
             "anyOf": [
               {
@@ -378,6 +392,13 @@
               }
             ],
             "title": "Description"
+          },
+          "glossary": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Glossary",
+            "type": "array"
           },
           "mode": {
             "anyOf": [
@@ -462,6 +483,9 @@
           "detectedLanguage": {
             "title": "Detectedlanguage"
           },
+          "glossary": {
+            "title": "Glossary"
+          },
           "id": {
             "title": "Id"
           },
@@ -491,6 +515,7 @@
           "description",
           "sourceLanguage",
           "mode",
+          "glossary",
           "detectedLanguage",
           "status",
           "createdAt",
@@ -530,6 +555,20 @@
               }
             ],
             "title": "Description"
+          },
+          "glossary": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glossary"
           },
           "mode": {
             "anyOf": [

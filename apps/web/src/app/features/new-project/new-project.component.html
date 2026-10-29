@@ -189,6 +189,49 @@
                 </p>
               }
             </div>
+
+            <div class="ns-form-row">
+              <label class="ns-label" for="project-glossary" i18n="@@new_project.glossary_label"
+                >Glossary <span class="muted">(optional)</span></label
+              >
+              <textarea
+                id="project-glossary"
+                class="ns-field"
+                formControlName="glossary"
+                rows="4"
+                spellcheck="false"
+                [attr.aria-invalid]="
+                  projectForm.controls.glossary.touched && projectForm.controls.glossary.invalid
+                    ? 'true'
+                    : null
+                "
+                [attr.aria-describedby]="
+                  projectForm.controls.glossary.touched && projectForm.controls.glossary.invalid
+                    ? 'glossary-help glossary-error'
+                    : 'glossary-help'
+                "
+              ></textarea>
+              <p id="glossary-help" class="ns-help" i18n="@@new_project.glossary_help">
+                Names and terms the speakers use, one per line. The transcription favors their
+                spelling. Put the most important first: a long list is cut after about 500
+                characters.
+              </p>
+              @if (projectForm.controls.glossary.touched && projectForm.controls.glossary.invalid) {
+                @if (projectForm.controls.glossary.errors?.['glossary'] === 'count') {
+                  <p id="glossary-error" class="ns-error" i18n="@@new_project.glossary_error_count">
+                    The glossary has too many terms. Use at most 200.
+                  </p>
+                } @else {
+                  <p
+                    id="glossary-error"
+                    class="ns-error"
+                    i18n="@@new_project.glossary_error_length"
+                  >
+                    A term is too long. Use at most 80 characters per line.
+                  </p>
+                }
+              }
+            </div>
           </div>
         </details>
 

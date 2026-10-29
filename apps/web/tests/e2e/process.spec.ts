@@ -50,6 +50,7 @@ async function useSavedRecording(context: BrowserContext): Promise<ProcessApi> {
     description: null,
     mode: api.starts.length > 0 ? 'meeting' : null,
     sourceLanguage: 'auto',
+    glossary: [],
     detectedLanguage: null,
     status: api.starts.length > 0 ? 'queued' : 'uploaded',
     createdAt: timestamp,
