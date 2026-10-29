@@ -216,11 +216,11 @@ is generated and an existing one is untouched; the owner smoke test on Podman is
 ## P09 — Owner-selected improvements
 
 **Depends on:** P02, P03. **Areas:** backend, frontend, documentation.
-Chosen by the owner on 2026-10-29 (Q2). P09.1 is delivered; P09.2 is planned.
+Chosen by the owner on 2026-10-29 (Q2). P09.1 and P09.2 are delivered.
 
 - [x] P09.1 Glossary per project passed to Whisper as hints (I-02).
   Exit: names and terms saved in a project are sent to the transcriber as hints in both languages; tests cover an empty glossary and a long one; API, OpenAPI, PROCESSING_PIPELINE and UI documents updated.
-- [ ] P09.2 Storage view and cleanup after export (I-07).
+- [x] P09.2 Storage view and cleanup after export (I-07).
   Exit: the interface shows the space each project uses and removes the original video only after the package exists and the user confirms; tests cover refusal before an export; API, OpenAPI and UI documents updated.
 
 P09.1 evidence (2026-10-29): `projects.glossary` (migration `20261029_0008`) holds the terms; the API
@@ -239,6 +239,39 @@ ruff check and format, `mypy app`, `scripts/export_openapi.py --check`; `apps/we
 `python3 scripts/check_docs.py` valid; `git diff --check HEAD` clean. Not run: the Playwright journeys
 (no Chromium on the build worker; their fixtures now carry `glossary: []`) and a real Whisper model with
 a glossary (none available), so the effect on accuracy is not measured.
+
+P09.2 evidence (2026-10-29): `GET /api/v1/storage` (`backend/app/services/storage.py`) adds up the
+regular files of each project workspace by folder (source, audio, transcript, screenshots, exports,
+other; symbolic links are skipped) with the free space of the data volume, and the **Storage**
+screen (`/storage`, menu entry; Italian *Spazio*) lists projects largest first. `DELETE
+/api/v1/projects/{id}/source-video` removes the files of `source/` (video and the kept microphone
+and system-audio tracks) only when the project is idle and `completed` and the ZIP of a completed
+export is on disk; otherwise it answers `409 PACKAGE_REQUIRED`, `PROJECT_BUSY` or
+`SOURCE_VIDEO_REMOVED` and deletes nothing. Files go first and `media_assets.source_removed_at`
+(migration `20261029_0009`) is set afterwards, so an interrupted removal is repeatable. The screen
+opens a confirmation dialog (danger button, `disableClose`, Cancel and Escape keep everything) that
+names the project and the space freed, in English and Italian; when removal is not allowed the row
+says why and links to the export screen. After removal playback answers `410`, exact-frame recovery,
+`includeOriginalVideo` and a package whose selected screenshots are not saved as images answer `409
+SOURCE_VIDEO_REMOVED` before anything is queued, Review shows a notice instead of the player and
+Export disables the video option. Decision in ADR 0018. Checks: `backend/tests/test_storage.py` (13)
+covers the accounting and symbolic links, a missing workspace, the sorted list and free space,
+refusal before any export (files kept, record unmarked), with the ZIP missing, after an edit
+returned the project to review and during an export, removal of an unknown project and of one
+without a video, a successful removal (source empty, package kept, totals lower, second removal
+409), an interrupted deletion finished by a retry, playback, frame recovery, full image and both
+export refusals plus a package that is still accepted when the screenshot is saved as an image,
+project deletion afterwards and the migration upgrade and downgrade; backend `python -B -m pytest`
+271 passed, 27 skipped (no FFmpeg), `ruff check` and `ruff format --check`, `mypy app`,
+`scripts/export_openapi.py --check`; `apps/web` `npm run build` (i18n check, 525 messages in both
+languages), `npm run test` 183 passed (11 new: the Storage screen with figures, allowed and blocked
+rows, confirmation, cancel, API refusal, load error, empty list and Italian; Review and Export after
+a removal; menu; Italian errors and GB sizes), `npm run lint`, `npx prettier --check .`, `npm run
+typecheck:e2e`; `desktop` `npm run test` 127 passed; `python3 scripts/check_docs.py` valid; `git diff
+--check HEAD` clean. Not run: the Playwright journeys (no Chromium on the build worker; no journey
+covers the Storage screen yet, and the accessibility and contrast checks of the new screen in both
+languages were not run), a removal on a real recording with FFmpeg or on the Docker stack, and a
+real `adaptive_v1` project re-exported after a removal.
 
 ## Improvement candidates
 

@@ -167,6 +167,22 @@ The worker saves screenshots, associations, active transcript segments, and meta
 committed before terminal progress is published. Each job also saves its immutable effective
 configuration and versioned numeric metrics. Per-job diagnostics are atomic and content-free.
 
+#### After the original video is removed (P09.2)
+
+Removing the original video ([ADR 0018](decisions/0018-remove-original-video-after-export.md))
+deletes the source of every later decode. Thumbnails and any full PNG already saved keep working.
+A screenshot that exists only as a position in the video (`thumbnail_only` evidence that was never
+opened at full size) can no longer be rebuilt: `services/screenshot_materialization.py` raises
+`SOURCE_VIDEO_REMOVED` instead of `PROJECT_ASSET_MISSING`, exact-frame recovery is refused, and
+the export request is checked before it is queued: a package with `includeOriginalVideo`, or with
+a selected screenshot that has no saved full image, answers `409 SOURCE_VIDEO_REMOVED`, so the
+worker never fails late on a file it cannot read. The `legacy` strategy saves full PNGs while
+processing, so for those projects a new package stays possible after the removal; `adaptive_v1`
+projects can export again only for screenshots opened at full size before. Speaker labels are
+computed during processing, so the removed microphone and system-audio tracks are not needed
+afterwards. A removed video cannot be reprocessed: removal needs a `completed` project, which
+cannot start processing.
+
 ### 9. Export screenshot selection
 
 Review retains the complete screenshot candidate set. When a new evidence package is exported, the

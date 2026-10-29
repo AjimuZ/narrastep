@@ -53,6 +53,12 @@ describe('Italian interface', () => {
 
   it('formats sizes with the Italian decimal comma', () => {
     expect(formatFileSize(1.5 * 1024 * 1024)).toBe('1,5 MB');
+    expect(formatFileSize(2.5 * 1024 * 1024 * 1024)).toBe('2,5 GB');
+  });
+
+  it('translates the storage errors', () => {
+    expect(localizedError('PACKAGE_REQUIRED', null, 'x')).toContain('pacchetto');
+    expect(localizedError('SOURCE_VIDEO_REMOVED', null, 'x')).toContain('rimosso');
   });
 
   it('renders the shell, the language switch and the health word in Italian', async () => {
@@ -83,6 +89,7 @@ describe('Italian interface', () => {
       'Progetti',
       'Registra',
       'Nuovo progetto',
+      'Spazio',
     ]);
     expect(element.querySelector('.skip-link')?.textContent?.trim()).toBe(
       'Vai al contenuto principale',

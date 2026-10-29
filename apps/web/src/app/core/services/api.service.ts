@@ -34,6 +34,7 @@ import {
   Project,
   ProjectExport,
   ProjectListResponse,
+  ProjectStorage,
   Recording,
   RecordingChunkAck,
   RecordingTrackName,
@@ -43,6 +44,7 @@ import {
   SplitSegmentRequest,
   TranscriptSegment,
   StartProcessingRequest,
+  StorageSummary,
   UpdateProjectRequest,
   UpdateSegmentRequest,
   UploadProgress,
@@ -86,6 +88,20 @@ export class ApiService {
   /** Deletes project metadata and its dedicated local workspace. */
   deleteProject(projectId: string): Observable<void> {
     return this.http.delete<void>(`${API_ROOT}/projects/${projectId}`);
+  }
+
+  /** Loads the disk space each project uses, largest first, with the free space left. */
+  getStorage(): Observable<StorageSummary> {
+    return this.http.get<StorageSummary>(`${API_ROOT}/storage`);
+  }
+
+  /**
+   * Deletes the original video (and the kept recording tracks) of a project that has a package of
+   * its current review. Answers the project's new storage figures; the API refuses with
+   * `PACKAGE_REQUIRED` before an export.
+   */
+  removeSourceVideo(projectId: string): Observable<ProjectStorage> {
+    return this.http.delete<ProjectStorage>(`${API_ROOT}/projects/${projectId}/source-video`);
   }
 
   /** Streams a source video upload and reports browser-derived transfer progress. */

@@ -100,6 +100,15 @@ All notable changes to Narrastep are documented in this file.
   `glossary` on create, update and process start (up to 200 terms of 80 characters). It can change
   only before processing or before a retry.
 
+- A **Storage** screen (Italian *Spazio*) shows the space each project uses on this computer, split
+  into original video, audio, transcript, screenshots, packages and other, with the free space.
+  After a package of the current review exists, **Remove original video** deletes the recording
+  (and the kept microphone and system-audio tracks) after a confirmation in English or Italian;
+  the transcript, screenshots and packages stay. Before a package exists the API refuses
+  (`PACKAGE_REQUIRED`) and the screen links to the export. Afterwards the video cannot be played,
+  exact frames cannot be recovered and a package that would need the video is refused. New API:
+  `GET /api/v1/storage` and `DELETE /api/v1/projects/{id}/source-video`; migration `20261029_0009`.
+
 ### Changed
 
 - The background queue now runs on Valkey 9.1.3 (BSD-3-Clause) instead of Redis 7.2.14, because

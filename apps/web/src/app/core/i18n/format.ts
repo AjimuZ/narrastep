@@ -9,12 +9,18 @@ export function formatDecimal(value: number, digits: number): string {
   }).format(value);
 }
 
-/** File size in KB below one megabyte, else MB, with one decimal; the unit symbols are international. */
+/**
+ * File size in KB below one megabyte, MB below one gigabyte, else GB, with one decimal; the unit
+ * symbols are international.
+ */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) {
     return `${formatDecimal(bytes / 1024, 1)} KB`;
   }
-  return `${formatDecimal(bytes / (1024 * 1024), 1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${formatDecimal(bytes / (1024 * 1024), 1)} MB`;
+  }
+  return `${formatDecimal(bytes / (1024 * 1024 * 1024), 1)} GB`;
 }
 
 /** Name of a spoken language in the active interface language; the code itself when unknown. */

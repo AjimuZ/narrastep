@@ -306,6 +306,9 @@
           "sizeBytes": {
             "title": "Sizebytes"
           },
+          "sourceRemovedAt": {
+            "title": "Sourceremovedat"
+          },
           "width": {
             "title": "Width"
           }
@@ -540,6 +543,43 @@
         ],
         "title": "ProjectState",
         "type": "string"
+      },
+      "ProjectStorageResponse": {
+        "description": "Report what one project uses on disk and whether its original video can be removed now.",
+        "properties": {
+          "categories": {},
+          "name": {
+            "title": "Name"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "removalBlockedReason": {
+            "title": "Removalblockedreason"
+          },
+          "sourceRemovedAt": {
+            "title": "Sourceremovedat"
+          },
+          "sourceVideoBytes": {
+            "title": "Sourcevideobytes"
+          },
+          "status": {},
+          "totalBytes": {
+            "title": "Totalbytes"
+          }
+        },
+        "required": [
+          "projectId",
+          "name",
+          "status",
+          "totalBytes",
+          "categories",
+          "sourceVideoBytes",
+          "sourceRemovedAt",
+          "removalBlockedReason"
+        ],
+        "title": "ProjectStorageResponse",
+        "type": "object"
       },
       "ProjectUpdate": {
         "description": "Validate editable project metadata without changing evidence or state.",
@@ -1084,6 +1124,60 @@
         ],
         "title": "SpeakerSource",
         "type": "string"
+      },
+      "StorageCategoriesResponse": {
+        "description": "Split a project's bytes by the folders of its workspace; the parts add up to the total.",
+        "properties": {
+          "audio": {
+            "title": "Audio"
+          },
+          "exports": {
+            "title": "Exports"
+          },
+          "other": {
+            "title": "Other"
+          },
+          "screenshots": {
+            "title": "Screenshots"
+          },
+          "source": {
+            "title": "Source"
+          },
+          "transcript": {
+            "title": "Transcript"
+          }
+        },
+        "required": [
+          "source",
+          "audio",
+          "transcript",
+          "screenshots",
+          "exports",
+          "other"
+        ],
+        "title": "StorageCategoriesResponse",
+        "type": "object"
+      },
+      "StorageResponse": {
+        "description": "List the space each project uses, largest first, with the free space of the data volume.",
+        "properties": {
+          "freeBytes": {
+            "title": "Freebytes"
+          },
+          "items": {
+            "title": "Items"
+          },
+          "totalBytes": {
+            "title": "Totalbytes"
+          }
+        },
+        "required": [
+          "totalBytes",
+          "freeBytes",
+          "items"
+        ],
+        "title": "StorageResponse",
+        "type": "object"
       },
       "WordResponse": {
         "description": "Expose immutable word-level evidence used by split operations.",
@@ -1830,6 +1924,46 @@
           }
         },
         "summary": "List Segments"
+      }
+    },
+    "/api/v1/projects/{project_id}/source-video": {
+      "delete": {
+        "description": "Delete the original recording once a package of the current review exists.\n\nAnswers the project's refreshed storage figures. Refused with `PACKAGE_REQUIRED` (409) before\nan export, `PROJECT_BUSY` while background work runs and `SOURCE_VIDEO_REMOVED` (409) when\nit is already gone. Existing packages are untouched.",
+        "operationId": "remove_source_video_api_v1_projects__project_id__source_video_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectStorageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Remove Source Video"
       }
     },
     "/api/v1/projects/{project_id}/video": {
@@ -2761,6 +2895,35 @@
           }
         },
         "summary": "Split Review Segment"
+      }
+    },
+    "/api/v1/storage": {
+      "get": {
+        "description": "Report the disk space each project uses, largest first, and the free space left.",
+        "operationId": "get_storage_api_v1_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Storage"
       }
     }
   }

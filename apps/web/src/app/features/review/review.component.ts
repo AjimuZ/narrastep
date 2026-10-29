@@ -101,6 +101,8 @@ export class ReviewComponent implements OnInit {
   >('all');
   readonly editorPaneWidth = signal('1.35fr');
 
+  /** True once the original video was removed after export (P09.2): no player, no frame recovery. */
+  readonly sourceRemoved = computed(() => !!this.project()?.videoAsset?.sourceRemovedAt);
   readonly selectedSegment = computed(
     () => this.segments().find((segment) => segment.id === this.selectedSegmentId()) ?? null,
   );

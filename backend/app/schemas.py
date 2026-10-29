@@ -327,6 +327,8 @@ class MediaAssetResponse(ApiModel):
     width: int
     height: int
     created_at: datetime
+    # Set once the original video was removed after export (P09.2); the metadata above stays.
+    source_removed_at: datetime | None = None
 
 
 class ProjectRecordingResponse(ApiModel):
@@ -363,6 +365,40 @@ class ProjectListResponse(ApiModel):
 
     items: list[ProjectResponse]
     total: int
+
+
+class StorageCategoriesResponse(ApiModel):
+    """Split a project's bytes by the folders of its workspace; the parts add up to the total."""
+
+    source: int
+    audio: int
+    transcript: int
+    screenshots: int
+    exports: int
+    other: int
+
+
+class ProjectStorageResponse(ApiModel):
+    """Report what one project uses on disk and whether its original video can be removed now."""
+
+    project_id: str
+    name: str
+    status: ProjectState
+    total_bytes: int
+    categories: StorageCategoriesResponse
+    # Size of the original video file on disk; 0 once removed or when the file is gone.
+    source_video_bytes: int
+    source_removed_at: datetime | None
+    # None when removable; else `no_video`, `already_removed`, `busy` or `package_required`.
+    removal_blocked_reason: str | None
+
+
+class StorageResponse(ApiModel):
+    """List the space each project uses, largest first, with the free space of the data volume."""
+
+    total_bytes: int
+    free_bytes: int | None
+    items: list[ProjectStorageResponse]
 
 
 class WordResponse(ApiModel):

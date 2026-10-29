@@ -84,6 +84,40 @@ export interface MediaAsset {
   width: number | null;
   height: number | null;
   createdAt: string;
+  /** Set once the original video was removed after export (P09.2); the file is gone. */
+  sourceRemovedAt?: string | null;
+}
+
+/** Bytes a project uses, by workspace folder; the parts add up to the project total (P09.2). */
+export interface StorageCategories {
+  source: number;
+  audio: number;
+  transcript: number;
+  screenshots: number;
+  exports: number;
+  other: number;
+}
+
+/** Why the original video cannot be removed now; null in `removalBlockedReason` when it can. */
+export type RemovalBlockedReason = 'no_video' | 'already_removed' | 'busy' | 'package_required';
+
+/** Disk use of one project and the state of its original video. */
+export interface ProjectStorage {
+  projectId: string;
+  name: string;
+  status: ProjectStatus;
+  totalBytes: number;
+  categories: StorageCategories;
+  sourceVideoBytes: number;
+  sourceRemovedAt: string | null;
+  removalBlockedReason: RemovalBlockedReason | null;
+}
+
+/** Space used by every project, largest first, and the free space of the data volume. */
+export interface StorageSummary {
+  totalBytes: number;
+  freeBytes: number | null;
+  items: ProjectStorage[];
 }
 
 export type ProcessingJobStatus =

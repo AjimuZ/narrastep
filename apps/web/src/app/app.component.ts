@@ -63,6 +63,12 @@ export const MENU_ENTRIES: readonly MenuEntry[] = [
     icon: 'plus',
     matches: isNewProject,
   },
+  {
+    label: () => $localize`:@@shell.menu.storage:Storage`,
+    path: '/storage',
+    icon: 'copy',
+    matches: (url) => url === '/storage',
+  },
 ];
 
 function isNewProject(url: string): boolean {

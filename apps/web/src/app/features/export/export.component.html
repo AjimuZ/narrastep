@@ -59,16 +59,22 @@
             type="checkbox"
             aria-describedby="include-original-video-help"
             [checked]="includeOriginalVideo()"
+            [disabled]="sourceRemoved()"
             (change)="setIncludeOriginalVideo($event)"
           />
           <span class="video-option__text">
             <span class="ns-label" i18n="@@export.include_video">Include the original video</span>
-            <span
-              class="ns-help"
-              id="include-original-video-help"
-              i18n="@@export.include_video_help"
-            >
-              Off by default. The video can make the package much larger.
+            <span class="ns-help" id="include-original-video-help">
+              @if (sourceRemoved()) {
+                <ng-container i18n="@@export.include_video_removed"
+                  >The original video was removed from this computer, so it cannot be
+                  included.</ng-container
+                >
+              } @else {
+                <ng-container i18n="@@export.include_video_help"
+                  >Off by default. The video can make the package much larger.</ng-container
+                >
+              }
             </span>
           </span>
         </label>

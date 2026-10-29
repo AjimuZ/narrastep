@@ -51,6 +51,10 @@ export function errorCodeMessage(code: string): string | null {
     case 'PROJECT_ASSET_MISSING':
     case 'MEDIA_FILE_MISSING':
       return $localize`:@@error.PROJECT_ASSET_MISSING:A file of this project is missing on this computer. Upload the video again or restore the project folder.`;
+    case 'PACKAGE_REQUIRED':
+      return $localize`:@@error.PACKAGE_REQUIRED:Create a package of the current review first. The original video can only be removed after that.`;
+    case 'SOURCE_VIDEO_REMOVED':
+      return $localize`:@@error.SOURCE_VIDEO_REMOVED:The original video was removed from this computer, so this action is no longer possible.`;
     case 'INVALID_SEGMENT_OPERATION':
       return $localize`:@@error.INVALID_SEGMENT_OPERATION:This change to the segment is not possible. Reload the review and try again.`;
     case 'INVALID_SCREENSHOT_ASSOCIATION':

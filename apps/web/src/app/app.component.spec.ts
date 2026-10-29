@@ -56,11 +56,13 @@ describe('AppComponent shell', () => {
       'Projects',
       'Record',
       'New project',
+      'Storage',
     ]);
     expect(MENU_ENTRIES.map((entry) => entry.path)).toEqual([
       '/projects',
       '/record',
       '/projects/new',
+      '/storage',
     ]);
   });
 

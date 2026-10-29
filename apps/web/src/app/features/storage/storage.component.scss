@@ -1,0 +1,114 @@
+// Storage screen layout: a totals window above one row per project. Rows stack on narrow columns
+// and become a grid when the content column is wide, following the container rather than the viewport.
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.error-row,
+.notice-row {
+  margin-bottom: var(--space-4);
+}
+
+.error-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.notice-row[hidden] {
+  display: none;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+ns-window + ns-window {
+  display: block;
+  margin-top: var(--space-4);
+}
+
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+  margin: 0;
+}
+
+.totals dt {
+  font-size: var(--text-xs);
+}
+
+.totals dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-lg);
+}
+
+.storage-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storage-row {
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) 1.25rem;
+}
+
+.storage-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.storage-identity h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-md);
+}
+
+.storage-total {
+  margin: 0;
+}
+
+.storage-shares {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-xs);
+  list-style: none;
+}
+
+.storage-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.storage-reason {
+  margin: 0;
+}
+
+@container (min-width: 48rem) {
+  .storage-row {
+    grid-template-columns: minmax(10rem, 2fr) minmax(5rem, 0.7fr) minmax(0, 3fr) minmax(
+        12rem,
+        1.6fr
+      );
+    align-items: center;
+  }
+}

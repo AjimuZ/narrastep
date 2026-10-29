@@ -28,6 +28,8 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | GET | `/api/v1/projects/{projectId}` | Read project details | 200 |
 | PATCH | `/api/v1/projects/{projectId}` | Update editable metadata | 200 |
 | DELETE | `/api/v1/projects/{projectId}` | Delete a non-busy project and its workspace | 204 |
+| GET | `/api/v1/storage` | Disk space used by each project, by kind, and the free space of the data volume | 200 |
+| DELETE | `/api/v1/projects/{projectId}/source-video` | Remove the original video once a package of the current review exists | 200 |
 | POST | `/api/v1/projects/{projectId}/video` | Stream, probe, and store the only source video | 201 |
 | GET | `/api/v1/projects/{projectId}/video` | Stream source video with byte-range support | 200/206 |
 | POST | `/api/v1/projects/{projectId}/process` | Queue or retry processing; the optional body carries the project type and spoken language | 202 |
@@ -201,6 +203,37 @@ is `draft`, `uploaded` or `failed` (a retry uses the current glossary). Changing
 answers `409 INVALID_PROJECT_STATE`; sending the stored list again is accepted. How the terms are
 used is described in [Processing pipeline](PROCESSING_PIPELINE.md#glossary-hints-p091).
 
+### Storage and removing the original video (P09.2)
+
+`GET /api/v1/storage` answers `{totalBytes, freeBytes, items}`. `items` has one entry per project,
+largest first (ties by name), with `projectId`, `name`, `status`, `totalBytes`, `categories`
+(`source`, `audio`, `transcript`, `screenshots`, `exports`, `other`; they add up to `totalBytes`),
+`sourceVideoBytes` (the video file on disk, 0 once removed), `sourceRemovedAt` and
+`removalBlockedReason`. Sizes are the bytes of the regular files in the project's workspace;
+symbolic links are not followed. `freeBytes` is the free space of the data volume, or null when it
+cannot be read. `other` holds diagnostics, scratch files and open recording chunks. The SQLite
+file and the data root's `.trash` and `.locks` folders are not counted.
+
+`removalBlockedReason` is null when the original video can be removed now, otherwise one of
+`no_video`, `already_removed`, `busy` (queued, processing or exporting) or `package_required`
+(the project is not `completed`, or the ZIP of its completed export is not on disk).
+
+`DELETE /api/v1/projects/{projectId}/source-video` deletes every file in the project's `source/`
+folder (the video and, for recordings, the kept microphone and system-audio tracks), marks the
+video with `sourceRemovedAt` and answers the project's refreshed storage entry (`200`). The project,
+transcript, screenshots and packages are untouched. It is refused, with nothing deleted, with
+`409 PACKAGE_REQUIRED` before a package of the current review exists, `409 PROJECT_BUSY` during
+background work, `409 SOURCE_VIDEO_REMOVED` when it is already removed and `404
+PROJECT_ASSET_MISSING` when the project has no video. The removal cannot be undone
+([ADR 0018](decisions/0018-remove-original-video-after-export.md)).
+
+After a removal the project's `videoAsset.sourceRemovedAt` is set and: `GET .../video` answers
+`410 SOURCE_VIDEO_REMOVED`; `POST /segments/{segmentId}/screenshot-from-video` and
+`POST .../exports` with `includeOriginalVideo: true` answer `409 SOURCE_VIDEO_REMOVED`; a package
+whose selected screenshots are not all saved as images answers `409 SOURCE_VIDEO_REMOVED` before
+anything is queued; `GET /screenshots/{id}/content` for an image that was never saved answers
+`404 SOURCE_VIDEO_REMOVED`.
+
 ### Starting processing (P05.4)
 
 `POST /api/v1/projects/{projectId}/process` accepts an optional JSON body
@@ -250,6 +283,8 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `PROCESSING_CANCELLED` | cancelled job | Cooperative cancellation completed and derivatives were removed. |
 | `PROJECT_TYPE_REQUIRED` | 409 | Processing was requested for a project without a project type and the request did not choose one. |
 | `PROJECT_ASSET_MISSING` | 404, 409, or failed operation | Required source, screenshot, or export evidence is unavailable. |
+| `PACKAGE_REQUIRED` | 409 | The original video can only be removed once a package of the current review exists on disk (P09.2). |
+| `SOURCE_VIDEO_REMOVED` | 404, 409, or 410 | The original video was removed after export, so playback, exact-frame recovery, a package that needs it or a second removal is refused (P09.2). |
 | `INVALID_SEGMENT_OPERATION` | 404, 409, or 422 | Split, merge, or edit invariants were not met. |
 | `INVALID_SCREENSHOT_ASSOCIATION` | 422 | The selected screenshot is not valid evidence for the segment's project. |
 | `INVALID_SCREENSHOT_TIMESTAMP` | 422 | Exact-frame recovery is outside the validated source duration. |

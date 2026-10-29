@@ -54,6 +54,12 @@ export const routes: Routes = [
     title: 'Export · Narrastep',
   },
   {
+    path: 'storage',
+    loadComponent: () =>
+      import('./features/storage/storage.component').then((module) => module.StorageComponent),
+    title: 'Storage · Narrastep',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found.component').then((module) => module.NotFoundComponent),

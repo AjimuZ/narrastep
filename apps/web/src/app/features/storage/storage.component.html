@@ -1,0 +1,125 @@
+<section class="page">
+  <header class="page-header">
+    <h1 i18n="@@storage.title">Storage</h1>
+    <p class="muted" i18n="@@storage.intro">
+      Space used by your projects on this computer. Remove an original video after you have created
+      its package.
+    </p>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="ns-notice ns-notice--error error-row" role="alert">
+      <span>{{ message }}</span>
+      <button class="ns-button ns-button--small" type="button" (click)="load()">
+        <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again">Try again</span>
+      </button>
+    </div>
+  }
+
+  <div class="ns-notice ns-notice--ok notice-row" role="status" [hidden]="!notice()">
+    {{ notice() }}
+  </div>
+
+  @if (loading()) {
+    <div
+      class="loading"
+      aria-label="Loading storage"
+      i18n-aria-label="@@storage.loading"
+      aria-busy="true"
+    >
+      <span class="visually-hidden" i18n="@@storage.loading_text">Loading storage…</span>
+      <ns-activity-line label="Loading storage" i18n-label="@@storage.loading" />
+      <div class="ns-placeholder"></div>
+    </div>
+  } @else if (summary(); as data) {
+    <ns-window title="Total" i18n-title="@@storage.total_title" [primary]="true">
+      <dl class="totals">
+        <div>
+          <dt class="muted" i18n="@@storage.total_used">Used by projects</dt>
+          <dd class="mono">{{ size(data.totalBytes) }}</dd>
+        </div>
+        <div>
+          <dt class="muted" i18n="@@storage.total_free">Free on this computer</dt>
+          <dd class="mono">
+            @if (data.freeBytes === null) {
+              <span i18n="@@common.unknown">Unknown</span>
+            } @else {
+              {{ size(data.freeBytes) }}
+            }
+          </dd>
+        </div>
+      </dl>
+    </ns-window>
+
+    @if (data.items.length === 0) {
+      <ns-window title="No projects yet" i18n-title="@@projects.empty_title">
+        <p class="muted" i18n="@@storage.empty">Projects you create will show their size here.</p>
+      </ns-window>
+    } @else {
+      <ns-window [title]="listTitle(data.items.length)">
+        <ul class="storage-list" aria-label="Projects" i18n-aria-label="@@projects.title">
+          @for (item of data.items; track item.projectId) {
+            <li class="ns-row storage-row">
+              <div class="storage-identity">
+                <h3>{{ item.name }}</h3>
+                <ns-status-pill [label]="statusLabel(item).label" [tone]="statusLabel(item).tone" />
+              </div>
+              <p class="storage-total mono">
+                {{ size(item.totalBytes) }}
+              </p>
+              <ul
+                class="storage-shares muted"
+                aria-label="Space by kind"
+                i18n-aria-label="@@storage.shares"
+              >
+                @for (share of shares(item); track share.label) {
+                  <li>
+                    {{ share.label }} <span class="mono">{{ size(share.bytes) }}</span>
+                  </li>
+                }
+              </ul>
+              <div class="storage-action">
+                @if (item.removalBlockedReason === null) {
+                  <button
+                    class="ns-button ns-button--small ns-button--danger"
+                    type="button"
+                    [attr.aria-label]="removeLabel(item)"
+                    [disabled]="removingProjectId() === item.projectId"
+                    (click)="confirmRemoval(item)"
+                  >
+                    <ns-pixel-icon name="trash" />
+                    @if (removingProjectId() === item.projectId) {
+                      <span i18n="@@storage.removing">Removing…</span>
+                    } @else {
+                      <span i18n="@@storage.remove">Remove original video</span>
+                    }
+                  </button>
+                } @else {
+                  <p class="ns-help storage-reason">
+                    {{ blockedText(item.removalBlockedReason) }}
+                    @if (item.sourceRemovedAt) {
+                      <time [attr.datetime]="item.sourceRemovedAt">{{
+                        item.sourceRemovedAt | date: 'short'
+                      }}</time>
+                    }
+                  </p>
+                  @if (canCreatePackage(item)) {
+                    <a
+                      class="ns-button ns-button--small"
+                      [routerLink]="['/projects', item.projectId, 'export']"
+                      [attr.aria-label]="packageLabel(item)"
+                    >
+                      <ns-pixel-icon name="export" /><span i18n="@@storage.create_package"
+                        >Create package</span
+                      >
+                    </a>
+                  }
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </ns-window>
+    }
+  }
+</section>

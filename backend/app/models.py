@@ -229,6 +229,9 @@ class MediaAsset(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+    # Set when the user removed the original recording after exporting (P09.2); the row keeps its
+    # metadata and the files are gone.
+    source_removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     project: Mapped[Project] = relationship(back_populates="media_asset")
 

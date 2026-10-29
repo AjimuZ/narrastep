@@ -64,6 +64,8 @@ export class ExportComponent implements OnInit {
   readonly loading = signal(true);
   readonly creating = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  /** True once the original video was removed after export (P09.2), so it cannot be included. */
+  readonly sourceRemoved = computed(() => !!this.project()?.videoAsset?.sourceRemovedAt);
   readonly currentExport = computed(
     () =>
       this.exports().find((item) => item.status === 'queued' || item.status === 'processing') ??

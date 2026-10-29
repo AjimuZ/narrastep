@@ -27,7 +27,7 @@ Statuses are `draft`, `uploaded`, `queued`, `processing`, `review`, `exporting`,
 
 ### MediaAsset
 
-Stores a relative path, safe display metadata, MIME type, byte size, duration, dimensions, type, and creation time. Video, audio, image, and archive bytes stay on the filesystem.
+Stores a relative path, safe display metadata, MIME type, byte size, duration, dimensions, type, and creation time. Video, audio, image, and archive bytes stay on the filesystem. `source_removed_at` (nullable; migration `20261029_0009`, P09.2) is set when the user removed the original recording after export: the files in `source/` are gone, the row and its metadata stay, and `size_bytes` keeps the size the video had. See [ADR 0018](decisions/0018-remove-original-video-after-export.md).
 
 ### TranscriptSegment
 

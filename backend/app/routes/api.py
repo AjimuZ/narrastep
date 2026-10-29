@@ -57,6 +57,7 @@ from app.schemas import (
     ProjectCreate,
     ProjectListResponse,
     ProjectResponse,
+    ProjectStorageResponse,
     ProjectUpdate,
     RecordingChunkResponse,
     RecordingComplete,
@@ -69,6 +70,7 @@ from app.schemas import (
     SegmentResponse,
     SegmentSplitRequest,
     SegmentUpdate,
+    StorageResponse,
     serialize_utc,
 )
 from app.services.export_names import stored_export_zip_file_name
@@ -111,6 +113,12 @@ from app.services.screenshot_materialization import (
     materialize_png,
     write_png_atomic,
     write_thumbnail_atomic,
+)
+from app.services.storage import (
+    measure_project_storage,
+    removal_blocked_reason,
+    remove_original_video,
+    source_video_bytes,
 )
 from app.services.uploads import stream_single_video_upload
 from app.services.workspaces import (
@@ -299,6 +307,48 @@ def _delete_project_and_workspace(session: Session, project: Project, settings: 
         )
 
 
+@router.get("/storage", response_model=StorageResponse)
+def get_storage(
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Report the disk space each project uses, largest first, and the free space left."""
+    projects = list(session.scalars(select(Project)))
+    items = [_storage_payload(session, project, settings) for project in projects]
+    items.sort(key=lambda item: (-_int_value(item["totalBytes"]), str(item["name"]).casefold()))
+    try:
+        free_bytes: int | None = shutil.disk_usage(settings.data_root).free
+    except OSError:
+        free_bytes = None
+    return {
+        "totalBytes": sum(_int_value(item["totalBytes"]) for item in items),
+        "freeBytes": free_bytes,
+        "items": items,
+    }
+
+
+@router.delete("/projects/{project_id}/source-video", response_model=ProjectStorageResponse)
+def remove_source_video(
+    project_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Delete the original recording once a package of the current review exists.
+
+    Answers the project's refreshed storage figures. Refused with `PACKAGE_REQUIRED` (409) before
+    an export, `PROJECT_BUSY` while background work runs and `SOURCE_VIDEO_REMOVED` (409) when
+    it is already gone. Existing packages are untouched.
+    """
+    project = _require_project(session, project_id)
+    reservation = acquire_project_operation(settings.data_root, project.id, "source-removal")
+    try:
+        session.refresh(project)
+        remove_original_video(session, project, settings.data_root)
+        return _storage_payload(session, project, settings)
+    finally:
+        release_project_operation(reservation)
+
+
 @router.post(
     "/projects/{project_id}/video",
     response_model=MediaAssetResponse,
@@ -420,6 +470,8 @@ def stream_video(
     asset = project.media_asset
     if asset is None:
         raise ApiError("PROJECT_ASSET_MISSING", "The project source video is unavailable.", 404)
+    if asset.source_removed_at is not None:
+        raise ApiError("SOURCE_VIDEO_REMOVED", "The original video was removed.", 410)
     path = ensure_within_root(settings.data_root, asset.relative_path)
     if not path.is_file():
         raise ApiError("PROJECT_ASSET_MISSING", "The project source video is unavailable.", 404)
@@ -1006,6 +1058,8 @@ def create_screenshot_from_video(
         asset = project.media_asset
         if asset is None:
             raise ApiError("PROJECT_ASSET_MISSING", "The source video is unavailable.", 404)
+        if asset.source_removed_at is not None:
+            raise ApiError("SOURCE_VIDEO_REMOVED", "The original video was removed.", 409)
         if asset.duration_seconds is None:
             raise ApiError(
                 "SOURCE_DURATION_UNAVAILABLE",
@@ -1260,6 +1314,7 @@ def _queue_export(
     )
     if active_export is not None:
         raise ApiError("PROJECT_BUSY", "This project already has an active export.", 409)
+    _reject_export_needing_removed_source(session, project, request, settings)
     _ensure_worker_available(settings)
     transition = session.execute(
         update(Project)
@@ -1315,6 +1370,42 @@ def _queue_export(
         ) from error
     session.expire_all()
     return _export_payload(_require_export(session, export.id))
+
+
+def _reject_export_needing_removed_source(
+    session: Session, project: Project, request: ExportCreate, settings: Settings
+) -> None:
+    """Refuse a package that would need frames or the file of an already removed original video.
+
+    Does nothing while the video exists. Afterwards the package may only use screenshots saved as
+    images; one that exists only as a position in the video would make the worker fail late, so
+    the request is refused up front with `SOURCE_VIDEO_REMOVED` (409).
+    """
+    asset = project.media_asset
+    if asset is None or asset.source_removed_at is None:
+        return
+    if request.include_original_video:
+        raise ApiError(
+            "SOURCE_VIDEO_REMOVED",
+            "The original video was removed, so it cannot be included in a package.",
+            409,
+        )
+    segments = session.scalars(
+        select(TranscriptSegment).where(
+            TranscriptSegment.project_id == project.id,
+            TranscriptSegment.active.is_(True),
+        )
+    )
+    for segment in segments:
+        snapshot = export_segment_snapshot(settings, segment)
+        if snapshot.screenshot_id is not None and (
+            snapshot.screenshot_path is None or not snapshot.screenshot_path.is_file()
+        ):
+            raise ApiError(
+                "SOURCE_VIDEO_REMOVED",
+                "A selected screenshot can only be rebuilt from the removed original video.",
+                409,
+            )
 
 
 @router.get("/projects/{project_id}/exports", response_model=ExportListResponse)
@@ -1484,6 +1575,34 @@ def _project_payload(session: Session, project: Project, settings: Settings) -> 
     }
 
 
+def _int_value(value: object) -> int:
+    """Narrow a payload value that is known to hold an integer."""
+    return value if isinstance(value, int) else 0
+
+
+def _storage_payload(session: Session, project: Project, settings: Settings) -> dict[str, object]:
+    """Map one project's measured disk use and removal guard to the storage contract."""
+    usage = measure_project_storage(settings.data_root, project.id)
+    asset = project.media_asset
+    return {
+        "projectId": project.id,
+        "name": project.name,
+        "status": project.state.value,
+        "totalBytes": usage.total,
+        "categories": {
+            "source": usage.source,
+            "audio": usage.audio,
+            "transcript": usage.transcript,
+            "screenshots": usage.screenshots,
+            "exports": usage.exports,
+            "other": usage.other,
+        },
+        "sourceVideoBytes": source_video_bytes(project, settings.data_root),
+        "sourceRemovedAt": asset.source_removed_at if asset else None,
+        "removalBlockedReason": removal_blocked_reason(session, project, settings.data_root),
+    }
+
+
 def _media_payload(asset: MediaAsset) -> dict[str, object]:
     """Map stored media metadata without exposing local filenames or paths."""
     return {
@@ -1497,6 +1616,7 @@ def _media_payload(asset: MediaAsset) -> dict[str, object]:
         "width": asset.width,
         "height": asset.height,
         "createdAt": asset.created_at,
+        "sourceRemovedAt": asset.source_removed_at,
     }
 
 

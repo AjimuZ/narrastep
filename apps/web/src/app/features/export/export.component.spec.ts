@@ -231,4 +231,51 @@ describe('ExportComponent', () => {
     );
     expect(element.querySelector('a[download]')).toBeNull();
   });
+
+  it('disables the original video option once the video was removed', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ExportComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: ApiService,
+          useValue: {
+            getProject: () =>
+              of({
+                ...PROJECT,
+                videoAsset: {
+                  id: 'asset-1',
+                  projectId: PROJECT.id,
+                  assetType: 'video',
+                  originalFilename: 'demo.mp4',
+                  mimeType: 'video/mp4',
+                  sizeBytes: 1000,
+                  durationSeconds: 4,
+                  width: 640,
+                  height: 360,
+                  createdAt: '2026-07-15T10:00:00Z',
+                  sourceRemovedAt: '2026-07-16T10:00:00Z',
+                },
+              }),
+            listExports: () => of([PREVIOUS_EXPORT]),
+            estimateExport: () => throwError(() => new Error('offline')),
+            monitorExports: () => of([PREVIOUS_EXPORT]),
+            exportDownloadUrl: () => '',
+          },
+        },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ExportComponent);
+    fixture.componentRef.setInput('projectId', PROJECT.id);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const option = element.querySelector('#include-original-video') as HTMLInputElement;
+    expect(option.disabled).toBe(true);
+    expect(element.querySelector('#include-original-video-help')!.textContent).toContain(
+      'The original video was removed from this computer',
+    );
+  });
 });

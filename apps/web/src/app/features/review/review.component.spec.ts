@@ -182,6 +182,37 @@ describe('ReviewComponent', () => {
     };
   }
 
+  it('replaces the player with a notice once the original video was removed', async () => {
+    const { fixture } = await setup();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('video')).not.toBeNull();
+
+    fixture.componentInstance.project.set({
+      ...PROJECT,
+      videoAsset: {
+        id: 'asset-1',
+        projectId: PROJECT.id,
+        assetType: 'video',
+        originalFilename: 'demo.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 1000,
+        durationSeconds: 4,
+        width: 640,
+        height: 360,
+        createdAt: '2026-07-15T10:00:00Z',
+        sourceRemovedAt: '2026-07-16T10:00:00Z',
+      },
+    });
+    fixture.detectChanges();
+
+    expect(element.querySelector('video')).toBeNull();
+    expect(element.querySelector('#review-video-panel [role="status"]')!.textContent).toContain(
+      'The original video was removed from this computer',
+    );
+    const recover = element.querySelector('button[title="Recover current frame (R)"]');
+    expect((recover as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('renders an accessible native selector with transcript as the default compact view', async () => {
     const { fixture } = await setup();
     const switcher = fixture.nativeElement.querySelector(

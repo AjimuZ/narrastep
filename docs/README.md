@@ -38,3 +38,4 @@
 | [0015](decisions/0015-english-and-italian-interface.md) | English and Italian interface | Accepted |
 | [0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md) | Podman launcher, generated environment file and dependency refresh | Accepted (planned, P08) |
 | [0017](decisions/0017-valkey-broker.md) | Valkey as the Redis-protocol broker | Accepted (P08.3) |
+| [0018](decisions/0018-remove-original-video-after-export.md) | Remove the original video after export | Accepted (P09.2) |

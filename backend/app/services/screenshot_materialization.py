@@ -117,6 +117,8 @@ def _decode_screenshot_source(screenshot: Screenshot, settings: Settings) -> Fra
     asset = project.media_asset
     if asset is None:
         raise PipelineServiceError("PROJECT_ASSET_MISSING", "The source video is unavailable.")
+    if asset.source_removed_at is not None:
+        raise PipelineServiceError("SOURCE_VIDEO_REMOVED", "The original video was removed.")
     source = ensure_within_root(settings.data_root, asset.relative_path)
     if not source.is_file():
         raise PipelineServiceError("PROJECT_ASSET_MISSING", "The source video is unavailable.")

@@ -86,11 +86,18 @@
         title="Video"
         i18n-title="@@processing.video"
       >
-        <video #videoPlayer controls preload="metadata" [src]="videoUrl()">
-          <ng-container i18n="@@review.no_video_support"
-            >This browser cannot play the video.</ng-container
-          >
-        </video>
+        @if (sourceRemoved()) {
+          <p class="ns-notice" role="status" i18n="@@review.video_removed">
+            The original video was removed from this computer after the package was created. The
+            transcript and the saved screenshots are still here.
+          </p>
+        } @else {
+          <video #videoPlayer controls preload="metadata" [src]="videoUrl()">
+            <ng-container i18n="@@review.no_video_support"
+              >This browser cannot play the video.</ng-container
+            >
+          </video>
+        }
         <div class="video-controls">
           <div class="ns-form-row playback-speed">
             <label class="ns-label" for="playback-rate" i18n="@@review.speed">Playback speed</label>
@@ -114,7 +121,7 @@
           <button
             class="ns-button ns-button--small"
             type="button"
-            [disabled]="!selectedSegment() || screenshotPending()"
+            [disabled]="!selectedSegment() || screenshotPending() || sourceRemoved()"
             title="Recover current frame (R)"
             i18n-title="@@review.recover_title"
             (click)="recoverCurrentFrame()"

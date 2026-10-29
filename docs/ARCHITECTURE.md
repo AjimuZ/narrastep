@@ -91,6 +91,15 @@ in during the conversion is detected and the save is refused instead of losing t
 chunk rows are deleted in that transaction and the files after it; the startup cleanup removes
 chunk files without rows, so a crash in between leaves nothing behind.
 
+Storage accounting and the removal of the original video (P09.2, `services/storage.py`) run in the
+API request like upload and completion. Accounting walks each project workspace with `os.scandir`
+(regular files only, symbolic links skipped) and reports bytes per fixed folder. Removal takes the
+project operation lock, checks that the project is `completed` with its package ZIP on disk, deletes
+the files in `source/` first and then sets `media_assets.source_removed_at`, so a crash between
+the two leaves a project that still offers the removal. Nothing reaches Redis or the worker; the
+Storage screen (`apps/web/src/app/features/storage/`) is the only client
+([ADR 0018](decisions/0018-remove-original-video-after-export.md)).
+
 The recorder screen (P05.3, `apps/web/src/app/features/recorder/`) is the only client. The
 component owns the source checks, the save step and the leave guard; `media-capture.ts` wraps the
 browser capture APIs and the microphone level, which is analysed in the page and never sent; and
