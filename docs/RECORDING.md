@@ -326,4 +326,28 @@ recorder can upload what is missing and save again, or discard.
   changes and clears a label with the keyboard in Review, reports a refused save, and checks
   contrast and 320 px and 200% zoom in English and Italian.
 - Manual test on the owner's computer with a real Teams call; the result is recorded in
-  [Status](STATUS.md) with the date and browser version.
+  [Status](STATUS.md) with the date and browser version. The procedure is below.
+
+### Manual test: Teams call on Windows with a headset (P05.6)
+
+Not yet run. It needs Windows, a headset, a browser (Chrome or Edge) and a second person or a
+second device to talk in the call. Record each step as passed or failed with the browser version.
+
+1. Start the stack, open `/record`, choose **Entire screen**, tick **Share system audio** in the
+   browser picker and check that the recorder shows system audio as **Included**. Select the
+   headset microphone and speak: the level gauge must move.
+2. Start a Teams call with the headset worn. Record for about five minutes: speak for a while,
+   let the other person speak, talk over each other once, and pause and resume once.
+3. Stop, save with a name and check in Projects that the project is **Not processed** and that no
+   processing job was queued.
+4. Process the project and open Review. Check that the video has both voices at a usable level,
+   that your sentences are labelled **You**, the other person's **Others**, and that overlapping
+   or quiet segments are unlabelled rather than wrong. Count the correct, wrong and unlabelled
+   segments.
+5. Change one label by hand, reload and check that the change stays.
+6. Repeat steps 2 to 4 for a minute with the Teams audio on the laptop speakers instead of the
+   headset. Expect more unlabelled segments because of echo; note how many.
+7. If labels are poor with the headset, adjust `LABEL_MARGIN_DB` and `SILENCE_DBFS` in
+   `backend/app/services/speaker_labels.py` and record the values and the new counts.
+8. Record the result in [Status](STATUS.md) (date, Windows and browser versions, counts) and only
+   then check P05.6 in the roadmap.
