@@ -200,6 +200,41 @@ Prettier from the repository root:
 apps/web/node_modules/.bin/prettier --check "desktop/src/*.cjs" "desktop/test/**/*.cjs" desktop/package.json
 ```
 
+### Manual smoke test on Docker (P07.2)
+
+Not yet run. The build worker cannot run Docker (no root, no capabilities, no user namespaces) and
+has no display, so the owner runs this check on a computer with Docker Engine or Docker Desktop
+and the Compose plugin (`docker compose version` succeeds). Podman is not part of this check for
+now (owner decision, 2026-10-29). The computer also needs Node.js 22.12 or newer with npm, a
+desktop session (on Linux, `DISPLAY` or `WAYLAND_DISPLAY` is set) and Internet access for step 4.
+Record each step as passed or failed with the date and the output of `docker version`,
+`docker compose version` and `node --version`. The address below uses the default port 4200; use
+`NARRASTEP_WEB_PORT` from `.env` when it is set.
+
+1. From the repository root run `./start.sh` (or `./start.sh -r` when the images are already
+   built). Compose output stays in the terminal and the launcher prints `Narrastep: Waiting for
+   Narrastep to become healthy at http://127.0.0.1:4200 ...`. No window opens before the line
+   `Narrastep: Opening the Narrastep window on http://127.0.0.1:4200.`; then one window opens on
+   **Projects** with **Services ready** in the header. A line ending in `the worker is not ready
+   yet.` means the worker did not answer for 60 seconds; note it.
+2. Close the window: `docker compose ps` in another terminal still lists the running services and
+   a browser on `http://127.0.0.1:4200` still shows the app. Press `Ctrl+C` to stop the stack.
+3. Run `./start.sh -r` again and wait for the window. Press `Ctrl+C` in the terminal: the stack
+   stops, the terminal prints `Narrastep: The stack is stopping, so the Narrastep window was
+   closed.` and the window closes.
+4. Delete the `desktop/node_modules` folder and run `./start.sh -r`. After the waiting line the
+   terminal prints `Narrastep: First launch: installing Electron 45.1.0 into
+   desktop/node_modules. ...`, then npm's output and the binary download, and the window opens on
+   **Projects**. Stop with `Ctrl+C` and run `./start.sh -r` once more: the window opens without the
+   install message.
+5. Run `./start.sh -r --headless`: the stack starts, no `Narrastep: Waiting` line is printed and
+   no window opens, and a browser on `http://127.0.0.1:4200` shows **Projects**. Stop with
+   `Ctrl+C`.
+6. A window that does not open is a failed step, not a pass: copy the launcher's message. On Linux,
+   an Electron that stops on Chromium's sandbox is risk K13 in [Risks](RISKS.md).
+7. Record the result in [Status](STATUS.md) and as dated evidence under P07.2 in the
+   [roadmap](ROADMAP.md), and only then check P07.2.
+
 ## Database migrations
 
 Create a migration only after reviewing the generated operations:

@@ -51,6 +51,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | --- | --- | --- |
 | Language switch in Settings | Planned | P06.4 |
 | Real Teams call with a headset on Windows | Planned | P05.6 |
+| Desktop window smoke test on the Docker stack, run by the owner ([procedure](DEVELOPMENT.md#manual-smoke-test-on-docker-p072)) | Planned | P07.2 |
 | Optional local Gemma 4 generation | Planned | P06 |
 | Clickable `[mm:ss]` references in Review and Document | Planned | P06.6 |
 | Source picker, microphone and native "Save as" in the desktop window | Planned | P07.3–P07.4 |
