@@ -22,6 +22,7 @@ from app.models import (
     SegmentLineage,
     SegmentScreenshotAssociation,
     TranscriptSegment,
+    canonical_output_mode,
     utc_now,
 )
 from app.schemas import serialize_utc
@@ -72,7 +73,10 @@ def perform_processing(
         project = job.project
         processing_settings = _settings_from_job_snapshot(active_settings, job)
         processing_snapshot = job.configuration_snapshot or {}
-        project_mode = str(processing_snapshot.get("projectMode", project.output_mode.value))
+        # A job queued before the project-type migration may still carry a legacy value.
+        project_mode = canonical_output_mode(
+            str(processing_snapshot.get("projectMode", project.output_mode.value))
+        )
         metrics = MetricsCollector(
             project_id=project.id,
             operation_id=job.id,

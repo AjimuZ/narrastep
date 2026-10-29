@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from app.config import Settings
+from app.models import canonical_output_mode
 from app.services.adaptive_selection import extract_adaptive_frames_to_directory
 from app.services.diagnostics import MetricsCollector
 from app.services.exporting import ExportRequest, ExportSegment, estimate_export_package
@@ -94,7 +95,7 @@ def _run_strategy(
             duration_seconds,
             segments,
             output_root / strategy,
-            project_mode=str(case.get("mode", "general")),
+            project_mode=canonical_output_mode(str(case.get("mode", "general"))),
             detected_language=str(case.get("detectedLanguage", "en")),
             config=config,
             metrics=metrics,
@@ -180,7 +181,7 @@ def _estimate_batch_copies(
             segments=export_segments,
             raw_transcript_path=output_root / "missing-raw-transcript.json",
             destination_path=output_root / "unused.zip",
-            output_mode=str(case.get("mode", "general")),
+            output_mode=canonical_output_mode(str(case.get("mode", "general"))),
             original_video_path=video_path,
             chatgpt_max_files_per_batch=config.chatgpt_max_files_per_batch,
             duplicate_similarity_threshold=config.duplicate_similarity_threshold,

@@ -26,13 +26,21 @@ only. No code behavior changed, so no other check was run. P01.5 waits for the o
 **Depends on:** P01.3. **Areas:** backend, frontend, migration.
 Decision: [ADR 0009](decisions/0009-project-types.md).
 
-- [ ] P02.1 Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate
+- [x] P02.1 Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate
   `technical_walkthrough` to `task_briefing`.
 - [ ] P02.2 Type-specific screenshot profile, export guide and evidence prompt.
 - [ ] P02.3 New-project form: four type cards, optional name with a default, "More options".
 
 Exit: migration upgrade test on a Version 0.2 database; backend and frontend suites pass;
 OpenAPI regenerated.
+
+P02.1 evidence (2026-10-29): migration `20261029_0003` rebuilds `projects` with the new CHECK
+constraint and maps `technical_walkthrough` to `task_briefing`.
+`test_project_type_revision_migrates_version_0_2_modes` upgrades a seeded Version 0.2 database
+(revision `20260720_0002`), checks the four values, child rows, `PRAGMA foreign_key_check`,
+`alembic check` and the downgrade. `python -B -m pytest` in `backend`: 90 passed, 1 skipped;
+`npm run test` in `apps/web`: 35 passed; `npm run lint` and `npm run build` passed;
+`python scripts/export_openapi.py --check` reports the regenerated document current.
 
 ## P03 — Descriptive export names
 

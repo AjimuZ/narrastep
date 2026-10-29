@@ -140,13 +140,13 @@ export class ProjectsPageComponent {
       });
   }
 
-  /** Presents project modes as product language instead of API enum syntax. */
+  /** Presents project types as product language instead of API enum syntax. */
   modeLabel(mode: ProjectMode): string {
     const labels: Record<ProjectMode, string> = {
-      tutorial: 'Tutorial',
+      task_briefing: 'Task briefing',
       meeting: 'Meeting',
-      technical_walkthrough: 'Technical walkthrough',
-      general: 'General',
+      tutorial: 'Tutorial',
+      general: 'Generic',
     };
     return labels[mode];
   }

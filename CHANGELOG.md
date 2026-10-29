@@ -18,6 +18,9 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- Projects now have one of four types: Task briefing, Meeting, Tutorial or Generic. Existing
+  Technical walkthrough projects become Task briefings when the database is upgraded and keep their
+  screenshot density and image budget; the API no longer accepts `technical_walkthrough`.
 - Reorganized the documentation: index, requirements, roadmap with exit checks, risks, and ADRs in
   one template. Added specifications for the planned project types, descriptive export names,
   pixel interface, in-browser recording and optional local generation. Accepted the English and

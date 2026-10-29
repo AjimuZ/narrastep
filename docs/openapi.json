@@ -317,11 +317,11 @@
         "type": "object"
       },
       "OutputMode": {
-        "description": "Describe the intended downstream document style for the export prompt.",
+        "description": "Describe the project type: the purpose of the recording and the package built for it.\n\nThe API keeps the historical field name `mode` (ADR 0009). Version 0.2 stored\n`technical_walkthrough`; migration 20261029_0003 rewrites it to `task_briefing`.",
         "enum": [
-          "tutorial",
+          "task_briefing",
           "meeting",
-          "technical_walkthrough",
+          "tutorial",
           "general"
         ],
         "title": "OutputMode",

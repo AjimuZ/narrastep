@@ -22,7 +22,7 @@ def _create_project(client: TestClient, name: str = "Claims walkthrough") -> dic
         json={
             "name": name,
             "description": "Review a local workflow.",
-            "mode": "technical_walkthrough",
+            "mode": "task_briefing",
             "sourceLanguage": "auto",
         },
     )
@@ -53,7 +53,7 @@ def test_health_and_documentation_assets_are_local(client: TestClient) -> None:
 def test_project_crud_uses_frontend_contract(client: TestClient) -> None:
     """Expose mode/status/video fields and stable UTC timestamps expected by Angular."""
     project = _create_project(client)
-    assert project["mode"] == "technical_walkthrough"
+    assert project["mode"] == "task_briefing"
     assert project["status"] == "draft"
     assert project["videoAsset"] is None
     assert project["createdAt"].endswith("Z")
@@ -76,6 +76,30 @@ def test_project_crud_uses_frontend_contract(client: TestClient) -> None:
     missing = client.get(f"/api/v1/projects/{project['id']}")
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "PROJECT_NOT_FOUND"
+
+
+@pytest.mark.parametrize("mode", ["task_briefing", "meeting", "tutorial", "general"])
+def test_project_types_are_accepted(client: TestClient, mode: str) -> None:
+    """Accept each ADR 0009 project type through the historical `mode` field."""
+    response = client.post("/api/v1/projects", json={"name": "Typed", "mode": mode})
+    assert response.status_code == 201
+    assert response.json()["mode"] == mode
+
+
+def test_legacy_technical_walkthrough_mode_is_rejected(client: TestClient) -> None:
+    """Reject the retired Version 0.2 value instead of silently storing or remapping it."""
+    created = client.post(
+        "/api/v1/projects", json={"name": "Legacy", "mode": "technical_walkthrough"}
+    )
+    assert created.status_code == 422
+    assert created.json()["error"]["code"] == "VALIDATION_ERROR"
+
+    project = _create_project(client)
+    updated = client.patch(
+        f"/api/v1/projects/{project['id']}", json={"mode": "technical_walkthrough"}
+    )
+    assert updated.status_code == 422
+    assert updated.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_upload_is_validated_once_and_supports_byte_ranges(

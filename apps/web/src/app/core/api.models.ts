@@ -1,4 +1,5 @@
-export type ProjectMode = 'tutorial' | 'meeting' | 'technical_walkthrough' | 'general';
+/** Project type (ADR 0009); the API keeps the historical field name `mode`. */
+export type ProjectMode = 'task_briefing' | 'meeting' | 'tutorial' | 'general';
 
 export type ProjectStatus =
   'draft' | 'uploaded' | 'queued' | 'processing' | 'review' | 'exporting' | 'completed' | 'failed';

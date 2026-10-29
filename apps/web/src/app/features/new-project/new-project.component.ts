@@ -45,26 +45,27 @@ export class NewProjectComponent implements OnInit {
     mode: ['tutorial' as ProjectMode, [Validators.required]],
   });
 
+  /** The four ADR 0009 project types, in the documented order, with one line of help each. */
   readonly modes: readonly { value: ProjectMode; label: string; detail: string }[] = [
     {
-      value: 'tutorial',
-      label: 'Tutorial',
-      detail: 'Step-by-step work with clear actions and outcomes.',
-    },
-    {
-      value: 'technical_walkthrough',
-      label: 'Technical walkthrough',
-      detail: 'A guided explanation of software or an implementation.',
+      value: 'task_briefing',
+      label: 'Task briefing',
+      detail: 'Someone explains a task or a problem you must solve later.',
     },
     {
       value: 'meeting',
       label: 'Meeting',
-      detail: 'Discussion, decisions, and supporting on-screen context.',
+      detail: 'A discussion whose decisions and key points need a summary.',
+    },
+    {
+      value: 'tutorial',
+      label: 'Tutorial',
+      detail: 'A procedure to repeat or teach, step by step.',
     },
     {
       value: 'general',
-      label: 'General',
-      detail: 'Flexible source material without a specialized structure.',
+      label: 'Generic',
+      detail: 'Anything else, such as a demo or a recorded note.',
     },
   ];
 

@@ -11,7 +11,7 @@ const PROJECT: Project = {
   id: 'project-1',
   name: 'Claims workflow',
   description: null,
-  mode: 'technical_walkthrough',
+  mode: 'task_briefing',
   sourceLanguage: 'en',
   detectedLanguage: 'en',
   status: 'review',

@@ -54,7 +54,7 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 
 ## Important requests
 
-Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is one of `tutorial`, `meeting`, `technical_walkthrough`, or `general`; source language is `auto` or a supported Whisper language code.
+Project creation accepts `name`, optional `description`, `mode`, and `sourceLanguage`. `mode` is the project type ([ADR 0009](decisions/0009-project-types.md)): one of `task_briefing`, `meeting`, `tutorial`, or `general` (default `tutorial`). The retired Version 0.2 value `technical_walkthrough` is rejected with `VALIDATION_ERROR` on create and update; stored projects were migrated to `task_briefing`, while published export manifests and job configuration snapshots keep the value they were written with. Source language is `auto` or a supported Whisper language code.
 
 Split accepts:
 
@@ -105,7 +105,7 @@ generation. All fields are additive.
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- New `mode` values ([ADR 0009](decisions/0009-project-types.md)).
+- Optional `mode` until processing starts ([ADR 0009](decisions/0009-project-types.md), P05.4).
 - Descriptive download names ([ADR 0013](decisions/0013-descriptive-export-names.md)).
 - Recording session endpoints ([Recording](RECORDING.md#planned-api)).
 - Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).

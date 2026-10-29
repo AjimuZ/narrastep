@@ -99,7 +99,7 @@
     } @else {
       <div class="project-list" aria-label="Projects">
         <div class="project-list__header" aria-hidden="true">
-          <span>Project</span><span>Status</span><span>Mode</span><span>Duration</span
+          <span>Project</span><span>Status</span><span>Type</span><span>Duration</span
           ><span>Segments</span><span>Screenshots</span><span>Updated</span><span>Actions</span>
         </div>
         @for (project of visibleProjects(); track project.id) {
@@ -113,7 +113,7 @@
                 project.status
               }}</span>
             </div>
-            <div class="mode" data-label="Mode">{{ modeLabel(project.mode) }}</div>
+            <div class="mode" data-label="Type">{{ modeLabel(project.mode) }}</div>
             <div data-label="Duration">{{ durationLabel(project) }}</div>
             <div data-label="Segments">{{ project.activeSegmentCount ?? 0 }}</div>
             <div data-label="Screenshots">{{ project.screenshotCount ?? 0 }}</div>

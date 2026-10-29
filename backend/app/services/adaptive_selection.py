@@ -64,9 +64,10 @@ class AdaptiveProfile:
     hard_cap_images_per_minute: float
 
 
+# `task_briefing` keeps the Version 0.2 `technical_walkthrough` profile (ADR 0009).
 PROFILES = {
     "tutorial": AdaptiveProfile(1.0, 1.2, 2.0),
-    "technical_walkthrough": AdaptiveProfile(1.0, 1.5, 2.2),
+    "task_briefing": AdaptiveProfile(1.0, 1.5, 2.2),
     "general": AdaptiveProfile(0.75, 0.8, 1.5),
     "meeting": AdaptiveProfile(0.5, 0.4, 1.0),
 }

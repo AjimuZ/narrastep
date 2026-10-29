@@ -140,9 +140,10 @@ class ExportEstimate:
     redundancy_warning: bool
 
 
+# `task_briefing` keeps the Version 0.2 `technical_walkthrough` budget (ADR 0009).
 MODE_BUDGETS = {
     "tutorial": (1.2, 2.0),
-    "technical_walkthrough": (1.5, 2.2),
+    "task_briefing": (1.5, 2.2),
     "general": (0.8, 1.5),
     "meeting": (0.4, 1.0),
 }

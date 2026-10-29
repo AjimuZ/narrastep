@@ -19,7 +19,7 @@ erDiagram
 
 ### Project
 
-Stores user metadata, content mode, requested and detected language, lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
+Stores user metadata, project type (`output_mode`: `task_briefing`, `meeting`, `tutorial` or `general`, enforced by the `output_mode` CHECK constraint), requested and detected language, lifecycle status, and timestamps. The API derives the source-video and current-job references from related rows. UUIDs are never derived from project names.
 
 Statuses are `draft`, `uploaded`, `queued`, `processing`, `review`, `exporting`, `completed`, and `failed`.
 
@@ -92,7 +92,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 
 | Change | Package |
 | --- | --- |
-| `Project.mode` values become `task_briefing`, `meeting`, `tutorial`, `general`; `technical_walkthrough` migrates to `task_briefing` | P02 |
 | `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
 | `ProjectExport.sequence` and `ProjectExport.downloadName` | P03 |
 | `RecordingSession` (state, per-track chunk count, stored bytes and start offset, timestamps) with chunks under `projects/{id}/recording/{track}/` | P05 |
@@ -120,4 +119,4 @@ From [ADR 0013](decisions/0013-descriptive-export-names.md), for
 
 ## Migration policy
 
-Every schema change requires an Alembic revision, upgrade test, documentation update, and OpenAPI/status review. Migrations must not silently delete local evidence. SQLite foreign keys are enabled for all connections, and delete cascades are used only where project deletion explicitly owns the dependent record.
+Every schema change requires an Alembic revision, upgrade test, documentation update, and OpenAPI/status review. Migrations must not silently delete local evidence. SQLite foreign keys are enabled for all application connections, and delete cascades are used only where project deletion explicitly owns the dependent record. Alembic connections (`backend/alembic/env.py`) leave foreign keys off, so batch revisions that rebuild a parent table, such as `20261029_0003` for `projects`, cannot cascade deletes; their upgrade tests run `PRAGMA foreign_key_check` and assert that child rows survive.

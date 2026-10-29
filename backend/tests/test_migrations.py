@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import IntegrityError
 
 from alembic import command
 from app.config import get_settings
+from app.models import OutputMode, canonical_output_mode
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 APPLICATION_TABLES = {
@@ -174,3 +177,113 @@ def test_adaptive_revision_backfills_existing_png_without_rewriting_path(
         assert row.selection_reason == "legacy"
     finally:
         get_settings.cache_clear()
+
+
+def test_project_type_revision_migrates_version_0_2_modes(tmp_path: Path, monkeypatch) -> None:
+    """Upgrade a Version 0.2 database to the ADR 0009 project types and downgrade it again.
+
+    `technical_walkthrough` becomes `task_briefing`, other modes keep their value, child rows
+    survive the SQLite table rebuild, and the new CHECK constraint rejects the retired value.
+    """
+    data_root = tmp_path / "migration-project-types"
+    database_path = data_root / "narrastep.db"
+    database_url = f"sqlite:///{database_path.as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    legacy_modes = {
+        "tutorial-project": "tutorial",
+        "meeting-project": "meeting",
+        "walkthrough-project": "technical_walkthrough",
+        "general-project": "general",
+    }
+
+    def project_modes() -> dict[str, str]:
+        """Read every project's stored mode through a short-lived connection."""
+        engine = create_engine(database_url)
+        with engine.connect() as connection:
+            rows = connection.execute(text("SELECT id, output_mode FROM projects")).all()
+        engine.dispose()
+        return {row.id: row.output_mode for row in rows}
+
+    try:
+        command.upgrade(alembic_config, "20260720_0002")
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            for project_id, mode in legacy_modes.items():
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO projects (
+                            id, name, description, source_language, detected_language,
+                            output_mode, state, created_at, updated_at
+                        ) VALUES (
+                            :id, 'Legacy', NULL, 'en', 'en',
+                            :mode, 'review', '2026-07-20', '2026-07-20'
+                        )
+                        """
+                    ),
+                    {"id": project_id, "mode": mode},
+                )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO processing_jobs (
+                        id, project_id, status, stage, message, progress_percent,
+                        progress_version, cancel_requested, created_at, updated_at,
+                        configuration_snapshot
+                    ) VALUES (
+                        'job', 'walkthrough-project', 'completed', 'completed', 'Done', 100,
+                        1, 0, '2026-07-20', '2026-07-20',
+                        '{"projectMode": "technical_walkthrough"}'
+                    )
+                    """
+                )
+            )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        assert project_modes() == {
+            "tutorial-project": "tutorial",
+            "meeting-project": "meeting",
+            "walkthrough-project": "task_briefing",
+            "general-project": "general",
+        }
+        engine = create_engine(database_url)
+        with engine.connect() as connection:
+            job = connection.execute(
+                text("SELECT project_id, configuration_snapshot FROM processing_jobs")
+            ).one()
+            assert connection.execute(text("PRAGMA foreign_key_check")).all() == []
+        constraints = {
+            item["name"]: item["sqltext"]
+            for item in inspect(engine).get_check_constraints("projects")
+        }
+        engine.dispose()
+        # The immutable job snapshot keeps its historical value; processing normalizes it.
+        assert job.project_id == "walkthrough-project"
+        assert "technical_walkthrough" in job.configuration_snapshot
+        assert set(constraints) == {"output_mode", "project_state"}
+        assert "task_briefing" in constraints["output_mode"]
+        assert "technical_walkthrough" not in constraints["output_mode"]
+        command.check(alembic_config)
+
+        engine = create_engine(database_url)
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(text("UPDATE projects SET output_mode = 'technical_walkthrough'"))
+        engine.dispose()
+
+        command.downgrade(alembic_config, "20260720_0002")
+        assert project_modes() == legacy_modes
+    finally:
+        get_settings.cache_clear()
+
+
+def test_legacy_mode_values_map_to_project_types() -> None:
+    """Normalize the retired value found in old snapshots and keep every other value."""
+    assert canonical_output_mode("technical_walkthrough") == OutputMode.TASK_BRIEFING.value
+    for project_type in OutputMode:
+        assert canonical_output_mode(project_type.value) == project_type.value
+    assert canonical_output_mode("unknown") == "unknown"

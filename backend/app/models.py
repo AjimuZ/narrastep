@@ -71,12 +71,30 @@ class ExportStatus(StrEnum):
 
 
 class OutputMode(StrEnum):
-    """Describe the intended downstream document style for the export prompt."""
+    """Describe the project type: the purpose of the recording and the package built for it.
 
-    TUTORIAL = "tutorial"
+    The API keeps the historical field name `mode` (ADR 0009). Version 0.2 stored
+    `technical_walkthrough`; migration 20261029_0003 rewrites it to `task_briefing`.
+    """
+
+    TASK_BRIEFING = "task_briefing"
     MEETING = "meeting"
-    TECHNICAL_WALKTHROUGH = "technical_walkthrough"
+    TUTORIAL = "tutorial"
     GENERAL = "general"
+
+
+# Values written before ADR 0009 that may still appear in immutable records such as job
+# configuration snapshots and published export manifests, which the migration does not rewrite.
+LEGACY_OUTPUT_MODE_ALIASES = {"technical_walkthrough": OutputMode.TASK_BRIEFING.value}
+
+
+def canonical_output_mode(value: str) -> str:
+    """Return the current project type for a stored mode value.
+
+    Maps legacy Version 0.2 values to their replacement and returns every other value
+    unchanged, so callers keep their own fallback for unknown values. Never raises.
+    """
+    return LEGACY_OUTPUT_MODE_ALIASES.get(value, value)
 
 
 class Project(Base):

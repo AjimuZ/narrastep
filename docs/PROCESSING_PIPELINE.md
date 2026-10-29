@@ -71,7 +71,7 @@ The adaptive service is selected only when the queued job snapshot contains `ada
 `legacy` remains the default and its extraction behavior is unchanged.
 
 The scan streams grayscale frames downscaled to a 320-pixel long edge. Sampling is 1 fps for
-`tutorial` and `technical_walkthrough`, 0.75 fps for `general`, and 0.5 fps for `meeting`. It
+`tutorial` and `task_briefing`, 0.75 fps for `general`, and 0.5 fps for `meeting`. It
 combines structural, histogram, edge, and localized deltas with weights 35%, 25%, 25%, and 15%.
 Connected difference regions covering at most 0.15% of the frame are suppressed only in the
 localized channel; the unmasked structural, histogram, and edge channels remain available.
@@ -104,11 +104,11 @@ relevance, and 15% quality. Mandatory transient/error states and the final stabl
 numeric budget. Explicit manual evidence is preserved independently during review and export.
 Balanced automatic target/hard-cap rates per video minute are:
 
-| Mode | Target | Hard cap |
+| Project type | Target | Hard cap |
 | --- | ---: | ---: |
 | Tutorial | 1.2 | 2.0 |
-| Technical walkthrough | 1.5 | 2.2 |
-| General | 0.8 | 1.5 |
+| Task briefing | 1.5 | 2.2 |
+| Generic (`general`) | 0.8 | 1.5 |
 | Meeting | 0.4 | 1.0 |
 
 Compact and detailed multiply the target by 0.75 and 1.25. The hard cap never increases. Selected
@@ -195,8 +195,8 @@ failure.
 
 ## Planned
 
-- Project types replace the modes above; `task_briefing` takes the `technical_walkthrough`
-  profile ([ADR 0009](decisions/0009-project-types.md)).
+- Type-specific screenshot profile, export guide and evidence prompt (P02.2,
+  [ADR 0009](decisions/0009-project-types.md)).
 - Optional local generation runs after review as a separate job
   ([Local generation](LOCAL_GENERATION.md)).
 - Persisted OCR indexing, speaker labelling, sensitive-data masking, screenshot annotation and

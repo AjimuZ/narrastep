@@ -13,7 +13,7 @@ const PROJECT: Project = {
   id: 'project-1',
   name: 'Claims workflow',
   description: 'A local claims walkthrough.',
-  mode: 'technical_walkthrough',
+  mode: 'task_briefing',
   sourceLanguage: 'en',
   detectedLanguage: 'en',
   status: 'review',
@@ -190,5 +190,17 @@ describe('ProjectsPageComponent', () => {
       'Claims workflow',
     ]);
     expect(listProjects).toHaveBeenCalledTimes(1);
+  });
+
+  it('names every project type in the library instead of showing API values', async () => {
+    const { fixture } = await setup(vi.fn(() => of(undefined)));
+    const component = fixture.componentInstance;
+
+    expect(component.modeLabel('task_briefing')).toBe('Task briefing');
+    expect(component.modeLabel('meeting')).toBe('Meeting');
+    expect(component.modeLabel('tutorial')).toBe('Tutorial');
+    expect(component.modeLabel('general')).toBe('Generic');
+    const typeCell = (fixture.nativeElement as HTMLElement).querySelector('[data-label="Type"]');
+    expect(typeCell?.textContent?.trim()).toBe('Task briefing');
   });
 });

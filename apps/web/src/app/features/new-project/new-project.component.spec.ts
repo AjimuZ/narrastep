@@ -71,6 +71,32 @@ describe('NewProjectComponent', () => {
     expect(component.currentStep()).toBe(2);
   });
 
+  it('offers the four project types and creates a task briefing', async () => {
+    const { fixture, component, createProject } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+    const cardTitles = Array.from(host.querySelectorAll('.mode-card strong')).map((title) =>
+      title.textContent?.trim(),
+    );
+    const radios = host.querySelectorAll<HTMLInputElement>('.mode-card input[type="radio"]');
+
+    expect(cardTitles).toEqual(['Task briefing', 'Meeting', 'Tutorial', 'Generic']);
+    expect(component.modes.map((mode) => mode.value)).toEqual([
+      'task_briefing',
+      'meeting',
+      'tutorial',
+      'general',
+    ]);
+
+    radios[0]?.click();
+    expect(component.projectForm.controls.mode.value).toBe('task_briefing');
+    component.projectForm.controls.name.setValue('Fix the claims report');
+    component.createProject();
+
+    expect(createProject).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Fix the claims report', mode: 'task_briefing' }),
+    );
+  });
+
   it('rejects unsupported files before any upload request', async () => {
     const { component } = await setup();
     const file = new File(['not a video'], 'notes.txt', { type: 'text/plain' });

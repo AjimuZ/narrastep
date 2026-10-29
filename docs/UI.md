@@ -30,6 +30,20 @@ The interface is available in English and Italian
   package = pacchetto, review = revisione, project type = tipo di progetto).
 - Italian text is often longer: layouts must not truncate it at 320 px.
 
+### Project type labels
+
+The new-project form (legend "Project type") and the projects list ("Type" column) use these
+labels since P02.1. The interface is English-only until the P04.4 catalogs exist; the Italian
+column is the agreed translation that P04.4 moves into `messages.it.json`.
+
+| Value | English label and help | Italian label and help |
+| --- | --- | --- |
+| `task_briefing` | Task briefing — Someone explains a task or a problem you must solve later. | Spiegazione di un compito — Qualcuno spiega un compito o un problema da risolvere in seguito. |
+| `meeting` | Meeting — A discussion whose decisions and key points need a summary. | Riunione — Una discussione di cui riassumere decisioni e punti chiave. |
+| `tutorial` | Tutorial — A procedure to repeat or teach, step by step. | Tutorial — Una procedura da ripetere o insegnare, passo per passo. |
+| `general` | Generic — Anything else, such as a demo or a recorded note. | Generico — Tutto il resto, per esempio una demo o una nota registrata. |
+| (legend, column) | Project type, Type | Tipo di progetto, Tipo |
+
 ## Language switch
 
 - An `EN` / `IT` switch in the header and in Settings; the current language is marked with the
