@@ -86,7 +86,9 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | --- | ---: | --- |
 | `NARRASTEP_API_PORT` | `8002` | Loopback API port |
 | `NARRASTEP_WEB_PORT` | `4200` | Loopback web port |
-| `NARRASTEP_MAX_UPLOAD_SIZE_MB` | `4096` | Upload size limit |
+| `NARRASTEP_MAX_UPLOAD_SIZE_MB` | `4096` | Upload size limit, also for one whole recording |
+| `NARRASTEP_RECORDING_MAX_CHUNK_MB` | `64` | Largest accepted recording chunk |
+| `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS` | `30` | Time without chunks before a recording counts as interrupted |
 | `NARRASTEP_WHISPER_MODEL` | `small` | Whisper model baked into the image at build |
 | `NARRASTEP_SCREENSHOT_SELECTION_STRATEGY` | `legacy` | `legacy` or experimental `adaptive_v1` |
 | `NARRASTEP_IMAGE_BUDGET_PROFILE` | `balanced` | `compact`, `balanced` or `detailed` |

@@ -71,6 +71,10 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.EXPORT_NOT_READY:The package is not ready yet. Wait until it is finished.`;
     case 'EXPORT_NOT_FOUND':
       return $localize`:@@error.EXPORT_NOT_FOUND:This package does not exist. It may have been deleted.`;
+    case 'RECORDING_NOT_FOUND':
+      return $localize`:@@error.RECORDING_NOT_FOUND:This recording does not exist. It may have been discarded.`;
+    case 'RECORDING_CHUNK_CONFLICT':
+      return $localize`:@@error.RECORDING_CHUNK_CONFLICT:A part of this recording was already saved with different content. Stop the recording and save what was recorded.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

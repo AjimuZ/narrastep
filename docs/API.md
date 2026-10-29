@@ -51,6 +51,10 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | GET | `/api/v1/projects/{projectId}/exports` | List historical exports | 200 |
 | GET | `/api/v1/exports/{exportId}` | Poll one export | 200 |
 | GET | `/api/v1/exports/{exportId}/download` | Download a completed ZIP | 200 |
+| POST | `/api/v1/recordings` | Create a recorder project and open its recording session | 201 |
+| GET | `/api/v1/recordings/{recordingId}` | Read the session state and what each track stored | 200 |
+| PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one `screen` or `microphone` chunk; an identical repeat is a no-op | 201/200 |
+| DELETE | `/api/v1/recordings/{recordingId}` | Discard an open session, its chunks and its project | 204 |
 
 ## Important requests
 
@@ -106,12 +110,49 @@ Project responses add `activeSegmentCount` and `screenshotCount`. Screenshot res
 profile, and optional numeric metrics. Export responses expose actual versioned metrics after
 generation. All fields are additive.
 
+### Recording sessions
+
+Implemented in P05.1; the rules (limits, offsets, interruption, guards) are in
+[Recording](RECORDING.md#session-rules-p051). `POST /api/v1/recordings` accepts an optional body
+`{"name": "Registrazione 2026-10-29 14:05", "sourceLanguage": "it"}` and creates a `draft`
+project of type `general` together with the session. It and `GET /api/v1/recordings/{recordingId}`
+return:
+
+```json
+{
+  "id": "recording-uuid",
+  "projectId": "project-uuid",
+  "state": "recording",
+  "interrupted": false,
+  "storedBytes": 3276800,
+  "maxBytes": 4294967296,
+  "createdAt": "2026-10-29T13:05:00Z",
+  "updatedAt": "2026-10-29T13:05:10Z",
+  "lastChunkAt": "2026-10-29T13:05:10Z",
+  "tracks": [
+    {"track": "screen", "chunkCount": 2, "storedBytes": 3145728, "nextSequence": 3,
+     "missingSequences": [1], "missingCount": 1, "startOffsetMs": 0},
+    {"track": "microphone", "chunkCount": 2, "storedBytes": 131072, "nextSequence": 2,
+     "missingSequences": [], "missingCount": 0, "startOffsetMs": 40}
+  ]
+}
+```
+
+`PUT .../tracks/{track}/chunks/{sequence}?startOffsetMs=40` takes the raw chunk bytes with
+`Content-Type: video/webm`, `audio/webm` or `application/octet-stream` and answers `201` with
+`{"track", "sequence", "sizeBytes", "duplicate": false}`, or `200` with `duplicate: true` when the
+same bytes were already stored. `track` is `screen` or `microphone`; `sequence` is 0 to 999999.
+`DELETE` answers `204`. Project responses carry `recording`: `{"id", "state", "interrupted"}` for
+recorder projects and `null` for uploaded ones. `state` is `recording` or `completed`; the
+completion endpoint arrives with P05.2.
+
 ## Planned changes
 
 Not implemented and not in [openapi.json](openapi.json):
 
 - Optional `mode` until processing starts ([ADR 0009](decisions/0009-project-types.md), P05.4).
-- Recording session endpoints ([Recording](RECORDING.md#planned-api)).
+- Recording completion, `POST /api/v1/recordings/{recordingId}/complete`
+  ([Recording](RECORDING.md#api), P05.2).
 - Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).
 
 ## Progress events
@@ -127,10 +168,10 @@ persisted on their job or export record so a browser refresh does not lose the r
 | --- | ---: | --- |
 | `PROJECT_NOT_FOUND` | 404 | The requested project does not exist. |
 | `PROJECT_BUSY` | 409 | Processing, export, or another guarded project operation is active. |
-| `INVALID_PROJECT_STATE` | 409 | The requested lifecycle transition is not allowed. |
+| `INVALID_PROJECT_STATE` | 409 | The requested lifecycle transition is not allowed (also: upload during an open recording, a change to a completed recording). |
 | `SOURCE_VIDEO_ALREADY_EXISTS` | 409 | The project already has its one immutable source upload. |
-| `UPLOAD_TOO_LARGE` | 413 | The streamed file exceeds the configured limit. |
-| `UNSUPPORTED_MEDIA_TYPE` | 415 | The filename extension is not an enabled video type. |
+| `UPLOAD_TOO_LARGE` | 413 | The streamed file, a recording chunk or a whole recording session exceeds its configured limit. |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | The filename extension is not an enabled video type, or a recording chunk is not WebM. |
 | `VIDEO_VALIDATION_FAILED` | 422 or failed job | Upload structure or media validation failed. |
 | `VIDEO_STREAM_MISSING` | 422 | FFprobe found no usable video stream. |
 | `VIDEO_AUDIO_TRACK_MISSING` | 422 or failed job | FFprobe found no audio track required for transcription. |
@@ -154,4 +195,6 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `INVALID_BYTE_RANGE` | 416 | A video request contains an unsupported or unsatisfiable byte range. |
 | `EXPORT_FAILED` | failed export | The immutable package could not be generated. |
 | `EXPORT_NOT_READY` | 409 | A ZIP was requested before export completion. |
+| `RECORDING_NOT_FOUND` | 404 | The recording session does not exist or was discarded. |
+| `RECORDING_CHUNK_CONFLICT` | 409 | A stored chunk sequence was sent with different bytes, or a track with a different start offset. |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

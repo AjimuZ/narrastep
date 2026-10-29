@@ -27,6 +27,17 @@ All notable changes to Narrastep are documented in this file.
   text. Dates, numbers and file sizes follow the language. A check fails the build when a message
   exists in one language only.
 
+- Recording session API for the coming recorder: `POST /api/v1/recordings` creates a project
+  and a session, the recorder uploads `screen` and `microphone` chunks with
+  `PUT /api/v1/recordings/{id}/tracks/{track}/chunks/{sequence}` (in any order, in parallel, a
+  repeated identical chunk changes nothing), `GET` reports what each track stored and which
+  chunks are missing so an interrupted upload can resume, also after a restart, and `DELETE`
+  discards the session with its chunks and project. Chunks count against the upload limit and
+  the free-disk reserve. New settings `NARRASTEP_RECORDING_MAX_CHUNK_MB` and
+  `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS`; new error codes `RECORDING_NOT_FOUND` and
+  `RECORDING_CHUNK_CONFLICT`, translated in Italian. Recordings cannot be made from the interface
+  yet.
+
 ### Changed
 
 - Accessibility pass in English and Italian: placeholder text and the danger button text now

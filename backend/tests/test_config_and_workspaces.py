@@ -28,6 +28,8 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     monkeypatch.setenv("NARRASTEP_CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200")
     monkeypatch.setenv("NARRASTEP_FRAME_DUPLICATE_THRESHOLD", "0.88")
     monkeypatch.setenv("NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH", "17")
+    monkeypatch.setenv("NARRASTEP_RECORDING_MAX_CHUNK_MB", "8")
+    monkeypatch.setenv("NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS", "45")
     settings = Settings()
 
     assert settings.data_root == tmp_path.resolve()
@@ -36,6 +38,8 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert settings.allowed_origins == ["http://localhost:4200", "http://127.0.0.1:4200"]
     assert settings.duplicate_similarity_threshold == pytest.approx(0.88)
     assert settings.chatgpt_max_files_per_batch == 17
+    assert settings.recording_max_chunk_bytes == 8 * 1024 * 1024
+    assert settings.recording_interrupted_after_seconds == 45
 
 
 def test_workspace_path_rejects_traversal(tmp_path: Path) -> None:

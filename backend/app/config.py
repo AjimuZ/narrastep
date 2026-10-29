@@ -77,6 +77,11 @@ class Settings(BaseSettings):
         validation_alias="NARRASTEP_ALLOWED_VIDEO_EXTENSIONS",
     )
     upload_chunk_bytes: int = Field(default=1024 * 1024, ge=64 * 1024)
+    # One recording chunk covers a few seconds (about 1.6 MB at 2.5 Mbit/s and 5 s); the limit only
+    # stops a runaway request. The whole session is bounded by `max_upload_mb`.
+    recording_max_chunk_mb: int = Field(default=64, ge=1)
+    # A session still recording with no chunk for this long is reported as interrupted.
+    recording_interrupted_after_seconds: int = Field(default=30, ge=5)
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     ffmpeg_timeout_seconds: int = Field(
@@ -234,6 +239,11 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         """Return the configured upload limit in bytes."""
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def recording_max_chunk_bytes(self) -> int:
+        """Return the largest accepted recording chunk in bytes."""
+        return self.recording_max_chunk_mb * 1024 * 1024
 
     @property
     def disk_reserve_bytes(self) -> int:

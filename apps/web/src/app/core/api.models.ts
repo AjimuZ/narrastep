@@ -20,6 +20,18 @@ export interface Project {
   videoAsset?: MediaAsset | null;
   activeSegmentCount?: number;
   screenshotCount?: number;
+  /** Present for projects made with the recorder (P05.1); null for uploaded videos. */
+  recording?: ProjectRecording | null;
+}
+
+/**
+ * Recording session of a project made with the recorder. `interrupted` is true while it is still
+ * `recording` but no chunk arrived for the configured time (tab closed or network down).
+ */
+export interface ProjectRecording {
+  id: string;
+  state: 'recording' | 'completed';
+  interrupted: boolean;
 }
 
 /** `GET /health`: `status` is `ok` when every part answers and `degraded` otherwise. */

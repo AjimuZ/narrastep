@@ -23,6 +23,8 @@ APPLICATION_TABLES = {
     "processing_jobs",
     "project_exports",
     "segment_lineage",
+    "recording_sessions",
+    "recording_chunks",
 }
 
 
@@ -57,6 +59,15 @@ def test_initial_revision_matches_metadata_and_round_trips(
         assert {item["name"] for item in schema.get_check_constraints("project_exports")} == {
             "export_status"
         }
+        assert {item["name"] for item in schema.get_check_constraints("recording_sessions")} == {
+            "recording_state"
+        }
+        assert {item["name"] for item in schema.get_check_constraints("recording_chunks")} == {
+            "recording_track"
+        }
+        assert [
+            item["column_names"] for item in schema.get_unique_constraints("recording_chunks")
+        ] == [["recording_id", "track", "sequence"]]
 
         partial_indexes = {
             item["name"]: item

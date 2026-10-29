@@ -1,4 +1,4 @@
-"""Relational model for projects, evidence, processing, review, and exports."""
+"""Relational model for projects, evidence, processing, review, exports, and recordings."""
 
 from __future__ import annotations
 
@@ -68,6 +68,24 @@ class ExportStatus(StrEnum):
     RUNNING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+
+
+class RecordingState(StrEnum):
+    """Represent the lifecycle of an in-app recording session (ADR 0010).
+
+    `recording` accepts chunks; `completed` is set once the chunks became the project source video
+    (P05.2). A discarded session is deleted together with its project, so it has no state.
+    """
+
+    RECORDING = "recording"
+    COMPLETED = "completed"
+
+
+class RecordingTrack(StrEnum):
+    """Name the two independently uploaded tracks of a recording session."""
+
+    SCREEN = "screen"
+    MICROPHONE = "microphone"
 
 
 class OutputMode(StrEnum):
@@ -151,6 +169,9 @@ class Project(Base):
     )
     exports: Mapped[list[ProjectExport]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
+    )
+    recording_session: Mapped[RecordingSession | None] = relationship(
+        back_populates="project", cascade="all, delete-orphan", uselist=False, lazy="selectin"
     )
 
 
@@ -419,3 +440,82 @@ class SegmentLineage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+
+class RecordingSession(Base):
+    """Persist one in-app recording: its lifecycle, track start offsets and chunk activity.
+
+    A recording session owns exactly one project, created with it. Its chunks live under
+    `projects/{project_id}/recording/{track}/` and are listed in `recording_chunks`; SQLite is the
+    authority, so a chunk file without a row is an incomplete write and is removed at startup.
+    """
+
+    __tablename__ = "recording_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    state: Mapped[RecordingState] = mapped_column(
+        Enum(
+            RecordingState,
+            name="recording_state",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        ),
+        default=RecordingState.RECORDING,
+        nullable=False,
+    )
+    # Milliseconds between the session's common start and the first media of each track, as
+    # reported by the recorder; null until a chunk of that track carries it. P05.2 aligns with it.
+    screen_start_offset_ms: Mapped[int | None] = mapped_column(Integer)
+    microphone_start_offset_ms: Mapped[int | None] = mapped_column(Integer)
+    last_chunk_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    project: Mapped[Project] = relationship(back_populates="recording_session")
+    chunks: Mapped[list[RecordingChunk]] = relationship(
+        back_populates="recording", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class RecordingChunk(Base):
+    """Record one durably stored chunk of a recording track and the digest of its bytes.
+
+    `(recording_id, track, sequence)` is unique: a repeated upload of the same sequence is compared
+    with `sha256` and `size_bytes` instead of being stored twice.
+    """
+
+    __tablename__ = "recording_chunks"
+    __table_args__ = (
+        UniqueConstraint("recording_id", "track", "sequence", name="uq_recording_chunk_sequence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    recording_id: Mapped[str] = mapped_column(
+        ForeignKey("recording_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    track: Mapped[RecordingTrack] = mapped_column(
+        Enum(
+            RecordingTrack,
+            name="recording_track",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        ),
+        nullable=False,
+    )
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    recording: Mapped[RecordingSession] = relationship(back_populates="chunks")

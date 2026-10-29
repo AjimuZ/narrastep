@@ -390,6 +390,25 @@
         "title": "ProjectListResponse",
         "type": "object"
       },
+      "ProjectRecordingResponse": {
+        "description": "Summarize the recording session of a project made in the recorder, for list views.",
+        "properties": {
+          "id": {
+            "title": "Id"
+          },
+          "interrupted": {
+            "title": "Interrupted"
+          },
+          "state": {}
+        },
+        "required": [
+          "id",
+          "state",
+          "interrupted"
+        ],
+        "title": "ProjectRecordingResponse",
+        "type": "object"
+      },
       "ProjectResponse": {
         "description": "Expose project metadata, state, and optional validated source information.",
         "properties": {
@@ -415,6 +434,7 @@
           "name": {
             "title": "Name"
           },
+          "recording": {},
           "screenshotCount": {
             "title": "Screenshotcount"
           },
@@ -513,6 +533,155 @@
           }
         },
         "title": "ProjectUpdate",
+        "type": "object"
+      },
+      "RecordingChunkResponse": {
+        "description": "Acknowledge one durably stored chunk; `duplicate` is true for a repeated identical upload.",
+        "properties": {
+          "duplicate": {
+            "title": "Duplicate"
+          },
+          "sequence": {
+            "title": "Sequence"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          },
+          "track": {}
+        },
+        "required": [
+          "track",
+          "sequence",
+          "sizeBytes",
+          "duplicate"
+        ],
+        "title": "RecordingChunkResponse",
+        "type": "object"
+      },
+      "RecordingCreate": {
+        "description": "Validate the optional metadata of a new recording session and its project.\n\nThe recorder sends the name in the interface language and local time (ADR 0015); without it\nthe API names the project `Recording {YYYY-MM-DD HH:MM}` in the server's local time.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sourceLanguage": {
+            "default": "auto",
+            "maxLength": 16,
+            "title": "Sourcelanguage",
+            "type": "string"
+          }
+        },
+        "title": "RecordingCreate",
+        "type": "object"
+      },
+      "RecordingResponse": {
+        "description": "Expose the state and per-track storage of one recording session.",
+        "properties": {
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "interrupted": {
+            "title": "Interrupted"
+          },
+          "lastChunkAt": {
+            "title": "Lastchunkat"
+          },
+          "maxBytes": {
+            "title": "Maxbytes"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "state": {},
+          "storedBytes": {
+            "title": "Storedbytes"
+          },
+          "tracks": {
+            "title": "Tracks"
+          },
+          "updatedAt": {
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "state",
+          "interrupted",
+          "storedBytes",
+          "maxBytes",
+          "createdAt",
+          "updatedAt",
+          "lastChunkAt",
+          "tracks"
+        ],
+        "title": "RecordingResponse",
+        "type": "object"
+      },
+      "RecordingState": {
+        "description": "Represent the lifecycle of an in-app recording session (ADR 0010).\n\n`recording` accepts chunks; `completed` is set once the chunks became the project source video\n(P05.2). A discarded session is deleted together with its project, so it has no state.",
+        "enum": [
+          "recording",
+          "completed"
+        ],
+        "title": "RecordingState",
+        "type": "string"
+      },
+      "RecordingTrack": {
+        "description": "Name the two independently uploaded tracks of a recording session.",
+        "enum": [
+          "screen",
+          "microphone"
+        ],
+        "title": "RecordingTrack",
+        "type": "string"
+      },
+      "RecordingTrackResponse": {
+        "description": "Report what is stored for one track so an interrupted recorder can resume its uploads.\n\n`nextSequence` is one past the highest stored sequence (0 when none is stored).\n`missingSequences` lists, in ascending order and at most 100 at a time, the sequences below\nit that are not stored; `missingCount` is their full number.",
+        "properties": {
+          "chunkCount": {
+            "title": "Chunkcount"
+          },
+          "missingCount": {
+            "title": "Missingcount"
+          },
+          "missingSequences": {
+            "title": "Missingsequences"
+          },
+          "nextSequence": {
+            "title": "Nextsequence"
+          },
+          "startOffsetMs": {
+            "title": "Startoffsetms"
+          },
+          "storedBytes": {
+            "title": "Storedbytes"
+          },
+          "track": {}
+        },
+        "required": [
+          "track",
+          "chunkCount",
+          "storedBytes",
+          "nextSequence",
+          "missingSequences",
+          "missingCount",
+          "startOffsetMs"
+        ],
+        "title": "RecordingTrackResponse",
         "type": "object"
       },
       "ScreenshotAssociationResponse": {
@@ -1658,6 +1827,253 @@
           }
         },
         "summary": "Upload Video"
+      }
+    },
+    "/api/v1/recordings": {
+      "post": {
+        "description": "Create a project and its open recording session with one chunk folder per track.\n\nThe project has no source video until the session is completed (P05.2) and uses the\n`general` type until the type becomes optional before processing (P05.4).",
+        "operationId": "create_recording_api_v1_recordings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RecordingCreate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Create Recording"
+      }
+    },
+    "/api/v1/recordings/{recording_id}": {
+      "delete": {
+        "description": "Discard an open session: delete its chunks, its rows and the project made for it.\n\nA saved (completed) recording is refused with `INVALID_PROJECT_STATE`; delete its project\ninstead.",
+        "operationId": "discard_recording_api_v1_recordings__recording_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recording_id",
+            "required": true,
+            "schema": {
+              "title": "Recording Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Discard Recording"
+      },
+      "get": {
+        "description": "Read the session state and what each track has stored, so a recorder can resume.",
+        "operationId": "get_recording_api_v1_recordings__recording_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recording_id",
+            "required": true,
+            "schema": {
+              "title": "Recording Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Recording"
+      }
+    },
+    "/api/v1/recordings/{recording_id}/tracks/{track}/chunks/{sequence}": {
+      "put": {
+        "description": "Store one chunk of `screen` or `microphone` atomically; an identical repeat returns 200.\n\nChunks of both tracks and of any sequence order may arrive concurrently; they do not take\nthe project operation reservation, which would serialize the two tracks.",
+        "operationId": "upload_recording_chunk_api_v1_recordings__recording_id__tracks__track__chunks__sequence__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recording_id",
+            "required": true,
+            "schema": {
+              "title": "Recording Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "track",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RecordingTrack"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sequence",
+            "required": true,
+            "schema": {
+              "maximum": 999999,
+              "minimum": 0,
+              "title": "Sequence",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "startOffsetMs",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 86400000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Startoffsetms"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "audio/webm": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            },
+            "video/webm": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingChunkResponse"
+                }
+              }
+            },
+            "description": "Identical chunk already stored"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingChunkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Different content or start offset"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Chunk or session above its limit"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Upload Recording Chunk"
       }
     },
     "/api/v1/screenshots/{screenshot_id}/content": {

@@ -65,6 +65,19 @@ WebP review thumbnails, optional materialized PNGs, immutable transcript evidenc
 diagnostics, and export archives. Repository-local `data/` is a placeholder and is not the Docker
 storage path.
 
+## Recording sessions
+
+Implemented in P05.1 ([Recording](RECORDING.md#api)). The API, not the worker, owns recording
+sessions: `POST /api/v1/recordings` creates the project and the session together, and each chunk
+`PUT` streams its body straight into `recording/{track}/` of that project's workspace. Chunk
+uploads do not take the per-project operation lock, because the screen and microphone tracks
+upload in parallel; they are serialized instead by SQLite's write lock, taken by the first
+statement of the chunk transaction (an update of the session row). That transaction checks the
+session is still open, the track offset, an existing row for the sequence and the session total
+before the file is renamed into place. Discarding takes the project operation lock and uses the
+same staged workspace removal as project deletion. Nothing reaches Redis or the worker; no job
+is queued.
+
 ## Review and lineage
 
 `raw-transcript.json` is immutable. Reviewed segments are active views over that evidence. Split and merge archive their source rows, create derived active rows, and record `SegmentLineage` edges in one transaction. This protects original transcription evidence while allowing structural editing.
@@ -141,7 +154,9 @@ flowchart LR
 - **Recording ([Recording](RECORDING.md)).** The browser records the screen with system audio and
   the microphone as two tracks and uploads chunks. The API owns recording sessions, joins the
   chunks, aligns and mixes the tracks with FFmpeg, keeps the microphone track for speaker labels
-  and saves the project without queuing processing. No new container.
+  and saves the project without queuing processing. No new container. The session API and chunk
+  storage exist since P05.1 (see "Recording sessions" below); joining, the recorder screen and
+  the labels are still planned.
 - **Model manager ([Local generation](LOCAL_GENERATION.md)).** The API downloads model files only
   after an explicit user action, through the `local` network, which has an Internet route. It
   verifies SHA-256 hashes and writes to `/data/models`. No project data leaves the computer.

@@ -21,6 +21,7 @@ from app.errors import install_error_handlers
 from app.models import Project
 from app.routes.api import router
 from app.services.reconciliation import reconcile_interrupted_work
+from app.services.recordings import reconcile_recording_storage
 from app.services.workspaces import (
     reconcile_project_operation_reservations,
     reconcile_staged_workspace_trash,
@@ -49,6 +50,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             project_ids = set(session.scalars(select(Project.id)))
         reconcile_staged_workspace_trash(active_settings.data_root, project_ids)
         reconcile_project_operation_reservations(active_settings.data_root, project_ids)
+        with SessionLocal() as session:
+            reconcile_recording_storage(session, active_settings.data_root)
         yield
 
     application = FastAPI(

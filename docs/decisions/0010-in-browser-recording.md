@@ -2,6 +2,8 @@
 
 Status: accepted (2026-10-28). Supersedes: none. Amended (2026-10-28): the microphone is recorded
 as a separate track for speaker labels, and recording saves the project without processing it.
+Amended (2026-10-29, P05.1): implementation choices for the session API, listed under
+Consequences.
 
 ## Context
 
@@ -49,5 +51,12 @@ pipeline is unchanged. Details are in [Recording](../RECORDING.md).
 - When speakers are used, the microphone can capture the call a second time. The recorder enables
   echo cancellation and recommends a headset.
 - New endpoints, a recording-session table and chunk storage are needed.
+- Session API choices (P05.1). A recorder project stays a `draft` with a `recording` summary
+  instead of gaining a project state, so no CHECK constraint is rebuilt and the existing
+  screens keep working. Chunks are raw request bodies (not multipart) stored one file per track
+  and sequence; SQLite lists them with a SHA-256, so a repeat is compared, not stored twice.
+  Chunk uploads are serialized by SQLite's write lock instead of the project operation lock,
+  which would refuse the second track while the first uploads. "Interrupted" is derived on read
+  from the time since the last chunk, because a closed tab sends nothing the server could store.
 - Evidence: Playwright test with fake media devices, API tests for chunk order, resume and
   completion, and a manual test with a real Teams call (P05 in the [roadmap](../ROADMAP.md)).

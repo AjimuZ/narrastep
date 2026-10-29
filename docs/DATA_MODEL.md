@@ -9,6 +9,8 @@ erDiagram
     PROJECT ||--o{ SCREENSHOT : contains
     PROJECT ||--o{ PROCESSING_JOB : runs
     PROJECT ||--o{ PROJECT_EXPORT : creates
+    PROJECT ||--o| RECORDING_SESSION : recorded_by
+    RECORDING_SESSION ||--o{ RECORDING_CHUNK : stores
     TRANSCRIPT_SEGMENT ||--o{ SEGMENT_SCREENSHOT_ASSOCIATION : has
     SCREENSHOT ||--o{ SEGMENT_SCREENSHOT_ASSOCIATION : is_assigned
     TRANSCRIPT_SEGMENT ||--o{ SEGMENT_LINEAGE : source
@@ -69,6 +71,27 @@ an empty name means a Version 0.2 export, served as `narrastep-{export UUID}.zip
 
 Records directed source-to-derived edges produced by split and merge. Source rows are archived rather than deleted, preserving structural history.
 
+### RecordingSession
+
+One per project made with the recorder ([Recording](RECORDING.md), P05.1, migration
+`20261029_0005`); uploaded projects have none. Stores `state` (`recording` while it accepts
+chunks, `completed` once the chunks became the source video in P05.2; enforced by the
+`recording_state` CHECK constraint), `screen_start_offset_ms` and `microphone_start_offset_ms`
+(the start of each track relative to the session's common start, as sent by the recorder; null
+until a chunk of that track carries it, and never changed afterwards), `last_chunk_at`, and
+timestamps. `project_id` is unique and cascades on project deletion. A discarded session is deleted
+with its project, so there is no `discarded` state. The API reports a `recording` session as
+`interrupted` when no chunk arrived for `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS`; that flag
+is derived on read, not stored.
+
+### RecordingChunk
+
+One per stored chunk: `track` (`screen` or `microphone`, `recording_track` CHECK constraint),
+0-based `sequence`, `size_bytes`, the SHA-256 of the bytes and the creation time.
+`(recording_id, track, sequence)` is unique (`uq_recording_chunk_sequence`), which makes a repeated
+upload comparable instead of stored twice. The bytes are in the workspace file named by the track
+and sequence; the row is written in the same transaction that moves the file into place.
+
 ## Storage rules
 
 Portable paths are always relative to the configured data root. A project workspace follows this shape:
@@ -84,7 +107,15 @@ projects/{project UUID}/
   diagnostics/processing-{job UUID}.json
   diagnostics/export-{export UUID}.json
   exports/narrastep-{export UUID}.zip
+  recording/screen/NNNNNN.webm          (recorder projects only, P05.1)
+  recording/microphone/NNNNNN.webm
 ```
+
+Recording chunk files are named only from the track and the six-digit sequence; no user text
+reaches the path. A chunk is streamed to `recording/{track}/.chunk-{random}.partial`, fsynced and
+renamed after its row is flushed. At API startup, partial files and chunk files without a row (a
+crash between the rename and the commit) are removed; the recorder still holds those chunks and
+sends them again.
 
 Temporary upload, processing, and export paths use a suffix or task-specific directory and are promoted atomically after validation.
 
@@ -99,7 +130,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 | Change | Package |
 | --- | --- |
 | `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
-| `RecordingSession` (state, per-track chunk count, stored bytes and start offset, timestamps) with chunks under `projects/{id}/recording/{track}/` | P05 |
 | `source/microphone.webm` kept beside the mixed source video of in-app recordings | P05.2 |
 | `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
 | `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |

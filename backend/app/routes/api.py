@@ -12,6 +12,7 @@ from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi import Path as PathParam
 from fastapi.responses import FileResponse, StreamingResponse
 from redis import Redis
 from redis.asyncio import Redis as AsyncRedis
@@ -29,10 +30,14 @@ from app.models import (
     ExportStatus,
     JobStatus,
     MediaAsset,
+    OutputMode,
     ProcessingJob,
     Project,
     ProjectExport,
     ProjectState,
+    RecordingSession,
+    RecordingState,
+    RecordingTrack,
     Screenshot,
     SegmentScreenshotAssociation,
     TranscriptSegment,
@@ -52,6 +57,9 @@ from app.schemas import (
     ProjectListResponse,
     ProjectResponse,
     ProjectUpdate,
+    RecordingChunkResponse,
+    RecordingCreate,
+    RecordingResponse,
     ScreenshotAssociationResponse,
     ScreenshotFromVideoRequest,
     ScreenshotResponse,
@@ -76,6 +84,16 @@ from app.services.processing import (
     next_export_sequence,
 )
 from app.services.progress import publish_cancellation_flag, publish_job_event
+from app.services.recordings import (
+    MAX_CHUNK_SEQUENCE,
+    MAX_START_OFFSET_MS,
+    create_recording_storage,
+    default_recording_name,
+    project_recording_payload,
+    recording_payload,
+    require_open_recording,
+    store_recording_chunk,
+)
 from app.services.reviewing import (
     mark_project_review_changed,
     merge_segments,
@@ -130,11 +148,14 @@ def health(
 
 
 @router.get("/projects", response_model=ProjectListResponse)
-def list_projects(session: Session = Depends(get_session)) -> dict[str, object]:
+def list_projects(
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
     """List all projects newest first for the local dashboard."""
     projects = list(session.scalars(select(Project).order_by(desc(Project.updated_at))))
     return {
-        "items": [_project_payload(session, project) for project in projects],
+        "items": [_project_payload(session, project, settings) for project in projects],
         "total": len(projects),
     }
 
@@ -162,13 +183,17 @@ def create_project(
         shutil.rmtree(workspace, ignore_errors=True)
         raise
     session.refresh(project)
-    return _project_payload(session, project)
+    return _project_payload(session, project, settings)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: str, session: Session = Depends(get_session)) -> dict[str, object]:
+def get_project(
+    project_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
     """Load one persisted project so feature routes recover correctly after refresh."""
-    return _project_payload(session, _require_project(session, project_id))
+    return _project_payload(session, _require_project(session, project_id), settings)
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectResponse)
@@ -208,7 +233,7 @@ def update_project(
         mark_project_review_changed(project)
         session.commit()
         session.refresh(project)
-        return _project_payload(session, project)
+        return _project_payload(session, project, settings)
     finally:
         release_project_operation(reservation)
 
@@ -225,26 +250,35 @@ def delete_project(
     try:
         session.refresh(project)
         _reject_busy_project(project)
-        staged = stage_project_workspace_removal(settings.data_root, project.id)
-        try:
-            session.delete(project)
-            session.commit()
-        except Exception:
-            session.rollback()
-            restore_staged_workspace(settings.data_root, project.id, staged)
-            raise
-        try:
-            purge_staged_workspace(staged)
-        except OSError as error:
-            # The committed database deletion is authoritative; startup retries this purge.
-            logger.warning(
-                "Staged workspace purge will be retried for project %s (%s).",
-                project.id,
-                type(error).__name__,
-            )
+        _delete_project_and_workspace(session, project, settings)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     finally:
         release_project_operation(reservation)
+
+
+def _delete_project_and_workspace(session: Session, project: Project, settings: Settings) -> None:
+    """Stage the workspace, delete the project rows, then purge the staged files.
+
+    Requires the caller to hold the project operation reservation. A failed commit restores the
+    workspace; a failed purge after the commit is logged and retried at startup.
+    """
+    staged = stage_project_workspace_removal(settings.data_root, project.id)
+    try:
+        session.delete(project)
+        session.commit()
+    except Exception:
+        session.rollback()
+        restore_staged_workspace(settings.data_root, project.id, staged)
+        raise
+    try:
+        purge_staged_workspace(staged)
+    except OSError as error:
+        # The committed database deletion is authoritative; startup retries this purge.
+        logger.warning(
+            "Staged workspace purge will be retried for project %s (%s).",
+            project.id,
+            type(error).__name__,
+        )
 
 
 @router.post(
@@ -280,7 +314,8 @@ async def upload_video(
     destination: Path | None = None
     promoted = False
     try:
-        session.expire(project, ["media_asset"])
+        session.expire(project, ["media_asset", "recording_session"])
+        _reject_open_recording(project)
         if project.media_asset is not None:
             raise ApiError(
                 "SOURCE_VIDEO_ALREADY_EXISTS", "This project already has a source video.", 409
@@ -399,6 +434,123 @@ def stream_video(
         media_type=asset.content_type,
         headers=headers,
     )
+
+
+@router.post("/recordings", response_model=RecordingResponse, status_code=status.HTTP_201_CREATED)
+def create_recording(
+    request: RecordingCreate | None = None,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Create a project and its open recording session with one chunk folder per track.
+
+    The project has no source video until the session is completed (P05.2) and uses the
+    `general` type until the type becomes optional before processing (P05.4).
+    """
+    metadata = request or RecordingCreate()
+    project = Project(
+        name=metadata.name or default_recording_name(),
+        source_language=metadata.source_language,
+        output_mode=OutputMode.GENERAL,
+    )
+    session.add(project)
+    session.flush()
+    recording = RecordingSession(project_id=project.id)
+    session.add(recording)
+    session.flush()
+    workspace = create_recording_storage(settings.data_root, project.id)
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        shutil.rmtree(workspace, ignore_errors=True)
+        raise
+    session.refresh(recording)
+    return recording_payload(session, recording, settings)
+
+
+@router.get("/recordings/{recording_id}", response_model=RecordingResponse)
+def get_recording(
+    recording_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Read the session state and what each track has stored, so a recorder can resume."""
+    return recording_payload(session, _require_recording(session, recording_id), settings)
+
+
+@router.put(
+    "/recordings/{recording_id}/tracks/{track}/chunks/{sequence}",
+    response_model=RecordingChunkResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        200: {"model": RecordingChunkResponse, "description": "Identical chunk already stored"},
+        409: {"model": ErrorEnvelope, "description": "Different content or start offset"},
+        413: {"model": ErrorEnvelope, "description": "Chunk or session above its limit"},
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                media_type: {"schema": {"type": "string", "format": "binary"}}
+                for media_type in ("video/webm", "audio/webm", "application/octet-stream")
+            },
+        }
+    },
+)
+async def upload_recording_chunk(
+    recording_id: str,
+    track: RecordingTrack,
+    request: Request,
+    response: Response,
+    sequence: int = PathParam(ge=0, le=MAX_CHUNK_SEQUENCE),
+    start_offset_ms: int | None = Query(
+        default=None, ge=0, le=MAX_START_OFFSET_MS, alias="startOffsetMs"
+    ),
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Store one chunk of `screen` or `microphone` atomically; an identical repeat returns 200.
+
+    Chunks of both tracks and of any sequence order may arrive concurrently; they do not take
+    the project operation reservation, which would serialize the two tracks.
+    """
+    recording = _require_recording(session, recording_id)
+    stored = await store_recording_chunk(
+        request, session, recording, track, sequence, start_offset_ms, settings
+    )
+    if stored.duplicate:
+        response.status_code = status.HTTP_200_OK
+    return {
+        "track": stored.track.value,
+        "sequence": stored.sequence,
+        "sizeBytes": stored.size_bytes,
+        "duplicate": stored.duplicate,
+    }
+
+
+@router.delete("/recordings/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)
+def discard_recording(
+    recording_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Discard an open session: delete its chunks, its rows and the project made for it.
+
+    A saved (completed) recording is refused with `INVALID_PROJECT_STATE`; delete its project
+    instead.
+    """
+    recording = _require_recording(session, recording_id)
+    project = recording.project
+    reservation = acquire_project_operation(settings.data_root, project.id, "discard")
+    try:
+        session.refresh(recording)
+        require_open_recording(recording)
+        session.refresh(project)
+        _delete_project_and_workspace(session, project, settings)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    finally:
+        release_project_operation(reservation)
 
 
 @router.post(
@@ -1128,6 +1280,25 @@ def _require_project(session: Session, project_id: str) -> Project:
     return project
 
 
+def _require_recording(session: Session, recording_id: str) -> RecordingSession:
+    """Load a recording session or raise the stable not-found error."""
+    recording = session.get(RecordingSession, recording_id)
+    if recording is None:
+        raise ApiError("RECORDING_NOT_FOUND", "The recording was not found.", 404)
+    return recording
+
+
+def _reject_open_recording(project: Project) -> None:
+    """Refuse an uploaded source video while the project's recording session is still open."""
+    recording = project.recording_session
+    if recording is not None and recording.state == RecordingState.RECORDING:
+        raise ApiError(
+            "INVALID_PROJECT_STATE",
+            "This project is being recorded. Save or discard the recording first.",
+            409,
+        )
+
+
 def _require_job(session: Session, job_id: str) -> ProcessingJob:
     """Load a processing job or raise a stable not-found error."""
     job = session.get(ProcessingJob, job_id)
@@ -1179,7 +1350,7 @@ def _latest_job(session: Session, project_id: str) -> ProcessingJob | None:
     )
 
 
-def _project_payload(session: Session, project: Project) -> dict[str, object]:
+def _project_payload(session: Session, project: Project, settings: Settings) -> dict[str, object]:
     """Map internal project naming to the stable frontend-facing contract."""
     active_job = _active_job(session, project.id)
     visible_job = (
@@ -1214,6 +1385,7 @@ def _project_payload(session: Session, project: Project) -> dict[str, object]:
         "videoAsset": _media_payload(asset) if asset else None,
         "activeSegmentCount": active_segment_count or 0,
         "screenshotCount": screenshot_count or 0,
+        "recording": project_recording_payload(project.recording_session, settings),
     }
 
 

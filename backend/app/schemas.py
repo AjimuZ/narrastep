@@ -7,7 +7,14 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
-from app.models import ExportStatus, JobStatus, OutputMode, ProjectState
+from app.models import (
+    ExportStatus,
+    JobStatus,
+    OutputMode,
+    ProjectState,
+    RecordingState,
+    RecordingTrack,
+)
 
 SUPPORTED_WHISPER_LANGUAGES = frozenset(
     {
@@ -247,6 +254,14 @@ class MediaAssetResponse(ApiModel):
     created_at: datetime
 
 
+class ProjectRecordingResponse(ApiModel):
+    """Summarize the recording session of a project made in the recorder, for list views."""
+
+    id: str
+    state: RecordingState
+    interrupted: bool
+
+
 class ProjectResponse(ApiModel):
     """Expose project metadata, state, and optional validated source information."""
 
@@ -264,6 +279,7 @@ class ProjectResponse(ApiModel):
     video_asset: MediaAssetResponse | None = None
     active_segment_count: int = 0
     screenshot_count: int = 0
+    recording: ProjectRecordingResponse | None = None
 
 
 class ProjectListResponse(ApiModel):
@@ -444,3 +460,75 @@ class ExportListResponse(ApiModel):
 
     items: list[ExportResponse]
     total: int
+
+
+class RecordingCreate(ApiModel):
+    """Validate the optional metadata of a new recording session and its project.
+
+    The recorder sends the name in the interface language and local time (ADR 0015); without it
+    the API names the project `Recording {YYYY-MM-DD HH:MM}` in the server's local time.
+    """
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    source_language: str = Field(default="auto", max_length=16)
+
+    @field_validator("name")
+    @classmethod
+    def strip_optional_name(cls, value: str | None) -> str | None:
+        """Normalize a supplied name and reject one that holds only whitespace."""
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Recording name must not be empty.")
+        return normalized
+
+    @field_validator("source_language")
+    @classmethod
+    def validate_source_language(cls, value: str) -> str:
+        """Accept automatic detection or a lowercase ISO-639-1 language code."""
+        normalized = value.strip().lower()
+        if normalized != "auto" and normalized not in SUPPORTED_WHISPER_LANGUAGES:
+            raise ValueError("Source language must be 'auto' or a Whisper-supported language code.")
+        return normalized
+
+
+class RecordingTrackResponse(ApiModel):
+    """Report what is stored for one track so an interrupted recorder can resume its uploads.
+
+    `nextSequence` is one past the highest stored sequence (0 when none is stored).
+    `missingSequences` lists, in ascending order and at most 100 at a time, the sequences below
+    it that are not stored; `missingCount` is their full number.
+    """
+
+    track: RecordingTrack
+    chunk_count: int
+    stored_bytes: int
+    next_sequence: int
+    missing_sequences: list[int]
+    missing_count: int
+    start_offset_ms: int | None
+
+
+class RecordingResponse(ApiModel):
+    """Expose the state and per-track storage of one recording session."""
+
+    id: str
+    project_id: str
+    state: RecordingState
+    interrupted: bool
+    stored_bytes: int
+    max_bytes: int
+    created_at: datetime
+    updated_at: datetime
+    last_chunk_at: datetime | None
+    tracks: list[RecordingTrackResponse]
+
+
+class RecordingChunkResponse(ApiModel):
+    """Acknowledge one durably stored chunk; `duplicate` is true for a repeated identical upload."""
+
+    track: RecordingTrack
+    sequence: int
+    size_bytes: int
+    duplicate: bool

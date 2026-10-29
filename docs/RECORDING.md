@@ -1,6 +1,9 @@
 # Recording
 
-Status: **planned** (P05 in the [roadmap](ROADMAP.md)). Version 0.2 accepts uploaded files only.
+Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording session API with
+per-track chunk storage, resume and discard is implemented (P05.1); completion into a source video
+(P05.2), the recorder screen (P05.3) and speaker labels (P05.5) are planned. Until P05.3 Narrastep
+offers no way to record from the interface.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
 
 ## Goal
@@ -68,6 +71,10 @@ Recording only captures and saves. It never starts processing.
 | `NARRASTEP_RECORDING_CHUNK_SECONDS` | `5` | Chunk length requested from `MediaRecorder` |
 | `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate; about 1.1 GB per hour |
 | `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Enough for screen content, keeps files small |
+| `NARRASTEP_RECORDING_MAX_CHUNK_MB` | `64` | Largest accepted chunk (implemented, P05.1) |
+| `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS` | `30` | Silence after which an open session is reported as interrupted (implemented, P05.1) |
+
+The first three settings are planned with the recorder screen (P05.3).
 
 The existing upload size limit and free-disk reserve also apply to recordings.
 
@@ -92,17 +99,58 @@ Recordings made in Narrastep label each transcript segment **You** (*Tu*) or **O
   items can say "You" when the user took them.
 - Uploaded videos (for example from OBS) have one mixed track and get no labels.
 
-## Planned API
+## API
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| POST | `/api/v1/recordings` | Create a project named after the date and open its recording session |
-| PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one chunk of `screen` or `microphone` atomically; repeating a stored sequence is a no-op |
-| GET | `/api/v1/recordings/{recordingId}` | Read state, chunk counts and stored bytes per track, for resume |
-| POST | `/api/v1/recordings/{recordingId}/complete` | Accept the optional name; join, align, mix, validate and save; never starts processing |
-| DELETE | `/api/v1/recordings/{recordingId}` | Discard the session, its chunks and its empty project |
+| Method | Endpoint | Purpose | Status |
+| --- | --- | --- | --- |
+| POST | `/api/v1/recordings` | Create a project named after the date and open its recording session | Implemented (P05.1) |
+| PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one chunk of `screen` or `microphone` atomically; repeating a stored sequence is a no-op | Implemented (P05.1) |
+| GET | `/api/v1/recordings/{recordingId}` | Read state, chunk counts, gaps and stored bytes per track, for resume | Implemented (P05.1) |
+| POST | `/api/v1/recordings/{recordingId}/complete` | Accept the optional name; join, align, mix, validate and save; never starts processing | Planned (P05.2) |
+| DELETE | `/api/v1/recordings/{recordingId}` | Discard the session, its chunks and its project | Implemented (P05.1) |
 
-These endpoints are not in [openapi.json](openapi.json) until they are implemented.
+The implemented endpoints are in [openapi.json](openapi.json); request and response fields are in
+[API](API.md#recording-sessions).
+
+### Session rules (P05.1)
+
+- **Create.** The body is optional: `name` (the recorder sends it in the interface language and
+  local time, for example `Registrazione 2026-10-29 14:05`) and `sourceLanguage`. Without a name the
+  API uses `Recording {YYYY-MM-DD HH:MM}` in the server's local time, which is UTC in the
+  container. The project is a `draft` without a video. Until the type becomes optional (P05.4) it
+  gets the type `general`.
+- **Chunks.** The body is the raw `MediaRecorder` blob (`video/webm`, `audio/webm` or
+  `application/octet-stream`), not multipart. `sequence` counts from 0 per track, up to 999999.
+  Sequence 0 must start with the WebM (EBML) header; later chunks continue the same stream and
+  cannot be checked on their own, so FFprobe validates the joined tracks at completion (P05.2).
+  Chunks of both tracks and in any order are accepted in parallel. A repeated sequence with the
+  same bytes (same SHA-256 and size) answers `200` with `duplicate: true`; different bytes answer
+  `409 RECORDING_CHUNK_CONFLICT` and keep the stored chunk.
+- **Start offsets.** Each chunk may carry `startOffsetMs`: milliseconds from the session's common
+  start to the first media of that track. The first value sent for a track is stored; the same
+  value again is accepted, a different one is `409 RECORDING_CHUNK_CONFLICT`. The recorder sends it
+  with every chunk so it reaches the server whichever chunk arrives first.
+- **Limits.** One chunk may hold up to `NARRASTEP_RECORDING_MAX_CHUNK_MB` (default 64 MB; a 5 s
+  chunk at the default bitrate is about 1.6 MB). Both tracks together may hold up to
+  `NARRASTEP_MAX_UPLOAD_SIZE_MB`, the upload limit, and every write keeps the free-disk reserve.
+  Exceeding a limit answers `413 UPLOAD_TOO_LARGE` or `507 INSUFFICIENT_DISK_SPACE` and stores
+  nothing.
+- **Resume.** `GET` lists both tracks, also one with nothing stored, with `chunkCount`,
+  `storedBytes`, `nextSequence` (one past the highest stored), `missingSequences` (gaps below it,
+  at most 100 listed) and `missingCount`. A recorder that lost the connection uploads again the
+  chunks it still holds; stored ones are no-ops. Everything stored survives an API restart; at
+  startup, partial files and chunk files that SQLite does not list are removed.
+- **Interrupted.** A session still `recording` without a chunk for
+  `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS` (default 30, six chunk lengths) is reported with
+  `interrupted: true`, also in the `recording` summary of project responses. A paused recorder
+  sends no chunks, so a long pause reads as interrupted too; the recorder screen does not rely on
+  the flag. Chunks are still accepted, so a recorder that comes back can continue.
+- **Discard.** `DELETE` removes the project, its workspace with every chunk, and the session.
+  Deleting the project does the same. A completed recording cannot be discarded; delete its
+  project instead.
+- **Guards.** While a session is open, uploading a video to its project answers
+  `409 INVALID_PROJECT_STATE`, and processing answers `409 PROJECT_ASSET_MISSING` because there is
+  no source video yet. A completed session refuses chunks with `409 INVALID_PROJECT_STATE`.
 
 ## Verification
 
