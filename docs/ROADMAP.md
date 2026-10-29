@@ -157,6 +157,52 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy
 stack; manual Windows check records one window with system audio; `--headless` still works.
 
+## P08 — Podman, generated environment and dependency refresh
+
+**Depends on:** none. **Areas:** backend, containers, launcher, documentation.
+Decision: [ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md).
+Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.sh` and its tests
+(`desktop/test/start-script.test.cjs`) working as they are.
+
+- [ ] P08.1 Reproduce the Whisper audio-extraction failure with real media variants and add a transcription stack check to the backend image build.
+  Exit: the failing combination is reproduced and recorded, or the report says it was not reproduced with the media tried; `backend/scripts/check_transcription_stack.py` extracts audio from a generated clip and transcribes it with the baked model, and fails on a deliberately broken package set; an opt-in integration test covers silent, mono, multichannel and unusual-rate media in every accepted container.
+- [ ] P08.2 Lock every backend package, including the transitive ones, and update them to the latest versions that pass.
+  **Requires tasks:** P08.1.
+  Exit: the image installs only from the lock; every package and the Python version are the latest that pass or have a recorded reason to stay behind; `python -B -m pytest`, ruff, mypy and `scripts/export_openapi.py --check` pass; a real transcription passes the stack check; `docs/LICENSES.md` and `THIRD_PARTY_NOTICES.md` list the new versions and licenses.
+- [ ] P08.3 Update the container base images, system packages and pinned servers (Debian base with FFmpeg and Tesseract, `llama.cpp`, nginx, Node.js, Redis or Valkey).
+  **Requires tasks:** P08.2.
+  Exit: each image has an exact tag and digest or a recorded reason; the Redis/Valkey choice (Q10) and its license are recorded; all images build and the stack becomes healthy on a real engine, with the output recorded; a check this worker cannot run is reported as not run and the task stays unchecked.
+- [ ] P08.4 Update the Angular application's and the desktop shell's npm packages, the Node.js version and the GitHub Actions to the latest versions that pass.
+  Exit: `npm ci`, `npm run build`, `npm run lint`, `npm run test`, `npm run typecheck:e2e` and `npx prettier --check .` pass in `apps/web`; `npm test` passes in `desktop`; `.nvmrc`, Dockerfile and CI Node versions agree; the Electron pin in ADR 0014 and `docs/LICENSES.md` are current; browser journeys are run or reported as not run.
+- [ ] P08.5 Document the dependency policy and the update procedure, and record the refresh.
+  **Requires tasks:** P08.2, P08.3, P08.4.
+  Exit: `docs/DEVELOPMENT.md` has an "Updating dependencies" procedure (what to run, where licenses are recorded, what stays pinned and why); `docs/LICENSES.md` matches the installed versions; K9 and K15 are updated; `python scripts/check_docs.py` passes.
+- [ ] P08.6 Hardware probe and a pure profile function that turns CPU, memory, free disk and free ports into `.env` values.
+  Exit: `scripts/` generator prints a complete `.env` on standard output without writing anything; tests with fixed hardware cover each row of the ADR 0016 table, an unknown value, a busy port and a low-memory warning; the table in the ADR matches the code; the script makes no network request.
+- [ ] P08.7 Backend setting and Compose entries for the generated keys.
+  **Requires tasks:** P08.6.
+  Exit: `NARRASTEP_WHISPER_CPU_THREADS` is validated, passed to the model and listed in `.env.example` and `docker-compose.yml`; backend tests pass; `docker compose config` renders the new value; the default behavior without the key is unchanged.
+- [ ] P08.8 `start.sh` generates `.env` when it is missing and never touches an existing one.
+  **Requires tasks:** P08.7.
+  Exit: shell tests with a stubbed engine show that a missing `.env` is created before Compose starts, an existing or empty `.env` is left byte-identical, a failed generation stops the start with a readable message, the generated web port reaches the desktop launcher, and the existing start-script tests still pass; `docs/DEVELOPMENT.md` and `README.md` describe the step.
+- [ ] P08.9 Make `docker-compose.yml` and the Dockerfiles engine-neutral.
+  **Requires tasks:** P08.3.
+  Exit: `docker compose config` and `podman compose config` both render the file; every image name is fully qualified; each service that others wait for has a Compose health check; the stack becomes healthy on Docker with the output recorded; the same on Podman is recorded or reported as not run.
+- [ ] P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`.
+  **Requires tasks:** P08.8, P08.9.
+  Exit: `./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests; it prefers `podman compose`, falls back to `podman-compose` and explains a missing provider; it never uses `sudo` or `--privileged`; the Podman script is executable in Git; the `.env` step reads `podman info`; a failure leaves the stack usable in a browser as in P07.2.
+- [ ] P08.11 Update the user and contributor documentation for Podman, the generated `.env` and the new constraint.
+  **Requires tasks:** P08.5, P08.10.
+  Exit: `README.md` and `docs/DEVELOPMENT.md` explain both engines, the generated `.env` and `podman machine` memory; `docs/REQUIREMENTS.md` (R16–R18) and `docs/STATUS.md` say what is delivered and what is not; `CLAUDE.md` rule 13, `CONTRIBUTING.md` and `CHANGELOG.md` say "Docker or Podman"; `python scripts/check_docs.py` passes.
+- [ ] P08.12 Owner smoke test of `start-podman.sh`, the generated `.env` and a transcription on a real computer.
+  **Requires tasks:** P08.10, P08.11.
+  Exit: the owner runs `./start-podman.sh` without a `.env`, records the generated values next to the computer's real CPU, memory and free disk, confirms the window opens after health, transcribes a real video successfully, then repeats the start with Docker; results with `podman version`, `podman compose version`, `docker version` and `node --version` are recorded in `docs/STATUS.md` with the date.
+
+Exit: the transcription stack check passes in a freshly built image; backend, frontend and desktop
+suites pass on the updated dependencies; shell tests pass for both start scripts; a missing `.env`
+is generated and an existing one is untouched; the owner smoke test on Podman is recorded in
+[Status](STATUS.md); `./start.sh` and `./start.sh --headless` still work on Docker.
+
 ## Improvement candidates
 
 Proposed on 2026-10-28 (P01.5). **Recommended** items give the most value for their cost;

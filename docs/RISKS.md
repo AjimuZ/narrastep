@@ -29,6 +29,9 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | K11 | Italian strings are longer and break layouts | Truncated labels | 320 px and 200% zoom checks run in both languages (P04.5) |
 | K13 | On Linux, Chromium's sandbox needs unprivileged user namespaces or a root-owned `chrome-sandbox`; without either Electron refuses to start (seen on the build worker in P07.1) | No desktop window on such Linux systems | The shell never turns the sandbox off; the window tests add `--no-sandbox` only with `NARRASTEP_DESKTOP_TEST_NO_SANDBOX=1`; Windows is not affected; `./start.sh --headless` (P07.2) keeps the browser mode |
 | K14 | The web container sends `Permissions-Policy: camera=(), microphone=(), geolocation=()` with the app page (`apps/web/nginx.conf`, inherited by `location /`), and Chromium then refuses `getUserMedia` for the microphone (reproduced on 2026-10-29 with a stand-in server in headless Chromium; not run against the nginx container) | The recorder cannot use the microphone on the Docker stack, in a browser and in the desktop window | Allow the microphone for the app's own origin (`microphone=(self)`) before the P05.6 manual test and P07.4; tests so far used the development server, which does not send the header |
+| K15 | Transcription fails while the audio is extracted or decoded because backend packages (only the direct ones are pinned) or the unpinned Debian FFmpeg are incompatible with each other. Reported by the owner on 2026-10-29; not reproduced in the repository yet | Processing fails for some videos or builds | P08.1 reproduces it and adds a transcription check to the image build; P08.2 locks every package; P08.3 pins the base image |
+| K16 | Podman differs from Docker: Compose provider, `depends_on` health conditions, rootless volume ownership and user ids, short image names, image format dropping `HEALTHCHECK` | The stack does not start or starts in the wrong order | Engine-neutral Compose and Dockerfiles (P08.9); `start-podman.sh` checks the provider and rootless mode (P08.10); owner smoke test on real Podman (P08.12) |
+| K17 | A Podman machine (macOS, Windows) or Docker Desktop defaults to little memory, so the model chosen from the host's memory does not fit | Worker killed during transcription | The generator measures the engine's limits, not the host's, and prints how to raise them (P08.6) |
 
 ## Open questions
 
@@ -37,6 +40,8 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | Q2 | Which remaining improvement candidates to schedule? | P02 |
 | Q5 | When `huggingface.co` is blocked, allow importing the same verified model files from disk? | P06.2 |
 | Q6 | Default model: E2B (lighter) or E4B (better)? Decide after the P06.5 benchmark | P06.5 |
+| Q9 | Does the newest Python release that `ctranslate2` and `onnxruntime` publish wheels for pass the suite (the backend now requires 3.12)? | P08.2 |
+| Q10 | Redis 7.2.14 is the last BSD release: keep it, or move to Valkey (BSD-3-Clause) when the dependency refresh reaches it (K9)? | P08.3 |
 
 ## Resolved
 
@@ -47,6 +52,7 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | Q4 | Interface language? | English and Italian with a switch ([ADR 0015](decisions/0015-english-and-italian-interface.md)) |
 | Q7 | Desktop app: PWA or Electron? | Electron shell launched by `start.sh`, as in Symphony ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
 | Q8 | Which licenses are acceptable? | Free licenses only; public, non-commercial repository ([Licenses](LICENSES.md)) |
+| Q11 | Run Narrastep with Podman, and generate a missing `.env` from the computer? | Yes, with a dedicated `start-podman.sh` and a generator that never overwrites an existing `.env` (2026-10-29, [ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)) |
 
 ## Blockers
 

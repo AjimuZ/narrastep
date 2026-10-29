@@ -36,3 +36,4 @@
 | [0013](decisions/0013-descriptive-export-names.md) | Descriptive export names | Accepted |
 | [0014](decisions/0014-desktop-app-shell.md) | Electron desktop shell | Accepted |
 | [0015](decisions/0015-english-and-italian-interface.md) | English and Italian interface | Accepted |
+| [0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md) | Podman launcher, generated environment file and dependency refresh | Accepted (planned, P08) |

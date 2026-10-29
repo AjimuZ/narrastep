@@ -53,6 +53,9 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Real Teams call with a headset on Windows | Planned | P05.6 |
 | Desktop window smoke test on the Docker stack, run by the owner ([procedure](DEVELOPMENT.md#manual-smoke-test-on-docker-p072)) | Planned | P07.2 |
 | Optional local Gemma 4 generation | Planned | P06 |
+| Transcription stack check, locked backend dependencies and updated libraries, images and tools | Planned | P08.1–P08.5 |
+| `.env` generated from the computer's hardware when missing | Planned | P08.6–P08.8 |
+| Podman support with `start-podman.sh` | Planned | P08.9–P08.12 |
 | Clickable `[mm:ss]` references in Review and Document | Planned | P06.6 |
 | Source picker, microphone and native "Save as" in the desktop window | Planned | P07.3–P07.4 |
 | Other improvements (launcher for PowerShell, glossary, masking, search and more) | Candidate | [Roadmap](ROADMAP.md#improvement-candidates) |
