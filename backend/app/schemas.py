@@ -400,7 +400,11 @@ class ExportCreate(ApiModel):
 
 
 class ExportResponse(ApiModel):
-    """Expose export progress and a download URL only after successful completion."""
+    """Expose export progress, the per-project number and the name the ZIP downloads under.
+
+    `download_name` is the stored name, or `narrastep-{id}.zip` for exports made before names were
+    stored; `sequence` is null only for such rows if they were never numbered.
+    """
 
     id: str
     project_id: str
@@ -413,6 +417,8 @@ class ExportResponse(ApiModel):
     created_at: datetime
     completed_at: datetime | None
     size_bytes: int | None
+    sequence: int | None
+    download_name: str
     metrics: dict[str, Any] = Field(default_factory=dict)
 
 

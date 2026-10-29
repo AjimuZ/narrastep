@@ -178,6 +178,10 @@ export interface ProjectExport {
   errorCode: string | null;
   errorMessage: string | null;
   sizeBytes: number | null;
+  /** 1-based export number within the project; null only for rows that were never numbered. */
+  sequence: number | null;
+  /** Name the ZIP downloads under; older exports report `narrastep-{id}.zip`. */
+  downloadName: string;
   createdAt: string;
   completedAt: string | null;
   metrics?: Record<string, number | string | Record<string, number>>;

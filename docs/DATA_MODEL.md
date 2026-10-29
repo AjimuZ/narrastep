@@ -59,6 +59,12 @@ Stores immutable export status/progress, inclusion options, relative ZIP path, b
 timestamps, versioned actual metrics, and a safe diagnostics-relative path. Historical records are
 retained after later project edits.
 
+`sequence` is the 1-based export number within the project (unique per project; failed exports
+keep theirs) and `download_name` is the ZIP name offered on download. Both are fixed when the
+export is queued, so renaming the project later does not rename existing exports. Migration
+`20261029_0004` numbered existing exports by creation time and left their `download_name` empty;
+an empty name means a Version 0.2 export, served as `narrastep-{export UUID}.zip`.
+
 ### SegmentLineage
 
 Records directed source-to-derived edges produced by split and merge. Source rows are archived rather than deleted, preserving structural history.
@@ -93,7 +99,6 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 | Change | Package |
 | --- | --- |
 | `Project.mode` becomes nullable; processing refuses a project without a type | P05.4 |
-| `ProjectExport.sequence` and `ProjectExport.downloadName` store the number and the ZIP name that P03.2 already computes while building the archive | P03.3 |
 | `RecordingSession` (state, per-track chunk count, stored bytes and start offset, timestamps) with chunks under `projects/{id}/recording/{track}/` | P05 |
 | `source/microphone.webm` kept beside the mixed source video of in-app recordings | P05.2 |
 | `TranscriptSegment.speaker` (already present) holds `you`, `others` or null; a new `speakerSource` records `automatic` or `user` | P05.5 |
@@ -129,10 +134,11 @@ Rules:
   `llm/`, `chatgpt-batches/` and `metadata/`, manifest at the top level) are never rewritten and
   are still downloaded as stored. Nothing in Narrastep reads a manifest after export, so both
   versions coexist; a future reader must switch on `schemaVersion`.
-- The archive name is computed when the worker builds the package. The export number is the
-  position of the export among its project's exports by creation time; P03.3 stores it and the
-  name with the export record (see "Planned changes"). The package on disk stays
-  `exports/narrastep-{export UUID}.zip`.
+- The ZIP name and export number are computed when the export is queued and stored on the export
+  record (P03.3). The worker names the root folder after the stored name; a row queued before the
+  columns existed gets its name when the worker picks it up. The package on disk stays
+  `exports/narrastep-{export UUID}.zip`; the download uses the stored name through the
+  `Content-Disposition` header.
 
 ## Migration policy
 

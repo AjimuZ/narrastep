@@ -61,6 +61,7 @@ from app.schemas import (
     SegmentUpdate,
     serialize_utc,
 )
+from app.services.export_names import stored_export_zip_file_name
 from app.services.exporting import ExportRequest, estimate_export_package
 from app.services.media import MediaServiceError, validate_video
 from app.services.pipeline import (
@@ -69,7 +70,11 @@ from app.services.pipeline import (
     calculate_laplacian_sharpness,
     compute_perceptual_hash,
 )
-from app.services.processing import export_segment_snapshot
+from app.services.processing import (
+    assign_export_name,
+    export_segment_snapshot,
+    next_export_sequence,
+)
 from app.services.progress import publish_cancellation_flag, publish_job_event
 from app.services.reviewing import (
     mark_project_review_changed,
@@ -1031,7 +1036,10 @@ def _queue_export(
         project_id=project.id,
         include_original_video=request.include_original_video,
         celery_task_id=task_id,
+        created_at=utc_now(),
+        sequence=next_export_sequence(session, project.id),
     )
+    assign_export_name(session, export, project)
     session.add(export)
     try:
         session.commit()
@@ -1105,7 +1113,11 @@ def download_export(
     path = ensure_within_root(settings.data_root, export.relative_path)
     if not path.is_file():
         raise ApiError("PROJECT_ASSET_MISSING", "The export file is unavailable.", 404)
-    return FileResponse(path, media_type="application/zip", filename=f"narrastep-{export.id}.zip")
+    return FileResponse(
+        path,
+        media_type="application/zip",
+        filename=stored_export_zip_file_name(export.download_name, export.id),
+    )
 
 
 def _require_project(session: Session, project_id: str) -> Project:
@@ -1301,6 +1313,8 @@ def _export_payload(export: ProjectExport) -> dict[str, object]:
         "errorCode": export.error_code,
         "errorMessage": export.error_message,
         "sizeBytes": export.size_bytes,
+        "sequence": export.sequence,
+        "downloadName": stored_export_zip_file_name(export.download_name, export.id),
         "createdAt": export.created_at,
         "completedAt": export.completed_at,
         "metrics": export.metrics_summary or {},

@@ -66,8 +66,13 @@ def test_initial_revision_matches_metadata_and_round_trips(
                 "project_exports",
             )
             for item in schema.get_indexes(table_name)
-            if item["name"].startswith("uq_")
+            if item["name"].startswith("uq_") and item["name"] != "uq_export_sequence_per_project"
         }
+        sequence_index = {item["name"]: item for item in schema.get_indexes("project_exports")}[
+            "uq_export_sequence_per_project"
+        ]
+        assert sequence_index["unique"] == 1
+        assert sequence_index["column_names"] == ["project_id", "sequence"]
         assert set(partial_indexes) == {
             "uq_primary_screenshot_per_segment",
             "uq_active_processing_job_per_project",
@@ -277,6 +282,72 @@ def test_project_type_revision_migrates_version_0_2_modes(tmp_path: Path, monkey
 
         command.downgrade(alembic_config, "20260720_0002")
         assert project_modes() == legacy_modes
+    finally:
+        get_settings.cache_clear()
+
+
+def test_export_name_revision_numbers_existing_exports(tmp_path: Path, monkeypatch) -> None:
+    """Number existing exports per project by creation order and leave their names empty.
+
+    Old exports keep the Version 0.2 download name, so only `sequence` is backfilled; the unique
+    index rejects a duplicate number within a project and the downgrade removes both columns.
+    """
+    data_root = tmp_path / "migration-export-names"
+    database_url = f"sqlite:///{(data_root / 'narrastep.db').as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    exports = [  # (id, project, created_at): "b" and "c" tie on time, so the id decides
+        ("c", "one", "2026-07-02"),
+        ("a", "one", "2026-07-03"),
+        ("b", "one", "2026-07-02"),
+        ("d", "two", "2026-07-01"),
+    ]
+
+    try:
+        command.upgrade(alembic_config, "20261029_0003")
+        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            for project_id in ("one", "two"):
+                connection.execute(
+                    text(
+                        "INSERT INTO projects (id, name, source_language, detected_language,"
+                        " output_mode, state, created_at, updated_at) VALUES (:id, 'Legacy',"
+                        " 'en', 'en', 'tutorial', 'completed', '2026-07-01', '2026-07-01')"
+                    ),
+                    {"id": project_id},
+                )
+            for export_id, project_id, created_at in exports:
+                connection.execute(
+                    text(
+                        "INSERT INTO project_exports (id, project_id, status, progress_percent,"
+                        " include_original_video, metrics_summary, created_at, updated_at)"
+                        " VALUES (:id, :project, 'completed', 100, 0, '{}', :at, :at)"
+                    ),
+                    {"id": export_id, "project": project_id, "at": created_at},
+                )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        engine = create_engine(database_url)
+        with engine.connect() as connection:
+            rows = connection.execute(
+                text("SELECT id, sequence, download_name FROM project_exports")
+            ).all()
+        assert {row.id: row.sequence for row in rows} == {"b": 1, "c": 2, "a": 3, "d": 1}
+        assert all(row.download_name is None for row in rows)
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(text("UPDATE project_exports SET sequence = 1 WHERE id = 'c'"))
+        engine.dispose()
+        command.check(alembic_config)
+
+        command.downgrade(alembic_config, "20261029_0003")
+        engine = create_engine(database_url)
+        columns = {item["name"] for item in inspect(engine).get_columns("project_exports")}
+        engine.dispose()
+        assert {"sequence", "download_name"}.isdisjoint(columns)
     finally:
         get_settings.cache_clear()
 

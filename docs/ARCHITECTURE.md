@@ -106,7 +106,7 @@ The worker writes JSON, Markdown, SRT, normalized screenshots, prompt material, 
 video (the prompt, batch guide and batch task wording come from the project type through
 `services/export_guides.py`), creates the ZIP, then atomically promotes it into the project export directory.
 The ZIP has one root folder named after the archive and numbered folders in reading order
-(`services/export_names.py` builds the names, [Data model](DATA_MODEL.md#export-layout) lists
+(`services/export_names.py` builds the names, which `assign_export_name` stores on the export record when it is queued, [Data model](DATA_MODEL.md#export-layout) lists
 the layout); the file on disk keeps its UUID name. Historical
 exports and their actual metrics do not change when review data changes.
 

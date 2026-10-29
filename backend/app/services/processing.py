@@ -28,7 +28,7 @@ from app.models import (
 from app.schemas import serialize_utc
 from app.services.adaptive_selection import extract_adaptive_frames_to_directory
 from app.services.diagnostics import METRICS_VERSION, MetricsCollector
-from app.services.export_names import export_archive_name
+from app.services.export_names import export_zip_file_name
 from app.services.exporting import ExportRequest, ExportSegment, build_export_package
 from app.services.media import MediaServiceError, extract_pcm_audio, validate_video
 from app.services.pipeline import (
@@ -395,14 +395,13 @@ def perform_export(
             destination = workspace / "exports" / f"narrastep-{export.id}.zip"
             if destination.exists():
                 raise FileExistsError("An immutable export artifact already exists.")
+            if export.download_name is None:
+                # Queued before the name was stored (see `assign_export_name`).
+                assign_export_name(session, export, project)
+                session.commit()
             request = ExportRequest(
                 export_id=export.id,
-                archive_name=export_archive_name(
-                    export.created_at,
-                    canonical_output_mode(project.output_mode.value),
-                    project.name,
-                    _export_sequence(session, export),
-                ),
+                archive_name=(export.download_name or "").removesuffix(".zip"),
                 project={
                     "id": project.id,
                     "name": project.name,
@@ -498,11 +497,45 @@ def perform_export(
             session.commit()
 
 
+def next_export_sequence(session: Session, project_id: str) -> int:
+    """Return the number for a new export of the project: one more than any existing one.
+
+    Counts rows as well as stored numbers, so exports without a number still raise it. Failed
+    exports keep their number. The one-active-export rule serializes callers per project.
+    """
+    count = session.scalar(
+        select(func.count())
+        .select_from(ProjectExport)
+        .where(ProjectExport.project_id == project_id)
+    )
+    highest = session.scalar(
+        select(func.max(ProjectExport.sequence)).where(ProjectExport.project_id == project_id)
+    )
+    return max(int(count or 0), int(highest or 0)) + 1
+
+
+def assign_export_name(session: Session, export: ProjectExport, project: Project) -> None:
+    """Fix the export's number and ZIP name from the project's current type and name.
+
+    Requires `export.created_at` to be set. Idempotent: an existing sequence is kept, and the name
+    is built from it. The name is stored because later project renames must not change what an
+    existing export is called; the caller commits. A row without a number (inserted outside the
+    API) is numbered by its position among the project's exports by creation time.
+    """
+    if export.sequence is None:
+        export.sequence = _export_sequence(session, export)
+    export.download_name = export_zip_file_name(
+        export.created_at,
+        canonical_output_mode(project.output_mode.value),
+        project.name,
+        export.sequence,
+    )
+
+
 def _export_sequence(session: Session, export: ProjectExport) -> int:
     """Return the 1-based position of an export among its project's exports by creation time.
 
-    Failed exports keep their number. P03.3 stores the number with the export record; until then
-    it is recomputed here, so deleting an earlier export row would shift later numbers.
+    Fallback for rows without a stored number; ties on `created_at` are broken by id.
     """
     count = session.scalar(
         select(func.count())

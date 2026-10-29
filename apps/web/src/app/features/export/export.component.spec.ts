@@ -31,6 +31,8 @@ const PREVIOUS_EXPORT: ProjectExport = {
   errorCode: null,
   errorMessage: null,
   sizeBytes: 524_288,
+  sequence: 1,
+  downloadName: '2026-07-15_tutorial_demo_export-01.zip',
   createdAt: '2026-07-15T10:20:00Z',
   completedAt: '2026-07-15T10:21:00Z',
 };
@@ -43,6 +45,8 @@ const QUEUED_EXPORT: ProjectExport = {
   progressPercent: 0,
   currentStage: 'queued',
   sizeBytes: null,
+  sequence: 2,
+  downloadName: '2026-07-15_tutorial_demo_export-02.zip',
   createdAt: '2026-07-15T10:30:00Z',
   completedAt: null,
 };
@@ -85,6 +89,9 @@ describe('ExportComponent', () => {
     const component = fixture.componentInstance;
 
     expect(component.completedExports()).toEqual([PREVIOUS_EXPORT]);
+    expect(fixture.nativeElement.querySelector('.history-card .export-name').textContent).toBe(
+      PREVIOUS_EXPORT.downloadName,
+    );
     expect(fixture.nativeElement.textContent).toContain(
       'one evidence file and up to 19 images by default.',
     );

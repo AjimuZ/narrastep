@@ -22,11 +22,11 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Transcript review | Implemented | Raw evidence preserved |
 | Segment split and merge | Implemented | Archived sources and lineage |
 | Screenshot reassignment and recovery | Implemented | Primary and alternatives; exact-frame recovery |
-| ZIP export | Implemented | Numbered archive layout with a root folder named `{date}_{type}_{slug}_export-{nn}`, manifest schema 0.3.0 (P03.2); the stored and downloaded file is still `narrastep-{UUID}.zip` until P03.3 |
+| ZIP export | Implemented | Numbered archive layout with a root folder named `{date}_{type}_{slug}_export-{nn}`, manifest schema 0.3.0 (P03.2); the file on disk stays `narrastep-{UUID}.zip`. The number and ZIP name are stored when the export is queued (P03.3, migration `20261029_0004`) and the download and history use them; exports without a stored name download as `narrastep-{UUID}.zip` |
 | Project types | Implemented | `task_briefing`, `meeting`, `tutorial`, `general` (P02.1); migration `20261029_0003` maps `technical_walkthrough` to `task_briefing`. Type-specific screenshot profile, export guide, generation prompt and batch evidence prompts (P02.2); new-project form with type cards, optional default name and "More options" (P02.3) |
-| Export name builders | Implemented | Slug, archive and screenshot names (P03.1); used by the archive layout (P03.2), not yet by the download name (P03.3) |
+| Export name builders | Implemented | Slug, archive and screenshot names (P03.1); used by the archive layout (P03.2) and the stored download name (P03.3) |
 | Docker local stack | Implemented | Web, API, single worker, Redis, named volumes |
-| Automated unit, API and UI tests | Implemented | Last recorded floor (2026-10-29): 145 backend passed, 1 opt-in integration skipped; 38 frontend passed |
+| Automated unit, API and UI tests | Implemented | Last recorded floor (2026-10-29): 148 backend passed, 1 opt-in integration skipped; 38 frontend passed |
 | Browser contract journey | Implemented | Desktop and mobile Chromium, six responsive widths |
 | Full-stack browser journey | Implemented | Opt-in; real mock-enabled Compose stack; inspects the ZIP |
 | Docker Compose smoke test | Verified (2026-08-05) | Images build; health, CSS/CSP rendering and full-stack export passed |
@@ -38,7 +38,6 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 
 | Capability | Status | Package |
 | --- | --- | --- |
-| Download name from the stored export name; history shows it | Planned | P03.3 |
 | Pixel interface, pixel title font and plain copy | Planned | P04 |
 | English and Italian interface with a switch | Planned | P04 |
 | In-browser screen, system-audio and microphone recording, saved without processing | Planned | P05 |

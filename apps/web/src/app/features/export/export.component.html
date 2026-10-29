@@ -149,7 +149,7 @@
           <article class="panel history-card">
             <div>
               <span class="status-badge" [attr.data-status]="item.status">{{ item.status }}</span>
-              <h3>Narrastep export</h3>
+              <h3 class="export-name">{{ item.downloadName }}</h3>
               <p class="muted">
                 Created {{ item.createdAt | date: 'medium' }} · {{ formatFileSize(item.sizeBytes) }}
               </p>

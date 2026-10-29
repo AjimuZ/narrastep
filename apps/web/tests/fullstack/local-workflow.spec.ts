@@ -79,6 +79,7 @@ test('processes generated media through the real local API and exports reviewed 
 
   const [download] = await Promise.all([page.waitForEvent('download'), downloadLink.click()]);
   const exportPath = testInfo.outputPath('narrastep-export.zip');
+  expect(download.suggestedFilename()).toMatch(/^\d{4}-\d{2}-\d{2}_[a-z_]+_.+_export-01\.zip$/);
   await download.saveAs(exportPath);
   assertExportPackage(exportPath, reviewedText);
 });

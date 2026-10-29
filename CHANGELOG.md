@@ -23,7 +23,11 @@ All notable changes to Narrastep are documented in this file.
   `2026-10-28_meeting_sprint-planning_export-02`): `README.md`, `01-ai-input`, `02-screenshots`
   (`step-003_00m42s.png`), `03-transcript`, `04-chatgpt-batches/batch-01-of-03` and `metadata`.
   The manifest moved to `metadata/manifest.json` with schema version 0.3.0. Earlier exports keep
-  their layout. The downloaded file name does not change yet.
+  their layout.
+- Each export now has a number and a descriptive ZIP name, fixed when it is queued. The file you
+  download and the export history use that name (for example
+  `2026-10-28_meeting_sprint-planning_export-02.zip`); renaming the project later does not rename
+  existing exports. Exports made before this change still download as `narrastep-{id}.zip`.
 
 - The new-project form now starts with the four project-type cards. The project name is optional
   and defaults to the type and the local date (for example "Meeting 2026-10-29"); the spoken

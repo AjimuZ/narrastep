@@ -353,6 +353,7 @@ class ProjectExport(Base):
             unique=True,
             sqlite_where=text("status IN ('queued', 'processing')"),
         ),
+        Index("uq_export_sequence_per_project", "project_id", "sequence", unique=True),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
@@ -376,6 +377,12 @@ class ProjectExport(Base):
     include_original_video: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     relative_path: Mapped[str | None] = mapped_column(String(500))
     size_bytes: Mapped[int | None] = mapped_column(Integer)
+    # 1-based export number within the project; failed exports keep theirs. Null only for rows
+    # inserted without one, which the worker numbers when it builds the archive.
+    sequence: Mapped[int | None] = mapped_column(Integer)
+    # ZIP name offered on download, fixed when the export is queued; null for Version 0.2 exports,
+    # which are served as `narrastep-{id}.zip`.
+    download_name: Mapped[str | None] = mapped_column(String(255))
     celery_task_id: Mapped[str | None] = mapped_column(String(80))
     error_code: Mapped[str | None] = mapped_column(String(80))
     error_message: Mapped[str | None] = mapped_column(String(500))

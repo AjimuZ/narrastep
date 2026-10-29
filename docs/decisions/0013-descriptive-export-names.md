@@ -22,8 +22,10 @@ do not say which file to open first.
 - **Screenshots:** `step-{nnn}_{mm}m{ss}s.png`, so the file name gives the step and video time.
 - The name is computed once at export creation and stored with the export record. Workspace
   storage keeps UUID paths ([ADR 0005](0005-filesystem-media-storage.md)).
-- Version 0.2 archives are not rewritten. Their download name uses the new pattern; their content
-  keeps the old layout.
+- Version 0.2 archives are not rewritten. They keep the download name they always had,
+  `narrastep-{UUID}.zip` (amended in P03.3: their creation-time name was never stored and a
+  new-pattern name would promise a root folder their content does not have); their content keeps
+  the old layout.
 
 ## Alternatives
 

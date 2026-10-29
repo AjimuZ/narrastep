@@ -213,6 +213,10 @@ progress::-webkit-progress-value {
   font-size: 1.25rem;
 }
 
+.history-card .export-name {
+  overflow-wrap: anywhere;
+}
+
 .history-card h3 {
   margin: var(--dk-space-3) 0 var(--dk-space-1);
 }

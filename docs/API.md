@@ -76,7 +76,12 @@ Merge accepts ordered IDs:
 }
 ```
 
-Export creation accepts `includeOriginalVideo`, which defaults to `false`.
+Export creation accepts `includeOriginalVideo`, which defaults to `false`. Export responses carry
+`sequence` (the per-project export number) and `downloadName`
+([ADR 0013](decisions/0013-descriptive-export-names.md)), for example
+`2026-10-28_meeting_sprint-planning_export-02.zip`. Both are fixed when the export is queued. The
+download endpoint returns that name in `Content-Disposition`; exports made before names were
+stored report and download as `narrastep-{exportId}.zip`.
 
 Exact-frame recovery accepts a source-relative timestamp:
 
@@ -106,7 +111,6 @@ generation. All fields are additive.
 Not implemented and not in [openapi.json](openapi.json):
 
 - Optional `mode` until processing starts ([ADR 0009](decisions/0009-project-types.md), P05.4).
-- Descriptive download names ([ADR 0013](decisions/0013-descriptive-export-names.md)).
 - Recording session endpoints ([Recording](RECORDING.md#planned-api)).
 - Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).
 

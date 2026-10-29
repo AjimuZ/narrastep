@@ -327,6 +327,8 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
         errorCode: null,
         errorMessage: null,
         sizeBytes: 4096,
+        sequence: 1,
+        downloadName: 'export-1.zip',
         createdAt: timestamp,
         completedAt: timestamp,
       };
@@ -337,7 +339,7 @@ test('creates, reviews, restructures, reassigns evidence, and exports a project'
     if (path === '/api/v1/exports/export-1/download') {
       await route.fulfill({
         contentType: 'application/zip',
-        headers: { 'Content-Disposition': 'attachment; filename="narrastep-export.zip"' },
+        headers: { 'Content-Disposition': 'attachment; filename="export-1.zip"' },
         body: 'deterministic-test-zip',
       });
       return;

@@ -77,6 +77,15 @@ def export_zip_file_name(
     return f"{export_archive_name(created_at, project_type, project_name, sequence)}.zip"
 
 
+def stored_export_zip_file_name(download_name: str | None, export_id: str) -> str:
+    """Return the name to offer on download: the stored one, or the Version 0.2 name.
+
+    Exports created before the name was stored have `download_name` None and use the old layout,
+    so they keep the `narrastep-{export_id}.zip` name they were always served under.
+    """
+    return download_name or f"narrastep-{export_id}.zip"
+
+
 def screenshot_file_name(step_number: int, start_seconds: float) -> str:
     """Return `step-{nnn}_{mm}m{ss}s.png` for a step and its video time.
 

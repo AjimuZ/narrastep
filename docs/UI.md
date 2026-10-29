@@ -125,7 +125,7 @@ steps, and `prefers-reduced-motion` removes it.
 | Process | dialog on a Not processed project | Project type cards (required), language under "More options". Action: Start processing |
 | Processing | `/projects/:id` | Stage list with segmented gauges and real percentages; cancel and retry. Action: Open review |
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every `[mm:ss]` is a button that moves the video to that time. Action: Save |
-| Export | `/projects/:id/export` | Package options, size estimate, history with descriptive file names. Action: Create package |
+| Export | `/projects/:id/export` | Package options, size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
 | Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled |
 | Settings | `/settings` | Local generation: install, enable, delete, model size and license; storage use per project |
 

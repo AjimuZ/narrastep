@@ -333,6 +333,76 @@ def test_version_0_2_export_still_downloads_unchanged(client: TestClient, sessio
 
     assert response.status_code == 200
     assert response.content == archive_path.read_bytes()
+    assert f'filename="narrastep-{export.id}.zip"' in response.headers["content-disposition"]
+    history = client.get(f"/api/v1/projects/{project.id}/exports").json()["items"]
+    assert history[0]["downloadName"] == f"narrastep-{export.id}.zip"
     with zipfile.ZipFile(io.BytesIO(response.content)) as served:
         assert served.namelist()[0] == "manifest.json"
         assert json.loads(served.read("manifest.json"))["schemaVersion"] == "0.2.0"
+
+
+def test_export_stores_its_number_and_name_and_download_uses_them(
+    client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fix the export number and ZIP name at queue time; renaming the project leaves them alone."""
+    from app.tasks.celery_app import export_project_task
+
+    monkeypatch.setattr(export_project_task, "apply_async", lambda **_: None)
+    project = _project_with_source(session, ProjectState.REVIEW)
+    workspace = create_project_workspace(get_settings().data_root, project.id)
+    (workspace / "transcript" / "raw-transcript.json").write_text(
+        '{"segments": []}', encoding="utf-8"
+    )
+
+    first = client.post(f"/api/v1/projects/{project.id}/exports", json={}).json()
+    day = first["createdAt"][:10]
+    expected = f"{day}_{project.output_mode.value}_resilience_export-01.zip"
+    assert first["sequence"] == 1
+    assert first["downloadName"] == expected
+    stored = session.get(ProjectExport, first["id"])
+    assert stored is not None and (stored.sequence, stored.download_name) == (1, expected)
+
+    perform_export(first["id"], get_settings())
+    assert client.patch(f"/api/v1/projects/{project.id}", json={"name": "Renamed plan"}).is_success
+
+    download = client.get(f"/api/v1/exports/{first['id']}/download")
+    assert download.status_code == 200, download.text
+    assert f'filename="{expected}"' in download.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(download.content)) as served:
+        assert {name.split("/")[0] for name in served.namelist()} == {expected.removesuffix(".zip")}
+
+    second = client.post(f"/api/v1/projects/{project.id}/exports", json={}).json()
+    assert second["sequence"] == 2
+    assert second["downloadName"].endswith("_renamed-plan_export-02.zip")
+    history = client.get(f"/api/v1/projects/{project.id}/exports").json()["items"]
+    assert {item["id"]: item["downloadName"] for item in history} == {
+        first["id"]: expected,
+        second["id"]: second["downloadName"],
+    }
+
+
+def test_worker_names_an_export_queued_without_a_stored_name(session: Session) -> None:
+    """Keep the stored number and add the missing name when the worker picks the export up."""
+    project = _project_with_source(session, ProjectState.EXPORTING)
+    workspace = create_project_workspace(get_settings().data_root, project.id)
+    (workspace / "transcript" / "raw-transcript.json").write_text(
+        '{"segments": []}', encoding="utf-8"
+    )
+    export = ProjectExport(
+        project_id=project.id,
+        created_at=datetime(2026, 10, 28, 9, 0, tzinfo=UTC),
+        sequence=7,
+    )
+    session.add(export)
+    session.commit()
+
+    perform_export(export.id, get_settings())
+
+    session.expire_all()
+    done = session.get(ProjectExport, export.id)
+    assert done is not None and done.status == ExportStatus.COMPLETED, done.error_code
+    expected = f"2026-10-28_{project.output_mode.value}_resilience_export-07"
+    assert done.download_name == f"{expected}.zip"
+    assert done.relative_path is not None
+    with open_package(get_settings().data_root / done.relative_path) as archive:
+        assert archive.root == expected

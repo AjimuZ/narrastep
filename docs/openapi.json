@@ -94,7 +94,7 @@
         "type": "object"
       },
       "ExportResponse": {
-        "description": "Expose export progress and a download URL only after successful completion.",
+        "description": "Expose export progress, the per-project number and the name the ZIP downloads under.\n\n`download_name` is the stored name, or `narrastep-{id}.zip` for exports made before names were\nstored; `sequence` is null only for such rows if they were never numbered.",
         "properties": {
           "completedAt": {
             "title": "Completedat"
@@ -104,6 +104,9 @@
           },
           "currentStage": {
             "title": "Currentstage"
+          },
+          "downloadName": {
+            "title": "Downloadname"
           },
           "errorCode": {
             "title": "Errorcode"
@@ -126,6 +129,9 @@
           "projectId": {
             "title": "Projectid"
           },
+          "sequence": {
+            "title": "Sequence"
+          },
           "sizeBytes": {
             "title": "Sizebytes"
           },
@@ -142,7 +148,9 @@
           "errorMessage",
           "createdAt",
           "completedAt",
-          "sizeBytes"
+          "sizeBytes",
+          "sequence",
+          "downloadName"
         ],
         "title": "ExportResponse",
         "type": "object"
