@@ -10,7 +10,10 @@ RUN mkdir /opt/llama.cpp \
     && cp -P llama-server libllama-server-impl.so libllama-common.so* libllama.so* libmtmd.so* \
         libggml*.so* /opt/llama.cpp/
 
-FROM python:3.12.13-slim AS runtime
+# Python 3.14 is the newest release with wheels for every locked package; ONNX Runtime has none for
+# 3.15 yet (P08.2, docs/LICENSES.md). The tag names the Debian 13 base whose FFmpeg the
+# transcription check below exercises; the digest pin belongs to P08.3.
+FROM python:3.14.10-slim-trixie AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -38,14 +41,19 @@ COPY --from=llama-server /opt/llama.cpp/ /opt/llama.cpp/
 COPY third_party/llama.cpp/LICENSE /opt/llama.cpp/LICENSE
 
 WORKDIR /app
-COPY pyproject.toml ./
+COPY pyproject.toml requirements.lock ./
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY scripts ./scripts
 
-RUN python -m pip install --upgrade pip \
-    && python -m pip install . \
+# Installs exactly the packages in requirements.lock, direct and transitive (pip and the build
+# backend included), each checked against its SHA-256 hash and only as a prebuilt wheel. The project
+# goes last without dependencies, build isolation or an index, so nothing outside the lock is
+# downloaded, and `pip check` fails the build on an inconsistent set (P08.2).
+RUN python -m pip install --require-hashes --no-deps --only-binary=:all: -r requirements.lock \
+    && python -m pip install --no-deps --no-build-isolation --no-index . \
+    && python -m pip check \
     && mkdir -p "/opt/models/${NARRASTEP_WHISPER_MODEL}" /data \
     && python scripts/download_model.py --model "${NARRASTEP_WHISPER_MODEL}" "/opt/models/${NARRASTEP_WHISPER_MODEL}" \
     && useradd --create-home --uid 10001 narrastep \

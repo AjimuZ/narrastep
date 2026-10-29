@@ -69,7 +69,7 @@ def _track_dir(project_id: str, track: str) -> Path:
 
 
 @pytest.fixture
-def small_limits() -> Generator[None, None, None]:
+def small_limits() -> Generator[None]:
     """Lower the session limit to 1 MB and the chunk limit to 1 MB for size tests."""
     limited = get_settings().model_copy(update={"max_upload_mb": 1, "recording_max_chunk_mb": 1})
     app.dependency_overrides[get_settings] = lambda: limited

@@ -47,7 +47,7 @@ Implemented in P06.1 (`backend/Dockerfile`, `backend/app/services/llama_server.p
 | Release | `v0.5.0`, build `b11146`, commit `7fe450e19305b828c199d602c23a8337aaa1f03b` (image built 2026-09-23) |
 | Location | `/opt/llama.cpp`: `llama-server`, `libllama-server-impl.so`, `libllama-common`, `libllama`, `libmtmd` (vision input), `libggml`, `libggml-base` and one `libggml-cpu-*.so` per CPU family, plus the MIT `LICENSE` |
 | Left out | The `llama` multi-tool and the libraries of its other commands (`cli`, `completion`, `bench`, `batched-bench`, `perplexity`, `quantize`, `fit-params`); the CPU image has no GPU backend |
-| System libraries | `libstdc++6`, `libgcc-s1` and `libssl3t64` come with `python:3.12.13-slim` (Debian 13); `libgomp1` (OpenMP) is listed in the apt line, although FFmpeg and Tesseract already install it |
+| System libraries | `libstdc++6`, `libgcc-s1` and `libssl3t64` come with the Debian 13 base of `python:3.14.10-slim-trixie` (`python:3.12.13-slim`, also Debian 13, when P06.1 checked the libraries); `libgomp1` (OpenMP) is listed in the apt line, although FFmpeg and Tesseract already install it |
 
 - The official build loads one CPU backend at run time, chosen for the processor among
   `x64`, `sse42`, `sandybridge`, `ivybridge`, `piledriver`, `haswell`, `skylakex`, `cannonlake`,

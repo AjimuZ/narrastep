@@ -22,6 +22,7 @@ flowchart LR
 - `web` serves static Angular assets through Nginx and proxies `/api` to FastAPI. It contains presentation and client orchestration only. Shared pixel primitives live in `apps/web/src/app/shared/ui/` (styles in `apps/web/src/styles/primitives.scss`); the icon sprite and the bundled font are static files under `apps/web/public/`. The shell (`app.component.ts`: header with the product name and a health pill fed by `GET /api/v1/health`, and the vertical menu) frames every screen; state words come from `shared/status-labels.ts` and project type labels from `shared/project-types.ts`. Interface language ([ADR 0015](decisions/0015-english-and-italian-interface.md)): `apps/web/src/app/core/i18n/` holds the language choice (`language.ts`), the startup loader that applies the active catalog from `apps/web/src/locale/` before any component runs (`init.ts`, imported first by `main.ts`), the language switch with its unsaved-changes checks (`language.service.ts`), locale-aware formatting (`format.ts`) and the translation of stable API error codes (`error-text.ts`). Texts are `i18n="@@id"` template attributes and `$localize` calls with custom IDs, never module-level constants, so they follow the language loaded at startup; the API keeps English messages and codes.
 - `api` validates requests and configuration, coordinates transactions, streams local assets, and exposes durable state. Route handlers delegate business behavior to services.
 - `worker` performs media and export work. It is the only service that loads the transcription model and runs with concurrency one. FFmpeg is its only media decoder: Whisper receives the samples of the extracted WAV, never a media path (P08.1), and the image build fails when FFmpeg and the Whisper packages cannot transcribe generated clips (`scripts/check_transcription_stack.py`).
+- `api` and `worker` share one backend image on Python 3.14 that installs only the hashed packages of `backend/requirements.lock`, direct and transitive (P08.2, [Backend package lock](DEVELOPMENT.md#backend-package-lock)), so the same sources build the same package set.
 - `redis` provides Celery queues, short-lived results, and best-effort progress notifications. It is not persistent business storage and is not published to the host.
 
 The API joins the local web network and the internal processing network. The worker and Redis join only the internal network, which prevents the processing runtime from reaching the Internet.
@@ -150,6 +151,11 @@ Each completed processing or export stage emits one JSON log event containing id
 durations, and sizes. Terminal per-operation diagnostics are atomically stored below the project
 workspace and summarized numerically in SQLite for API, SSE, and UI use. This boundary forbids
 transcript text, OCR text, filenames, absolute paths, window titles, and image content.
+
+Nothing is measured for or sent to anyone else. FastAPI's built-in OpenTelemetry instrumentation
+(FastAPI 0.142 and later) is switched off in `create_app`, including its setup of exporters from
+`OTEL_*` variables, and no OpenTelemetry SDK or exporter is installed
+([Licenses](LICENSES.md#fastapi-and-opentelemetry)).
 
 ## Failure handling
 

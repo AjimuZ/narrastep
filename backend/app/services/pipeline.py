@@ -1112,7 +1112,7 @@ def _optional_finite_float(value: Any) -> float | None:
         return None
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return parsed if math.isfinite(parsed) else None
 

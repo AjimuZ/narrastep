@@ -161,6 +161,12 @@ All notable changes to Narrastep are documented in this file.
 - Refined the interface visuals within the existing palette: layered panel and button depth, consistent inline SVG icons replacing ad-hoc glyphs, status badges color-coded for every project state, project-row and history-card hover elevation, animated progress and processing-timeline cues, a brand-accented header mark and favicon, and app-wide custom scrollbars and text selection. All motion respects reduced-motion preferences.
 - Reduced screenshot alternatives from four to two and introduced semantic design tokens with temporary compatibility aliases.
 - Kept `legacy` as the screenshot-selection default while `adaptive_v1` completes its local benchmark gate.
+- The backend now runs on Python 3.14 and installs every Python package, including the indirect
+  ones, from a lock file with checked hashes, so an image built later contains exactly the same
+  packages and a new upstream release can no longer break transcription. All backend packages were
+  updated to their newest releases (FastAPI 0.162, SQLAlchemy 2.1, OpenCV 5, NumPy 2.5, Pillow 13,
+  among others); redis-py stays at 6.4 until Celery's messaging library accepts a newer one. FastAPI's
+  new built-in OpenTelemetry instrumentation is switched off, so nothing is measured or sent.
 
 ### Fixed
 

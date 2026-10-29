@@ -1255,8 +1255,10 @@ def _queue_export(
     )
     if getattr(transition, "rowcount", 0) != 1:
         session.rollback()
-        session.refresh(project)
-        if project.state == ProjectState.EXPORTING:
+        # Another request changed the state after the check above. Query the stored state: the
+        # type checker treats `project.state` as narrowed by that check even after a refresh.
+        current_state = session.scalar(select(Project.state).where(Project.id == project.id))
+        if current_state == ProjectState.EXPORTING:
             raise ApiError("PROJECT_BUSY", "This project already has an active export.", 409)
         raise ApiError("INVALID_PROJECT_STATE", "Complete processing before exporting.", 409)
     task_id = str(uuid.uuid4())
@@ -1634,7 +1636,7 @@ def _parse_byte_range(value: str, file_size: int) -> tuple[int, int]:
         else:
             start = int(start_text)
             end = int(end_text) if end_text else file_size - 1
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         raise ApiError(
             "INVALID_BYTE_RANGE", "The requested byte range is not satisfiable.", 416
         ) from None
@@ -1643,7 +1645,7 @@ def _parse_byte_range(value: str, file_size: int) -> tuple[int, int]:
     return start, min(end, file_size - 1)
 
 
-def _file_range(path: Path, start: int, length: int) -> Generator[bytes, None, None]:
+def _file_range(path: Path, start: int, length: int) -> Generator[bytes]:
     """Yield only the requested portion of a local file in bounded chunks."""
     remaining = length
     with path.open("rb") as source:
@@ -1658,7 +1660,7 @@ def _file_range(path: Path, start: int, length: int) -> Generator[bytes, None, N
 
 async def _job_event_stream(
     job_id: str, last_version: int, settings: Settings
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[str]:
     """Use Redis wakeups plus periodic SQLite resync, versioned snapshots, and heartbeats."""
     delivered = last_version
     heartbeat_elapsed: float = float(settings.sse_heartbeat_seconds)

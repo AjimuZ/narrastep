@@ -52,12 +52,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.13
+          python-version: 3.14.10
           cache: pip
-          cache-dependency-path: backend/pyproject.toml
+          cache-dependency-path: backend/requirements-dev.lock
       - run: sudo apt-get update && sudo apt-get install --yes ffmpeg
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e "./backend[dev]"
+      # The locked packages only, each checked against its hash; then the project itself (P08.2).
+      - run: python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock
+      - run: python -m pip install --no-deps --no-build-isolation --no-index -e ./backend
       - run: python -m ruff format --check backend
       - run: python -m ruff check backend
       - run: python -m mypy --config-file backend/pyproject.toml backend/app
@@ -74,10 +75,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.12.13
+          python-version: 3.14.10
           cache: pip
-          cache-dependency-path: backend/pyproject.toml
-      - run: python -m pip install -e "./backend[dev]"
+          cache-dependency-path: backend/requirements-dev.lock
+      - run: python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock
+      - run: python -m pip install --no-deps --no-build-isolation --no-index -e ./backend
       - run: python scripts/check_docs.py
       - run: python scripts/export_openapi.py --check
 

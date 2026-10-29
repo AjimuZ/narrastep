@@ -42,7 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(active_settings)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
         """Prepare local storage and reconcile stale work around process startup."""
         active_settings.data_root.mkdir(parents=True, exist_ok=True)
         reconcile_interrupted_work(active_settings)
@@ -62,6 +62,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json",
         lifespan=lifespan,
+        # FastAPI 0.142 and later instrument every request with OpenTelemetry and can add OTLP
+        # exporters from `OTEL_*` variables. Narrastep sends nothing anywhere (CLAUDE.md rule 11),
+        # so the instrumentation and the environment setup are off whatever the environment says.
+        telemetry={"tracing": False, "metrics": False, "logs": False, "auto_configure": False},
     )
     application.add_middleware(
         CORSMiddleware,

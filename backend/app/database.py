@@ -38,7 +38,7 @@ engine = build_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, class_=Session)
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session() -> Generator[Session]:
     """Yield one transaction-aware session for a request and always close it."""
     session = SessionLocal()
     try:

@@ -441,7 +441,7 @@ def _positive_float(value: Any) -> float | None:
 
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     if parsed <= 0 or not math.isfinite(parsed):
         return None
@@ -453,7 +453,7 @@ def _positive_int(value: Any) -> int | None:
 
     try:
         parsed = int(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return parsed if parsed > 0 else None
 

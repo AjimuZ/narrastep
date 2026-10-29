@@ -26,7 +26,7 @@ from app.main import app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def clean_database() -> Generator[None, None, None]:
+def clean_database() -> Generator[None]:
     """Reset all persisted rows and project files before every test."""
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -38,14 +38,14 @@ def clean_database() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def client() -> Generator[TestClient, None, None]:
+def client() -> Generator[TestClient]:
     """Yield an in-process HTTP client against the isolated application."""
     with TestClient(app) as test_client:
         yield test_client
 
 
 @pytest.fixture
-def session() -> Generator[Session, None, None]:
+def session() -> Generator[Session]:
     """Yield a direct ORM session for arranging business-rule fixtures."""
     with SessionLocal() as database_session:
         yield database_session

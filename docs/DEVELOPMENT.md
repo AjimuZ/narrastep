@@ -51,11 +51,13 @@ The Angular development proxy targets the API on port 8002.
 
 ## Native backend
 
-Use Python 3.12 and create an isolated environment. After activation:
+Use Python 3.14 (the image uses 3.14.10) and create an isolated environment. After activation,
+install the locked packages and then the project itself (see [Backend package lock](#backend-package-lock)):
 
 ```bash
 cd backend
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes --no-deps --only-binary=:all: -r requirements-dev.lock
+python -m pip install --no-deps --no-build-isolation --no-index -e .
 python scripts/download_model.py
 python -m alembic upgrade head
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8002 --reload
@@ -384,6 +386,39 @@ broken set fails it: faster-whisper 1.2.1 with PyAV 19 and the code before P08.1
 got an unexpected keyword argument 'metadata_errors'`), or ONNX Runtime 1.18.1, built for NumPy 1,
 next to NumPy 2.4.6 (`Applying the VAD filter requires the onnxruntime package`).
 `tests/test_transcription_stack_check.py` covers the script with stand-ins in the default suite.
+
+## Backend package lock
+
+Every backend package, direct and transitive, is pinned with its SHA-256 hashes (P08.2,
+[ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)):
+
+| File | Contents | Installed by |
+| --- | --- | --- |
+| `backend/pyproject.toml` | The direct packages (`[project].dependencies`), the development tools (`dev` extra) and the `build` group (pip and the Hatchling build backend), each pinned with `==` | Read by `uv` to resolve the locks |
+| `backend/requirements.lock` | The runtime packages plus the `build` group, resolved for Python 3.14 on every platform (`--universal`), with hashes for every published wheel | `backend/Dockerfile` |
+| `backend/requirements-dev.lock` | The same versions plus the development tools | CI and native development |
+
+The image installs the lock with `--require-hashes --no-deps --only-binary=:all:`, then the project
+with `--no-deps --no-build-isolation --no-index`, and runs `pip check`, so it never resolves or
+downloads a package that is not in the lock and never compiles one. `tests/test_dependencies.py`
+fails when a lock entry has no hash, when `pyproject.toml` and the locks disagree, when the image
+or CI installs anything else, when a locked package is a pre-release or missing from [Licenses](LICENSES.md#backend-python-packages), when the Python version differs between `pyproject.toml`, the
+Dockerfile, CI and the locks, or when the environment running the tests is not the development lock.
+
+To change a package, edit its pin in `pyproject.toml` and regenerate both locks with the pinned
+`uv` from the development environment, from `backend/` (the runtime lock first, because the
+development lock is constrained to it):
+
+```bash
+uv pip compile pyproject.toml --group pyproject.toml:build --universal --python-version 3.14 --generate-hashes -o requirements.lock
+uv pip compile pyproject.toml --extra dev --group pyproject.toml:build --universal --python-version 3.14 --generate-hashes -c requirements.lock -o requirements-dev.lock
+```
+
+`uv` keeps the existing pins of transitive packages; add `--upgrade` to the first command (or
+`--upgrade-package NAME`) to move them to the newest versions the direct pins allow. Then reinstall
+the development environment, run the backend checks and `scripts/check_transcription_stack.py`, and
+record new packages and licenses in [Licenses](LICENSES.md). Packages kept behind their newest
+release, and why, are listed there too.
 
 ## Bundled llama.cpp server
 

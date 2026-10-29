@@ -2,7 +2,14 @@
 
 Narrastep itself is published under the [MIT License](LICENSE). This file records the third-party
 files that are copied into the repository and shipped unmodified. Packages installed from a
-registry are listed in [docs/LICENSES.md](docs/LICENSES.md).
+registry are listed in [docs/LICENSES.md](docs/LICENSES.md) with their versions and licenses; the
+backend image installs exactly the Python packages of `backend/requirements.lock`
+([Backend Python packages](docs/LICENSES.md#backend-python-packages)). In the image most of them
+keep their license files in their `*.dist-info` folders under
+`/usr/local/lib/python3.14/site-packages/`; ONNX Runtime keeps `LICENSE` and
+`ThirdPartyNotices.txt` in its package folder, and CTranslate2, FlatBuffers and `tokenizers` ship no
+license file and declare their license (MIT, Apache-2.0, Apache-2.0) only in their metadata
+(checked on 2026-10-29, P08.2).
 
 ## Pixelify Sans
 

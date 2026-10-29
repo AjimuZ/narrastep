@@ -20,7 +20,7 @@ def _peak_resident_set_mb() -> float:
         resource_module = import_module("resource")
         usage = float(resource_module.getrusage(resource_module.RUSAGE_SELF).ru_maxrss)
         return round(usage / (1024 * 1024 if os.name == "posix" and usage > 10**8 else 1024), 2)
-    except (ImportError, AttributeError, OSError, ValueError):
+    except ImportError, AttributeError, OSError, ValueError:
         return 0.0
 
 

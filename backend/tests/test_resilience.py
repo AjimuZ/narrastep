@@ -10,11 +10,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from package_reader import open_package
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.database import SessionLocal
 from app.main import app
 from app.models import (
     ExportStatus,
@@ -410,6 +411,42 @@ def test_export_stores_its_number_and_name_and_download_uses_them(
         first["id"]: expected,
         second["id"]: second["downloadName"],
     }
+
+
+@pytest.mark.parametrize(
+    ("concurrent_state", "expected_code"),
+    [(ProjectState.EXPORTING, "PROJECT_BUSY"), (ProjectState.FAILED, "INVALID_PROJECT_STATE")],
+)
+def test_export_request_losing_the_state_race_reports_the_stored_state(
+    client: TestClient,
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    concurrent_state: ProjectState,
+    expected_code: str,
+) -> None:
+    """Answer from the state another request stored between the check and the guarded update."""
+    from app.tasks.celery_app import export_project_task
+
+    project = _project_with_source(session, ProjectState.REVIEW)
+    dispatched: list[object] = []
+    monkeypatch.setattr(export_project_task, "apply_async", lambda **kwargs: dispatched.append(1))
+
+    def change_state_concurrently(_settings: object) -> None:
+        """Store another state in a separate session, as a concurrent request would."""
+        with SessionLocal() as other:
+            other.execute(
+                update(Project).where(Project.id == project.id).values(state=concurrent_state)
+            )
+            other.commit()
+
+    monkeypatch.setattr("app.routes.api._ensure_worker_available", change_state_concurrently)
+
+    response = client.post(f"/api/v1/projects/{project.id}/exports", json={})
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == expected_code
+    assert dispatched == []
+    assert session.scalar(select(func.count()).select_from(ProjectExport)) == 0
 
 
 def test_worker_names_an_export_queued_without_a_stored_name(session: Session) -> None:
