@@ -29,6 +29,12 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   reproducible and an incompatible release of a transitive package or of FFmpeg can break
   transcription without any change in the repository. This is a hypothesis: the failure has not
   been reproduced in the repository yet, and P08.1 must establish the real cause first.
+  *Finding of P08.1 (2026-10-29):* reproduced. The transitive PyAV, not FFmpeg, is at fault:
+  faster-whisper 1.2.1 decodes a file path with PyAV and passes `metadata_errors` to `av.open`,
+  which PyAV 19.0.0 (released 2026-09-29) removed, so every transcription in an image built since
+  then fails with `TypeError`; PyAV 18.1.0 works. Narrastep now passes Whisper the samples of the
+  WAV that FFmpeg extracted, so PyAV is no longer used at runtime, and the image build runs
+  `scripts/check_transcription_stack.py`. Evidence is in the roadmap entry for P08.1.
 - `docker-compose.yml` and the Dockerfiles use unqualified image names (`redis:7.2.14-alpine`,
   `python:3.12.13-slim`, `node:22.23.1-alpine`, `nginx:1.28.0-alpine`). Podman without a configured
   search registry asks interactively or fails for such names.

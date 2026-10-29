@@ -339,6 +339,17 @@ On POSIX shells, set the same two variables before the command. The test synthes
 video at runtime, exercises real transcription and frame extraction, and stores no binary fixture
 in the repository.
 
+The same two variables run the media matrix of P08.1,
+`tests/integration/test_transcription_stack.py`: 16 generated clips (MP4, MOV, MKV and WebM, each
+with mono audio at an unusual rate, 5.1, 7.1 at 96 kHz and silence) go through validation,
+extraction and transcription with the real model. It needs FFmpeg with the `flite` source (Debian's
+FFmpeg has it) but not `espeak-ng`, and takes a few seconds with `tiny` or `small`:
+
+```bash
+NARRASTEP_RUN_REAL_PIPELINE_TESTS=1 NARRASTEP_REAL_WHISPER_MODEL_PATH=/path/to/model \
+  python -m pytest -m integration tests/integration/test_transcription_stack.py
+```
+
 `legacy` remains the default screenshot strategy. To exercise the experimental strategy locally,
 set these values before queueing a new job (an already queued job keeps its immutable snapshot):
 
@@ -352,6 +363,27 @@ NARRASTEP_TESSERACT_PATH=tesseract
 Diagnostic JSON files appear under `projects/{projectId}/diagnostics/`. They intentionally contain
 only identifiers, counters, durations, sizes, versions, and terminal state. Do not add transcript,
 OCR, filename, window-title, absolute-path, or image content to these files or stage logs.
+
+## Transcription stack check
+
+The backend image build runs `python scripts/check_transcription_stack.py` after it downloads the
+Whisper model (P08.1, risk K15). The script prints the FFmpeg version and the versions of
+faster-whisper, CTranslate2, PyAV, NumPy, ONNX Runtime, `tokenizers` and `huggingface_hub`, then
+generates five clips (MP4, MOV, MKV, WebM and a silent MP4) and transcribes each with the baked
+model as a processing job does. It fails the build, with the error chain that names the failing
+package, when a step fails or a speech clip lacks the words "settings" and "save". It needs no
+network and takes about 10 s with `small` on 4 CPUs. To run it in a built image or natively:
+
+```bash
+docker run --rm narrastep-backend:0.2.0 python scripts/check_transcription_stack.py
+python scripts/check_transcription_stack.py --model-path /path/to/model --ffmpeg ffmpeg --ffprobe ffprobe
+```
+
+Run it after any change to a backend package, the Python version or the base image. A deliberately
+broken set fails it: faster-whisper 1.2.1 with PyAV 19 and the code before P08.1 (`TypeError: open()
+got an unexpected keyword argument 'metadata_errors'`), or ONNX Runtime 1.18.1, built for NumPy 1,
+next to NumPy 2.4.6 (`Applying the VAD filter requires the onnxruntime package`).
+`tests/test_transcription_stack_check.py` covers the script with stand-ins in the default suite.
 
 ## Bundled llama.cpp server
 

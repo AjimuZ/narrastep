@@ -20,7 +20,15 @@ FFmpeg writes PCM signed 16-bit, mono, 16 kHz WAV to the project audio directory
 
 ### 3. Transcription
 
-faster-whisper uses the locally stored `small` model with CPU/int8 defaults, automatic or user-selected language, VAD filtering, and word timestamps. Runtime model downloads are disabled. Raw segments and words are written atomically to `raw-transcript.json`; reviewed text initially equals raw text.
+faster-whisper uses the locally stored `small` model with CPU/int8 defaults, automatic or user-selected language, VAD filtering, and word timestamps. Runtime model downloads are disabled. The worker reads the extracted WAV and passes its samples (float32, mono, 16 kHz) to the model, so FFmpeg is the only media decoder: given a file path, faster-whisper decodes it again with PyAV, and faster-whisper 1.2.1 calls PyAV with an argument that PyAV 19.0.0 removed, which made every transcription fail in images built after 2026-09-29 (P08.1, risk K15). A WAV that is not mono 16 kHz 16-bit PCM, or holds no samples, fails with `TRANSCRIPTION_INPUT_INVALID` before the model loads. Raw segments and words are written atomically to `raw-transcript.json`; reviewed text initially equals raw text.
+
+The backend image build runs `scripts/check_transcription_stack.py` (P08.1): it generates one
+clip per accepted container with FFmpeg (spoken test sentence from the `flite` source, or
+silence; mono, stereo and 5.1 audio at 8, 22.05, 44.1 and 48 kHz), runs validation, extraction
+and transcription exactly as a job does with the baked model, and fails the build when a speech
+clip does not contain "settings" and "save" or any step fails. It prints the FFmpeg version and
+the versions of faster-whisper, CTranslate2, PyAV, NumPy, ONNX Runtime, `tokenizers` and
+`huggingface_hub`, and on failure the error chain that names the package at fault.
 
 Progress advances as generated segment end times move through the source duration. Confidence is `exp(avg_logprob)` clamped to `[0, 1]` and is explicitly a heuristic rather than a calibrated probability.
 

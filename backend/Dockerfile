@@ -55,6 +55,12 @@ RUN python -m pip install --upgrade pip \
 # the pinned build (risk K6).
 RUN python scripts/check_llama_server.py
 
+# Fails the build when this image's FFmpeg and Whisper packages cannot turn generated clips (every
+# accepted container; mono, 5.1, odd rates, silence) into the expected transcript with the baked
+# model (P08.1, risk K15). Takes about 10 s with `small` on 4 CPUs and needs no network.
+RUN HF_HUB_OFFLINE=1 python scripts/check_transcription_stack.py \
+        --model-path "/opt/models/${NARRASTEP_WHISPER_MODEL}"
+
 ENV HF_HUB_OFFLINE=1 \
     HF_HUB_DISABLE_TELEMETRY=1 \
     DO_NOT_TRACK=1 \

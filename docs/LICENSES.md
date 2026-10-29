@@ -27,7 +27,7 @@ inventory inside the containers is roadmap item I-15.
 | Pillow | 12.3.0 | MIT-CMU | |
 | python-multipart | 0.0.22 | Apache-2.0 | |
 | swagger-ui-bundle | 1.1.0 | Apache-2.0 | Serves API docs locally, no CDN |
-| FFmpeg (Debian package) | distribution version | GPL-2.0-or-later build | Built locally; if images are ever published, GPL source obligations apply |
+| FFmpeg (Debian package) | distribution version | GPL-2.0-or-later build | Built locally; if images are ever published, GPL source obligations apply. The image-build transcription check (P08.1) speaks its test sentence with FFmpeg's `flite` source; `libflite1` (BSD-style Flite license) is already installed as an FFmpeg dependency, so nothing is added |
 | Tesseract and language data | distribution version | Apache-2.0 | |
 | `llama.cpp` server (CPU) | v0.5.0, build b11146 | MIT | Copied into `/opt/llama.cpp` from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` pinned by digest (P06.1); license text in `backend/third_party/llama.cpp/LICENSE`, copied beside the binaries |
 | OpenMP runtime `libgomp1` (Debian package) | distribution version | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |

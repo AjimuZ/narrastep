@@ -12,6 +12,7 @@ import pytest
 from app.config import Settings
 from app.services.pipeline import (
     FrameCandidate,
+    PipelineServiceError,
     SampledFrame,
     compute_perceptual_hash,
     deduplicate_consecutive_candidates,
@@ -128,6 +129,71 @@ def test_real_transcription_generator_preserves_cooperative_cancellation(tmp_pat
             model_factory=factory,
             cancellation_check=cancel,
         )
+
+
+def _write_wav(path: Path, samples: bytes, *, channels: int = 1, rate: int = 16_000) -> Path:
+    """Write little-endian 16-bit PCM `samples` as a WAV file and return its path."""
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(channels)
+        output.setsampwidth(2)
+        output.setframerate(rate)
+        output.writeframes(samples)
+    return path
+
+
+def test_whisper_receives_the_extracted_samples_instead_of_decoding_the_file(
+    tmp_path: Path,
+) -> None:
+    """Keep PyAV out of transcription: faster-whisper 1.2.1 fails on every path with PyAV 19.
+
+    The fake model behaves like faster-whisper 1.2.1 with PyAV 19.0.0 or newer, which raises
+    this `TypeError` for any file path (P08.1, risk K15) but works on a sample array.
+    """
+    audio = _write_wav(
+        tmp_path / "audio.wav", np.array([0, 16_384, -32_768, 32_767], "<i2").tobytes()
+    )
+    received: list[object] = []
+
+    class PyAv19Model:
+        """Reject file paths the way faster-whisper's PyAV decoder does after PyAV 19."""
+
+        def transcribe(self, audio: object, **_: object) -> tuple[object, object]:
+            """Record the input and return one segment, or fail for a path like the real stack."""
+            if isinstance(audio, str):
+                raise TypeError("open() got an unexpected keyword argument 'metadata_errors'")
+            received.append(audio)
+            segment = SimpleNamespace(start=0, end=0.1, text="ok", words=[], avg_logprob=-0.1)
+            return iter([segment]), SimpleNamespace(
+                language="en", language_probability=1, duration=0.1
+            )
+
+    result = transcribe_audio(
+        audio, model_path=tmp_path / "model", model_factory=lambda *_, **__: PyAv19Model()
+    )
+
+    assert [segment.text for segment in result.segments] == ["ok"]
+    (samples,) = received
+    assert isinstance(samples, np.ndarray) and samples.dtype == np.float32
+    assert samples.tolist() == [0.0, 0.5, -1.0, 32_767 / 32_768]
+
+
+@pytest.mark.parametrize(
+    ("channels", "rate", "frames"),
+    [(2, 16_000, b"\x00\x00" * 8), (1, 44_100, b"\x00\x00" * 8), (1, 16_000, b"")],
+)
+def test_transcription_rejects_audio_that_is_not_mono_16_khz_pcm(
+    tmp_path: Path, channels: int, rate: int, frames: bytes
+) -> None:
+    """Fail with the invalid-input code before loading a model for any other WAV shape."""
+    audio = _write_wav(tmp_path / "audio.wav", frames, channels=channels, rate=rate)
+
+    def factory(*_: object, **__: object) -> object:
+        """Fail the test if the model is loaded for audio that was rejected."""
+        raise AssertionError("The model must not load for invalid audio.")
+
+    with pytest.raises(PipelineServiceError) as captured:
+        transcribe_audio(audio, model_path=tmp_path / "model", model_factory=factory)
+    assert captured.value.code == "TRANSCRIPTION_INPUT_INVALID"
 
 
 def test_mock_transcription_cannot_bypass_test_environment(tmp_path: Path) -> None:

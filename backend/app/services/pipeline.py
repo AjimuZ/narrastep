@@ -18,6 +18,9 @@ from numpy.typing import NDArray
 
 type Frame = NDArray[np.uint8]
 
+# faster-whisper expects mono float32 samples at this rate; `extract_pcm_audio` produces it.
+WHISPER_SAMPLE_RATE_HZ = 16_000
+
 
 class PipelineConfig(Protocol):
     """Describe processing settings consumed by the standalone pipeline helpers."""
@@ -298,7 +301,13 @@ def transcribe_audio(
     cancellation_check: Callable[[], None] | None = None,
     progress_callback: Callable[[float], None] | None = None,
 ) -> TranscriptionResult:
-    """Transcribe PCM audio with an explicitly local Whisper model or test mock."""
+    """Transcribe PCM audio with an explicitly local Whisper model or test mock.
+
+    `audio_path` must be the mono 16 kHz 16-bit PCM WAV that `extract_pcm_audio` writes; its
+    samples, not the path, go to Whisper, so the model never decodes media itself. Raises
+    `PipelineServiceError` with `TRANSCRIPTION_INPUT_MISSING` or `TRANSCRIPTION_INPUT_INVALID` for
+    a missing or malformed file and `TRANSCRIPTION_MODEL_FAILED` when the model cannot run.
+    """
 
     audio = Path(audio_path)
     if not audio.is_file():
@@ -332,6 +341,7 @@ def transcribe_audio(
             "TRANSCRIPTION_MODEL_FAILED", "The local transcription model is unavailable."
         )
 
+    samples = _read_whisper_samples(audio)
     selected_device = device or str(_setting(config, "whisper_device", "cpu"))
     selected_compute_type = compute_type or str(_setting(config, "whisper_compute_type", "int8"))
     factory = model_factory or _load_whisper_model_factory()
@@ -344,7 +354,7 @@ def transcribe_audio(
             local_files_only=True,
         )
         raw_segments, info = model.transcribe(
-            str(audio),
+            samples,
             language=None if source_language == "auto" else source_language,
             beam_size=beam_size,
             word_timestamps=True,
@@ -903,6 +913,38 @@ def _wav_duration(audio_path: Path) -> float:
         raise PipelineServiceError(
             "TRANSCRIPTION_INPUT_INVALID", "The prepared audio is invalid."
         ) from exc
+
+
+def _read_whisper_samples(audio_path: Path) -> NDArray[np.float32]:
+    """Return the prepared mono 16 kHz 16-bit PCM WAV as float32 samples in [-1, 1).
+
+    Narrastep decodes media once, with the FFmpeg executable that FFprobe validated
+    (`extract_pcm_audio`), and hands Whisper these samples instead of the file path. Given a path,
+    faster-whisper decodes it again with PyAV, and faster-whisper 1.2.1 passes `metadata_errors`
+    to `av.open`, which PyAV 19.0.0 removed, so every transcription failed in images built after
+    that release (P08.1, risk K15). Raises `PipelineServiceError` with
+    `TRANSCRIPTION_INPUT_INVALID` when the file is unreadable, empty or in another PCM format.
+    """
+
+    try:
+        with wave.open(str(audio_path), "rb") as source:
+            if (
+                source.getnchannels() != 1
+                or source.getsampwidth() != 2
+                or source.getframerate() != WHISPER_SAMPLE_RATE_HZ
+                or source.getnframes() <= 0
+            ):
+                raise ValueError("The prepared audio is not mono 16 kHz 16-bit PCM.")
+            payload = source.readframes(source.getnframes())
+    except (wave.Error, OSError, EOFError, ValueError) as exc:
+        raise PipelineServiceError(
+            "TRANSCRIPTION_INPUT_INVALID", "The prepared audio is invalid."
+        ) from exc
+    # WAV stores little-endian samples; `<i2` keeps the result right on any host byte order.
+    pcm = np.frombuffer(payload, dtype="<i2")
+    if pcm.size == 0:
+        raise PipelineServiceError("TRANSCRIPTION_INPUT_INVALID", "The prepared audio is invalid.")
+    return pcm.astype(np.float32) / 32768.0
 
 
 def _segments_duration(segments: Sequence[TranscriptSegment]) -> float | None:
