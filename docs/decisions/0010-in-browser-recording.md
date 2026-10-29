@@ -4,6 +4,7 @@ Status: accepted (2026-10-28). Supersedes: none. Amended (2026-10-28): the micro
 as a separate track for speaker labels, and recording saves the project without processing it.
 Amended (2026-10-29, P05.1): implementation choices for the session API, listed under
 Consequences. Amended (2026-10-29, P05.2): completion choices, listed under Consequences.
+Amended (2026-10-29, P05.3): recorder screen choices, listed under Consequences.
 
 ## Context
 
@@ -72,5 +73,19 @@ pipeline is unchanged. Details are in [Recording](../RECORDING.md).
   A recording with neither system audio nor microphone is refused rather than given a silent
   track, since it cannot be transcribed. Chunks are deleted after the save to avoid keeping the
   recording twice. Video that WebM cannot hold (H.264) is copied into Matroska.
+- Recorder choices (P05.3). The session is created only when the user starts recording, so
+  checking sources never leaves an empty project; the browser picker and the microphone are asked
+  only after a button press. Chunks stay in browser memory until the API acknowledges them and are
+  uploaded one at a time per track, so a track never has a gap unless an upload fails for good;
+  failures that may heal are retried without limit while the page is open, and other failures end
+  the recording, since later chunks would fail the same way. The capture settings travel in the
+  session response rather than in the web image, so they follow the server configuration. A
+  recording needs a screen and at least one sound source; one without sound could not be
+  transcribed. Leaving the recorder while it records asks first, and the uploaded part is kept as
+  an interrupted recording rather than discarded, because discarding is not reversible. An
+  interrupted recording is offered only "Save what was recorded" (`stopAtGap`), because the browser
+  that held the missing chunks is gone. The microphone level is computed in the page with Web
+  Audio and never stored. The browser picker is used until the desktop window supplies its own
+  (P07).
 - Evidence: Playwright test with fake media devices, API tests for chunk order, resume and
   completion, and a manual test with a real Teams call (P05 in the [roadmap](../ROADMAP.md)).

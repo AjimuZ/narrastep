@@ -89,6 +89,16 @@ in during the conversion is detected and the save is refused instead of losing t
 chunk rows are deleted in that transaction and the files after it; the startup cleanup removes
 chunk files without rows, so a crash in between leaves nothing behind.
 
+The recorder screen (P05.3, `apps/web/src/app/features/recorder/`) is the only client. The
+component owns the source checks, the save step and the leave guard; `media-capture.ts` wraps the
+browser capture APIs and the microphone level, which is analysed in the page and never sent; and
+`recording-engine.ts` runs the two `MediaRecorder` instances and the upload queue. The engine keeps
+each chunk in browser memory only until the API acknowledges it, uploads one chunk per track at a
+time and retries failures that may heal (no answer, 408, 429, 5xx except 507). The recorder reads
+its chunk length, bitrate and frame rate from the session response (`capture`), so the server's
+settings are the only source. Saving calls the completion endpoint and nothing else: no job is
+queued.
+
 ## Review and lineage
 
 `raw-transcript.json` is immutable. Reviewed segments are active views over that evidence. Split and merge archive their source rows, create derived active rows, and record `SegmentLineage` edges in one transaction. This protects original transcription evidence while allowing structural editing.
@@ -166,8 +176,8 @@ flowchart LR
   the microphone as two tracks and uploads chunks. The API owns recording sessions, joins the
   chunks, aligns and mixes the tracks with FFmpeg, keeps the microphone track for speaker labels
   and saves the project without queuing processing. No new container. The session API and chunk
-  storage exist since P05.1 and the completion into the source video since P05.2 (see
-  "Recording sessions" below); the recorder screen and the labels are still planned.
+  storage exist since P05.1, the completion into the source video since P05.2 and the recorder
+  screen since P05.3 (see "Recording sessions" below); speaker labels are still planned.
 - **Model manager ([Local generation](LOCAL_GENERATION.md)).** The API downloads model files only
   after an explicit user action, through the `local` network, which has an Internet route. It
   verifies SHA-256 hashes and writes to `/data/models`. No project data leaves the computer.

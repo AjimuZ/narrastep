@@ -1,4 +1,4 @@
-// Typed client for the local Narrastep API: projects, uploads, jobs, review data and packages.
+// Typed client for the local Narrastep API: projects, uploads, recordings, jobs, review data and packages.
 import {
   HttpClient,
   HttpEvent,
@@ -22,8 +22,10 @@ import {
 } from 'rxjs';
 
 import {
+  CompleteRecordingRequest,
   CreateExportRequest,
   CreateProjectRequest,
+  CreateRecordingRequest,
   ExportEstimate,
   HealthResponse,
   MediaAsset,
@@ -32,6 +34,9 @@ import {
   Project,
   ProjectExport,
   ProjectListResponse,
+  Recording,
+  RecordingChunkAck,
+  RecordingTrackName,
   Screenshot,
   ScreenshotAssociation,
   SegmentScreenshot,
@@ -107,6 +112,59 @@ export class ApiService {
         return { state: 'uploading', percent, asset: null } as UploadProgress;
       }),
     );
+  }
+
+  /**
+   * Opens a recording session and its `draft` project (named by `request.name` or by the API after
+   * the date). Answers the session with both tracks empty and the capture settings to apply.
+   */
+  createRecording(request: CreateRecordingRequest): Observable<Recording> {
+    return this.http.post<Recording>(`${API_ROOT}/recordings`, request);
+  }
+
+  /** Reads a session's state and what each track stores, including gaps; 404 when discarded. */
+  getRecording(recordingId: string): Observable<Recording> {
+    return this.http.get<Recording>(`${API_ROOT}/recordings/${recordingId}`);
+  }
+
+  /**
+   * Stores one `MediaRecorder` chunk as the raw request body. `startOffsetMs` is the track's start
+   * relative to the session's common start; the server keeps the first value per track. Repeating
+   * a stored sequence with the same bytes answers `duplicate: true`; different bytes fail with
+   * `RECORDING_CHUNK_CONFLICT`.
+   */
+  uploadRecordingChunk(
+    recordingId: string,
+    track: RecordingTrackName,
+    sequence: number,
+    chunk: Blob,
+    startOffsetMs: number | null,
+  ): Observable<RecordingChunkAck> {
+    const params: Record<string, number> = {};
+    if (startOffsetMs !== null) {
+      params['startOffsetMs'] = startOffsetMs;
+    }
+    return this.http.put<RecordingChunkAck>(
+      `${API_ROOT}/recordings/${recordingId}/tracks/${track}/chunks/${sequence}`,
+      chunk,
+      {
+        params,
+        headers: { 'Content-Type': chunk.type.split(';', 1)[0] || 'application/octet-stream' },
+      },
+    );
+  }
+
+  /**
+   * Saves an open session as its project's source video; answers the project `uploaded` with no
+   * job. Fails with `RECORDING_INCOMPLETE` while a chunk is missing unless `stopAtGap` is set.
+   */
+  completeRecording(recordingId: string, request: CompleteRecordingRequest): Observable<Project> {
+    return this.http.post<Project>(`${API_ROOT}/recordings/${recordingId}/complete`, request);
+  }
+
+  /** Discards an open session together with its chunks and its project. */
+  discardRecording(recordingId: string): Observable<void> {
+    return this.http.delete<void>(`${API_ROOT}/recordings/${recordingId}`);
   }
 
   /** Builds a range-capable relative URL for the native video element. */

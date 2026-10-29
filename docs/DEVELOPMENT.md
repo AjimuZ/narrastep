@@ -121,6 +121,17 @@ reflow at 320 to 1440 px and at 200% and 400% zoom. `npx playwright test tests/e
 runs it alone; [UI](UI.md#verification) lists exactly what each check asserts and what it does not.
 When a new screen or dialog is added, add it to `SCREENS` or to the dialog tests there.
 
+`tests/e2e/recorder.spec.ts` drives the recorder with Chromium's fake devices
+(`--use-fake-ui-for-media-stream`, `--use-fake-device-for-media-stream` and
+`--auto-select-desktop-capture-source=Entire screen`, set with `test.use` in that file): a test
+pattern with a beeping system-audio track as the screen, and a beeping microphone. Its recording
+routes sit on top of `fake-api.ts`, keep the size, offset and first bytes of every chunk and
+record any processing request. It checks the source checks and the live level gauge, chunk
+numbering and the WebM header per track, pause, stop, save with a name, the project as
+**Not processed** without a processing request, the leave confirmation, an interrupted recording
+opened from Projects, and contrast and 320 px reflow of the recording and save windows in English
+and Italian. Recorder unit tests use the doubles in `src/app/features/recorder/fake-media.testing.ts`.
+
 The responsive Review Studio contract covers 320, 390, 768, 1024, 1280, and 1440 pixels. The
 desktop editor width is stored only in browser local storage. Keyboard checks cover save, segment
 navigation, native playback, two-second seeking, search focus, merge selection, exact-frame

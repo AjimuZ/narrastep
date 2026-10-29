@@ -1,0 +1,403 @@
+<section class="page recorder-page">
+  <header class="page-header">
+    <h1 i18n="@@recorder.title">Record</h1>
+    <a class="ns-button" routerLink="/projects"
+      ><span i18n="@@common.back_to_projects">Back to projects</span></a
+    >
+  </header>
+
+  @if (requestError(); as message) {
+    <div class="ns-notice ns-notice--error recorder-notice" role="alert">{{ message }}</div>
+  }
+
+  @switch (phase()) {
+    @case ('checks') {
+      @if (!supported) {
+        <div
+          class="ns-notice ns-notice--error recorder-notice"
+          role="alert"
+          i18n="@@recorder.unsupported"
+        >
+          This browser cannot record the screen. Open Narrastep in its desktop window, Chrome or
+          Edge.
+        </div>
+      }
+      <ns-window title="Sources" i18n-title="@@recorder.sources" [primary]="true">
+        <ul class="source-checks">
+          <li class="source-check">
+            <div class="source-check__head">
+              <span class="source-check__name" i18n="@@recorder.screen">Screen</span>
+              <ns-status-pill [label]="screenLabel()" [tone]="screenStream() ? 'ok' : 'info'" />
+            </div>
+            <button
+              class="ns-button"
+              type="button"
+              [disabled]="!supported"
+              (click)="chooseScreen()"
+            >
+              @if (screenStream()) {
+                <span i18n="@@recorder.change_screen">Change screen</span>
+              } @else {
+                <span i18n="@@recorder.choose_screen">Choose screen</span>
+              }
+            </button>
+            @if (screenError(); as message) {
+              <p class="ns-error source-check__detail" role="alert">{{ message }}</p>
+            }
+          </li>
+
+          <li class="source-check">
+            <div class="source-check__head">
+              <span class="source-check__name" i18n="@@recorder.system_audio">System audio</span>
+              @if (!screenStream()) {
+                <ns-status-pill
+                  label="Choose a screen first"
+                  i18n-label="@@recorder.system_audio.unknown"
+                  tone="info"
+                />
+              } @else if (hasSystemAudio()) {
+                <ns-status-pill
+                  label="Included"
+                  i18n-label="@@recorder.system_audio.included"
+                  tone="ok"
+                />
+              } @else {
+                <ns-status-pill
+                  label="Not shared"
+                  i18n-label="@@recorder.system_audio.missing"
+                  tone="wait"
+                />
+              }
+            </div>
+            @if (screenStream() && !hasSystemAudio()) {
+              <p class="ns-help source-check__detail" i18n="@@recorder.system_audio.help">
+                The sound of the computer, such as the other people in a call, is not recorded. To
+                include it, choose the screen again and select "Share system audio" for an entire
+                screen or "Share tab audio" for a tab. Otherwise the recording keeps only the
+                microphone.
+              </p>
+            }
+          </li>
+
+          <li class="source-check">
+            <div class="source-check__head">
+              <span class="source-check__name" i18n="@@recorder.microphone">Microphone</span>
+              <ns-status-pill
+                [label]="microphoneLabel()"
+                [tone]="
+                  microphoneState() === 'on'
+                    ? 'ok'
+                    : microphoneState() === 'off' || microphoneState() === 'asking'
+                      ? 'info'
+                      : 'error'
+                "
+              />
+            </div>
+            @if (microphoneState() === 'on') {
+              @if (microphones().length > 1) {
+                <label class="ns-form-row source-check__detail">
+                  <span class="ns-label" i18n="@@recorder.mic.device">Microphone in use</span>
+                  <select
+                    class="ns-field"
+                    [value]="microphoneId()"
+                    (change)="selectMicrophone($event)"
+                  >
+                    @for (device of microphones(); track device.deviceId; let index = $index) {
+                      <option [value]="device.deviceId">{{ microphoneName(device, index) }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <div class="level source-check__detail">
+                <span class="ns-label" aria-hidden="true" i18n="@@recorder.level">Level</span>
+                <ns-segmented-gauge [percent]="level()" [segments]="20" [label]="levelLabel()" />
+              </div>
+            } @else {
+              <button
+                class="ns-button"
+                type="button"
+                [disabled]="!supported || microphoneState() === 'asking'"
+                (click)="useMicrophone()"
+              >
+                <ns-pixel-icon name="mic" /><span i18n="@@recorder.use_microphone"
+                  >Use microphone</span
+                >
+              </button>
+            }
+            @switch (microphoneState()) {
+              @case ('blocked') {
+                <p
+                  class="ns-error source-check__detail"
+                  role="alert"
+                  i18n="@@recorder.mic.blocked_help"
+                >
+                  The microphone is blocked. Allow it in the site settings of the browser, then
+                  select Use microphone again.
+                </p>
+              }
+              @case ('missing') {
+                <p
+                  class="ns-error source-check__detail"
+                  role="alert"
+                  i18n="@@recorder.mic.missing_help"
+                >
+                  No microphone was found. Connect one, then select Use microphone again.
+                </p>
+              }
+              @case ('failed') {
+                <p
+                  class="ns-error source-check__detail"
+                  role="alert"
+                  i18n="@@recorder.mic.failed_help"
+                >
+                  The microphone could not be opened. Close other programs that use it, then try
+                  again.
+                </p>
+              }
+            }
+          </li>
+        </ul>
+
+        <div class="ns-notice recorder-notice">
+          <p i18n="@@recorder.consent">
+            Tell everyone you record, for example the other people in a call, and get their consent
+            before you start.
+          </p>
+          <p i18n="@@recorder.headset">
+            Use a headset: with speakers the microphone records the call a second time.
+          </p>
+        </div>
+
+        @if (screenStream() && !hasSystemAudio() && microphoneState() !== 'on') {
+          <p class="ns-help" i18n="@@recorder.need_audio">
+            Turn on the microphone or share system audio: a recording without sound cannot be
+            transcribed.
+          </p>
+        }
+
+        <div class="recorder-actions">
+          <button
+            class="ns-button ns-button--primary"
+            type="button"
+            [disabled]="!canStart()"
+            (click)="start()"
+          >
+            <ns-pixel-icon name="record" /><span i18n="@@recorder.start">Start recording</span>
+          </button>
+        </div>
+      </ns-window>
+    }
+
+    @case ('starting') {
+      <ns-window title="Sources" i18n-title="@@recorder.sources" [primary]="true">
+        <ns-activity-line label="Starting the recording" i18n-label="@@recorder.starting" />
+        <p class="muted" i18n="@@recorder.starting_text">Starting the recording…</p>
+      </ns-window>
+    }
+
+    @case ('recording') {
+      <ns-window title="Recording" i18n-title="@@status.recording.recording" [primary]="true">
+        <div class="recording-status" role="status">
+          <ns-status-pill [label]="stateLabel().label" [tone]="stateLabel().tone" />
+        </div>
+        <dl class="recording-facts">
+          <div>
+            <dt i18n="@@recorder.length">Length</dt>
+            <dd class="mono recording-timer">{{ elapsedText() }}</dd>
+          </div>
+          <div>
+            <dt i18n="@@recorder.uploaded">Uploaded</dt>
+            <dd class="mono">{{ uploadedText() }}</dd>
+          </div>
+          <div>
+            <dt i18n="@@recorder.system_audio">System audio</dt>
+            <dd>
+              @if (recordedSystemAudio()) {
+                <span i18n="@@recorder.system_audio.included">Included</span>
+              } @else {
+                <span i18n="@@recorder.system_audio.missing">Not shared</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt i18n="@@recorder.microphone">Microphone</dt>
+            <dd>
+              @if (recordedMicrophone()) {
+                <span i18n="@@recorder.mic.on">On</span>
+              } @else {
+                <span i18n="@@recorder.mic.off">Off</span>
+              }
+            </dd>
+          </div>
+        </dl>
+        @if (recordedMicrophone()) {
+          <div class="level">
+            <span class="ns-label" aria-hidden="true" i18n="@@recorder.level">Level</span>
+            <ns-segmented-gauge [percent]="level()" [segments]="20" [label]="levelLabel()" />
+          </div>
+        }
+        @if (retrying()) {
+          <div
+            class="ns-notice ns-notice--wait recorder-notice"
+            role="status"
+            i18n="@@recorder.retrying"
+          >
+            Narrastep cannot reach its local service. It keeps the recorded parts and tries again.
+          </div>
+        }
+        <p class="ns-help" i18n="@@recorder.keep_open">
+          You can work in other programs. Keep this window open until you stop.
+        </p>
+        <div class="recorder-actions">
+          <button class="ns-button" type="button" (click)="togglePause()">
+            @if (paused()) {
+              <ns-pixel-icon name="play" /><span i18n="@@recorder.resume">Resume</span>
+            } @else {
+              <ns-pixel-icon name="pause" /><span i18n="@@recorder.pause">Pause</span>
+            }
+          </button>
+          <button class="ns-button ns-button--primary" type="button" (click)="stop()">
+            <ns-pixel-icon name="stop" /><span i18n="@@recorder.stop">Stop</span>
+          </button>
+        </div>
+      </ns-window>
+    }
+
+    @case ('stopping') {
+      <ns-window title="Recording" i18n-title="@@status.recording.recording" [primary]="true">
+        <ns-activity-line label="Stopping the recording" i18n-label="@@recorder.stopping" />
+        <p class="muted" i18n="@@recorder.stopping_text">Stopping the recording…</p>
+      </ns-window>
+    }
+
+    @case ('loading') {
+      <div class="ns-placeholder" aria-busy="true">
+        <span class="visually-hidden" i18n="@@recorder.loading">Loading the recording…</span>
+      </div>
+    }
+
+    @case ('saving') {
+      <ns-window title="Save recording" i18n-title="@@recorder.save_title" [primary]="true">
+        <ns-activity-line label="Saving the recording" i18n-label="@@recorder.saving" />
+        <p class="muted" i18n="@@recorder.saving_text">
+          Saving the recording. Narrastep joins the parts into one video; this takes a few seconds.
+        </p>
+      </ns-window>
+    }
+
+    @case ('save') {
+      <ns-window [title]="resumed() ? stateLabel().label : saveTitle" [primary]="true">
+        @if (resumed()) {
+          <p class="muted" i18n="@@recorder.interrupted_text">
+            This recording stopped before it was saved. Save what was uploaded, or discard it.
+          </p>
+        }
+        <dl class="recording-facts">
+          @if (!resumed()) {
+            <div>
+              <dt i18n="@@recorder.length">Length</dt>
+              <dd class="mono">{{ elapsedText() }}</dd>
+            </div>
+          }
+          <div>
+            <dt i18n="@@recorder.uploaded">Uploaded</dt>
+            <dd class="mono">{{ uploadedText() }}</dd>
+          </div>
+        </dl>
+
+        @if (pendingChunks() > 0) {
+          <div class="pending" role="status">
+            <ns-activity-line [label]="pendingText()" />
+            <p class="muted">{{ pendingText() }}</p>
+          </div>
+          @if (retrying()) {
+            <div
+              class="ns-notice ns-notice--wait recorder-notice"
+              role="status"
+              i18n="@@recorder.retrying"
+            >
+              Narrastep cannot reach its local service. It keeps the recorded parts and tries again.
+            </div>
+          }
+        }
+
+        <label class="ns-form-row name-field">
+          <span class="ns-label" i18n="@@recorder.name">Recording name (optional)</span>
+          <input
+            class="ns-field"
+            type="text"
+            maxlength="200"
+            autocomplete="off"
+            [placeholder]="projectName()"
+            [value]="saveName()"
+            (input)="updateSaveName($event)"
+            (keydown.enter)="resumed() || incomplete() ? save(true) : save()"
+          />
+          <span class="ns-help">{{ nameHelp() }}</span>
+        </label>
+
+        @if (saveError(); as message) {
+          <div class="ns-notice ns-notice--error recorder-notice" role="alert">{{ message }}</div>
+        }
+
+        <p class="ns-help" i18n="@@recorder.no_processing">
+          Saving does not start processing. The project appears in Projects as Not processed.
+        </p>
+
+        <div class="recorder-actions">
+          @if (resumed() || incomplete()) {
+            <button
+              class="ns-button ns-button--primary"
+              type="button"
+              [disabled]="pendingChunks() > 0 || discarding()"
+              (click)="save(true)"
+            >
+              <ns-pixel-icon name="check" /><span i18n="@@recorder.save_partial"
+                >Save what was recorded</span
+              >
+            </button>
+          } @else {
+            <button
+              class="ns-button ns-button--primary"
+              type="button"
+              [disabled]="pendingChunks() > 0 || discarding()"
+              (click)="save()"
+            >
+              <ns-pixel-icon name="check" /><span i18n="@@recorder.save">Save</span>
+            </button>
+          }
+          <button
+            class="ns-button ns-button--danger"
+            type="button"
+            [disabled]="discarding()"
+            (click)="discard()"
+          >
+            <ns-pixel-icon name="trash" /><span i18n="@@recorder.discard">Discard</span>
+          </button>
+        </div>
+      </ns-window>
+    }
+
+    @case ('saved') {
+      <ns-window title="Recording saved" i18n-title="@@recorder.saved_title" [primary]="true">
+        <div class="ns-notice ns-notice--ok recorder-notice" role="status">{{ savedText() }}</div>
+        <div class="recorder-actions">
+          <a class="ns-button ns-button--primary" routerLink="/projects">
+            <ns-pixel-icon name="folder" /><span i18n="@@recorder.open_projects"
+              >Open projects</span
+            >
+          </a>
+          <button class="ns-button" type="button" (click)="recordAgain()">
+            <ns-pixel-icon name="record" /><span i18n="@@recorder.record_again">Record again</span>
+          </button>
+        </div>
+      </ns-window>
+    }
+
+    @case ('gone') {
+      <a class="ns-button ns-button--primary" routerLink="/projects">
+        <ns-pixel-icon name="folder" /><span i18n="@@recorder.open_projects">Open projects</span>
+      </a>
+    }
+  }
+</section>

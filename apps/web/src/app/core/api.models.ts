@@ -235,3 +235,62 @@ export interface UploadProgress {
   percent: number;
   asset: MediaAsset | null;
 }
+
+/** One of the two tracks a recorder uploads: screen video with system audio, or microphone audio. */
+export type RecordingTrackName = 'screen' | 'microphone';
+
+/**
+ * What the server stores for one track. `nextSequence` is one past the highest stored sequence;
+ * `missingSequences` lists at most 100 gaps below it, `missingCount` all of them.
+ */
+export interface RecordingTrackSummary {
+  track: RecordingTrackName;
+  chunkCount: number;
+  storedBytes: number;
+  nextSequence: number;
+  missingSequences: number[];
+  missingCount: number;
+  startOffsetMs: number | null;
+}
+
+/** Capture settings the recorder applies (`NARRASTEP_RECORDING_*` on the server). */
+export interface RecordingCapture {
+  chunkSeconds: number;
+  videoBitsPerSecond: number;
+  maxFrameRate: number;
+}
+
+/** `POST /recordings` and `GET /recordings/{id}`: one recording session and its project. */
+export interface Recording {
+  id: string;
+  projectId: string;
+  state: 'recording' | 'completed';
+  interrupted: boolean;
+  storedBytes: number;
+  maxBytes: number;
+  createdAt: string;
+  updatedAt: string;
+  lastChunkAt: string | null;
+  tracks: RecordingTrackSummary[];
+  capture: RecordingCapture;
+}
+
+/** Optional body of `POST /recordings`. */
+export interface CreateRecordingRequest {
+  name?: string;
+  sourceLanguage?: string;
+}
+
+/** Optional body of `POST /recordings/{id}/complete`; `stopAtGap` saves up to the first gap. */
+export interface CompleteRecordingRequest {
+  name?: string;
+  stopAtGap?: boolean;
+}
+
+/** Acknowledgement of one stored chunk; `duplicate` is true when the same bytes were already stored. */
+export interface RecordingChunkAck {
+  track: RecordingTrackName;
+  sequence: number;
+  sizeBytes: number;
+  duplicate: boolean;
+}

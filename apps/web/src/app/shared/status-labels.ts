@@ -1,5 +1,10 @@
-// State words and pill tones for projects, processing jobs and exports, shared by every screen.
-import { ProcessingJobStatus, ProjectExportStatus, ProjectStatus } from '../core/api.models';
+// State words and pill tones for projects, recordings, processing jobs and exports, shared by every screen.
+import {
+  Project,
+  ProcessingJobStatus,
+  ProjectExportStatus,
+  ProjectStatus,
+} from '../core/api.models';
 import { StatusTone } from './ui';
 
 /** A state as the status pill shows it: a word (never color alone) and a tone. */
@@ -28,6 +33,25 @@ export function projectStatusLabel(status: ProjectStatus): StatusLabel {
     case 'failed':
       return { label: $localize`:@@status.project.failed:Failed`, tone: 'error' };
   }
+}
+
+/**
+ * Word and tone of a project row. A recorder project whose session is still open is a `draft`
+ * on the API; it shows **Recording** while chunks arrive and **Recording interrupted** once none
+ * came for the configured time, instead of "No video". Every other project uses its status.
+ */
+export function projectRowStatusLabel(project: Project): StatusLabel {
+  if (project.recording?.state === 'recording') {
+    return recordingStatusLabel(project.recording.interrupted);
+  }
+  return projectStatusLabel(project.status);
+}
+
+/** Word and tone for an open recording session: still receiving chunks, or interrupted. */
+export function recordingStatusLabel(interrupted: boolean): StatusLabel {
+  return interrupted
+    ? { label: $localize`:@@status.recording.interrupted:Recording interrupted`, tone: 'error' }
+    : { label: $localize`:@@status.recording.recording:Recording`, tone: 'wait' };
 }
 
 /** Word and tone for a processing job state; every `ProcessingJobStatus` has an entry. */

@@ -1,4 +1,4 @@
-// Projects screen: the local project list with search, type and status filters, sort and deletion.
+// Projects screen: the local project list with search, type and status filters, sort, deletion and open recordings.
 import { DatePipe } from '@angular/common';
 import { Dialog, DialogModule } from '@angular/cdk/dialog';
 import {
@@ -21,7 +21,11 @@ import {
   ConfirmDialogData,
 } from '../../shared/dialogs/confirm-dialog.component';
 import { projectTypeLabel, projectTypes } from '../../shared/project-types';
-import { projectStatusOptions, StatusLabel, projectStatusLabel } from '../../shared/status-labels';
+import {
+  StatusLabel,
+  projectRowStatusLabel,
+  projectStatusOptions,
+} from '../../shared/status-labels';
 import {
   ActivityLineComponent,
   PixelIconComponent,
@@ -111,8 +115,15 @@ export class ProjectsPageComponent {
       });
   }
 
-  /** Opens the route that matches the project's current business lifecycle state. */
+  /**
+   * Opens the route that matches the project's current business lifecycle state. A recording that
+   * was never saved opens in the recorder, which offers "Save what was recorded" and Discard.
+   */
   openProject(project: Project): void {
+    if (project.recording?.state === 'recording') {
+      void this.router.navigate(['/record'], { queryParams: { recording: project.recording.id } });
+      return;
+    }
     if (project.status === 'draft' || project.status === 'uploaded') {
       void this.router.navigate(['/projects/new'], { queryParams: { projectId: project.id } });
       return;
@@ -169,9 +180,9 @@ export class ProjectsPageComponent {
     return projectTypeLabel(mode);
   }
 
-  /** State word and pill tone of a project row. */
+  /** State word and pill tone of a project row; open recordings show their recording state. */
   statusLabel(project: Project): StatusLabel {
-    return projectStatusLabel(project.status);
+    return projectRowStatusLabel(project);
   }
 
   /** Limits the current local list to one project type. */

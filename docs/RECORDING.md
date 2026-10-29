@@ -1,10 +1,11 @@
 # Recording
 
 Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording session API with
-per-track chunk storage, resume and discard (P05.1) and the completion into a validated source
-video with the kept microphone track (P05.2) are implemented; the recorder screen (P05.3) and
-speaker labels (P05.5) are planned. Until P05.3 Narrastep offers no way to record from the
-interface.
+per-track chunk storage, resume and discard (P05.1), the completion into a validated source video
+with the kept microphone track (P05.2) and the recorder screen (P05.3) are implemented; speaker
+labels (P05.5) and the manual test with a real call (P05.6) are planned. The desktop window's own
+source picker and Windows loopback audio arrive with the desktop shell (P07); until then the
+recorder uses the browser picker.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
 
 ## Goal
@@ -69,13 +70,14 @@ Recording only captures and saves. It never starts processing.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `NARRASTEP_RECORDING_CHUNK_SECONDS` | `5` | Chunk length requested from `MediaRecorder` |
-| `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate; about 1.1 GB per hour |
-| `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Enough for screen content, keeps files small |
+| `NARRASTEP_RECORDING_CHUNK_SECONDS` | `5` | Chunk length requested from `MediaRecorder`, 1 to 60 (implemented, P05.3) |
+| `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate; about 1.1 GB per hour (implemented, P05.3) |
+| `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Enough for screen content, keeps files small, 1 to 60 (implemented, P05.3) |
 | `NARRASTEP_RECORDING_MAX_CHUNK_MB` | `64` | Largest accepted chunk (implemented, P05.1) |
 | `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS` | `30` | Silence after which an open session is reported as interrupted (implemented, P05.1) |
 
-The first three settings are planned with the recorder screen (P05.3).
+The API sends the first three to the recorder in the `capture` field of every session response,
+so changing them needs no new web image.
 
 The existing upload size limit and free-disk reserve also apply to recordings.
 
@@ -99,6 +101,65 @@ Recordings made in Narrastep label each transcript segment **You** (*Tu*) or **O
 - Labels appear in the transcript, in the export and in the generation input, so meeting action
   items can say "You" when the user took them.
 - Uploaded videos (for example from OBS) have one mixed track and get no labels.
+
+## Recorder screen (P05.3)
+
+`/record` (`apps/web/src/app/features/recorder/`), **Record** in the menu and on the Projects
+screen. Every text is in English and Italian.
+
+1. **Checks.** Nothing is asked from the browser until the user selects a button.
+   - **Choose screen** calls `getDisplayMedia` with `audio: true`, `systemAudio: 'include'` (Chrome
+     and Edge then offer "Share system audio" for a whole screen) and a frame rate of at most 15.
+     The row says Entire screen, Window or Browser tab from the track's `displaySurface`.
+   - **System audio** is Included when the share has an audio track, else Not shared with the
+     instructions to include it. Without it, the recording keeps the microphone only.
+   - **Use microphone** calls `getUserMedia` with echo cancellation and noise suppression. Once
+     on, a device list appears when there is more than one microphone, and a 20-cell gauge shows
+     the level: the RMS of the last 2048 samples in dBFS, from −60 dBFS (empty) to 0 dBFS (full),
+     read every 100 ms with a fall of at most 8 points per reading so short sounds stay visible.
+     The audio is analysed in the page and never stored or sent. Blocked, missing and busy
+     microphones each get a sentence saying what to do.
+   - A consent reminder and a headset recommendation are always shown.
+   - **Start recording** needs a screen and at least one sound source (system audio or the
+     microphone), because a recording without sound cannot be transcribed.
+2. **Start.** The recorder creates the session with the name `Recording YYYY-MM-DD HH:MM`
+   (`Registrazione …` in Italian, local time), applies the session's frame-rate limit to the screen
+   track and starts one `MediaRecorder` per track with the session's chunk length: the screen as
+   `video/webm;codecs=vp9,opus` (then VP8, then plain WebM; without system audio the same without
+   Opus) at the session bitrate, the microphone as `audio/webm;codecs=opus`. Each track's start
+   offset is the time from the common start to that recorder's `start` event and goes with every
+   chunk. If no format is supported, the empty session is discarded again.
+3. **Recording.** The screen shows the state word (Recording or Paused), the length without
+   pauses, the uploaded size, the sources and the microphone gauge. Chunks are numbered per track
+   from 0 (empty ones skipped) and kept in browser memory only until the API acknowledges them.
+   Each track uploads one chunk at a time, both tracks in parallel. A failure that may heal (no
+   answer, 408, 429, 5xx other than 507) is retried after 1, 2, 5, 10 and then every 15 seconds,
+   with a notice; any other failure (full disk, size limit, conflict, missing session) ends the
+   recording with its message, because later chunks would fail the same way. Pause and Resume act
+   on both recorders. Ending the share with the browser's own "Stop sharing" button stops the
+   recording like Stop.
+4. **Stop and save.** Stop waits for each recorder's last chunk, then releases the screen and the
+   microphone. The save window shows the length and uploaded size, the parts still uploading (Save
+   waits for them), one optional name field whose placeholder is the date name, Save and Discard
+   (with a confirmation). Save calls `complete` with the trimmed name (none when empty) and
+   `stopAtGap: false`. On `RECORDING_INCOMPLETE` it shows the error and offers **Save what was
+   recorded** (`stopAtGap: true`); an `FFMPEG_FAILED` gets a recorder wording ("could not be joined
+   into a video"). The saved window says the project is in Projects as **Not processed** and offers
+   Open projects and Record again. Nothing calls the processing endpoint.
+5. **Leaving.** While recording, stopping or uploading, leaving the screen and the language switch
+   ask first ("Stop recording and leave?") and the browser asks before closing or reloading the
+   tab. Leaving stops the recorders and gives up chunks not yet uploaded; the stored ones stay.
+6. **Interrupted recordings.** Projects shows an open session as **Recording** (still receiving
+   chunks) or **Recording interrupted**, not as "No video". Open leads to
+   `/record?recording={id}`, which shows the uploaded size, the name field, **Save what was
+   recorded** (`stopAtGap: true`) and Discard. A recording that is already saved or discarded
+   says so.
+
+Measured on 2026-10-29 on the development worker, through the real API (uvicorn, SQLite, FFmpeg
+7.1) and the development server with headless Chromium 149 and its fake devices: a 10-second
+recording (with a 3-second pause) uploaded 4 chunks, saved in 0.9 s and became a 9.94 s
+VP9/Opus `source.webm` with `microphone.webm`, project **Not processed**, no job, no chunk rows
+left; a 60-second recording uploaded 24 chunks, saved in 0.8 s and became a 60.02 s source.
 
 ## API
 
@@ -206,7 +267,13 @@ recorder can upload what is missing and save again, or discard.
 ## Verification
 
 - Playwright with `--use-fake-ui-for-media-stream` and `--use-fake-device-for-media-stream` records,
-  stops, saves with a name and finds the project as **Not processed**, with no job queued.
+  stops, saves with a name and finds the project as **Not processed**, with no job queued
+  (`apps/web/tests/e2e/recorder.spec.ts`, P05.3, against the deterministic fake API; the
+  real-API run above was a manual check with a scratch script).
+- Recorder unit tests (`apps/web/src/app/features/recorder/*.spec.ts`, P05.3) with doubles for
+  `MediaRecorder` and the capture API: start offsets, chunk numbering, ordered uploads, retry and
+  fatal errors, pause, stop and abort; source checks, start, save with and without a name, missing
+  parts, join failure, waiting uploads, ended share, leaving, discard and interrupted sessions.
 - API tests: out-of-order and repeated chunks per track, a missing chunk, an oversized session,
   resume after restart, discard, a session without a microphone track.
 - Completion tests (`backend/tests/test_recording_completion.py`, P05.2) build WebM tracks with

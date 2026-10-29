@@ -40,8 +40,8 @@ interface MenuEntry {
 }
 
 /**
- * Menu entries of the shell. Record (P05) and Settings (P06) are added by their packages: the
- * roadmap forbids enabled entries for screens that do not exist yet.
+ * Menu entries of the shell. Settings (P06) is added by its package: the roadmap forbids enabled
+ * entries for screens that do not exist yet.
  */
 export const MENU_ENTRIES: readonly MenuEntry[] = [
   {
@@ -50,6 +50,12 @@ export const MENU_ENTRIES: readonly MenuEntry[] = [
     icon: 'folder',
     // Every project screen belongs to Projects except the new-project form.
     matches: (url) => url === '/projects' || (url.startsWith('/projects/') && !isNewProject(url)),
+  },
+  {
+    label: () => $localize`:@@shell.menu.record:Record`,
+    path: '/record',
+    icon: 'record',
+    matches: (url) => url === '/record',
   },
   {
     label: () => $localize`:@@shell.menu.new_project:New project`,

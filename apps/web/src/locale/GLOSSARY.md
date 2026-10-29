@@ -17,12 +17,16 @@ terms in every new message and in both catalogs (`messages.en.json`, `messages.i
 | A group of files for one chat message   | batch            | lotto                    |
 | Transcript                              | transcript       | trascrizione             |
 | Unsaved                                 | unsaved          | non salvato              |
+| A screen capture made in the recorder   | recording        | registrazione            |
+| Uploaded piece of a recording           | part             | parte                    |
+| Computer sound shared with the screen   | system audio     | audio di sistema         |
 
 Other rules:
 
 - Buttons are verbs: Create project = Crea progetto, Upload video = Carica video, Start processing =
   Avvia elaborazione, Open review = Apri revisione, Save text = Salva testo, Create package = Crea
-  pacchetto, Download package = Scarica pacchetto. Italian uses the infinitive/imperative form
+  pacchetto, Download package = Scarica pacchetto, Record = Registra, Start recording = Avvia
+  registrazione, Stop = Ferma, Discard = Elimina. Italian uses the infinitive/imperative form
   of the verb, never "Clicca".
 - Address the user as "tu" (Scegli, Controlla, Riprova), never "Lei" and never in the plural.
 - Sentence case, no taglines, the same word for the same thing everywhere.

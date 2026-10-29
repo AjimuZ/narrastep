@@ -533,8 +533,20 @@ class RecordingTrackResponse(ApiModel):
     start_offset_ms: int | None
 
 
+class RecordingCaptureResponse(ApiModel):
+    """Capture settings the recorder applies to its `MediaRecorder` instances (P05.3).
+
+    `chunkSeconds` is the `MediaRecorder` timeslice, `videoBitsPerSecond` the screen track's video
+    bitrate and `maxFrameRate` the highest frame rate requested from the screen capture.
+    """
+
+    chunk_seconds: int
+    video_bits_per_second: int
+    max_frame_rate: int
+
+
 class RecordingResponse(ApiModel):
-    """Expose the state and per-track storage of one recording session."""
+    """Expose the state, per-track storage and capture settings of one recording session."""
 
     id: str
     project_id: str
@@ -546,6 +558,7 @@ class RecordingResponse(ApiModel):
     updated_at: datetime
     last_chunk_at: datetime | None
     tracks: list[RecordingTrackResponse]
+    capture: RecordingCaptureResponse
 
 
 class RecordingChunkResponse(ApiModel):

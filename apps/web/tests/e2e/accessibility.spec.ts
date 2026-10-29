@@ -28,6 +28,12 @@ const SCREENS: Screen[] = [
     ready: { en: 'Project name', it: 'Nome del progetto' },
   },
   {
+    name: 'recorder',
+    path: '/record',
+    scenario: { status: 'review' },
+    ready: { en: 'Choose screen', it: 'Scegli schermo' },
+  },
+  {
     name: 'processing',
     path: '/projects/project-1',
     scenario: { status: 'processing', jobStatus: 'processing' },

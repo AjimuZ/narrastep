@@ -81,6 +81,7 @@ describe('Italian interface', () => {
     expect(nav.getAttribute('aria-label')).toBe('Menu principale');
     expect(Array.from(nav.querySelectorAll('a')).map((a) => a.textContent?.trim())).toEqual([
       'Progetti',
+      'Registra',
       'Nuovo progetto',
     ]);
     expect(element.querySelector('.skip-link')?.textContent?.trim()).toBe(

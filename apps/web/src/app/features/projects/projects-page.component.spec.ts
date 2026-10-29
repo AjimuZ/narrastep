@@ -1,7 +1,7 @@
-// Projects screen tests: deletion, loading, errors, search, sort, type filter and state words.
+// Projects screen tests: deletion, loading, errors, search, sort, type filter, state words and open recordings.
 import { Dialog } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -139,6 +139,10 @@ describe('ProjectsPageComponent', () => {
       (fixture.nativeElement.querySelector('a[href="/projects/new"]') as HTMLAnchorElement)
         .textContent,
     ).toContain('New project');
+    expect(
+      (fixture.nativeElement.querySelector('.empty-actions a[href="/record"]') as HTMLAnchorElement)
+        .textContent,
+    ).toContain('Record');
   });
 
   it('exposes collection failures as a retryable alert', async () => {
@@ -229,5 +233,47 @@ describe('ProjectsPageComponent', () => {
     expect(component.visibleProjects()).toEqual([meeting]);
     expect(element.querySelectorAll('.project-row').length).toBe(1);
     expect(element.textContent).toContain('1 of 2 shown');
+  });
+
+  it('shows open recordings as Recording or Recording interrupted and opens them in the recorder', async () => {
+    const recordingProject = (id: string, interrupted: boolean): Project => ({
+      ...PROJECT,
+      id,
+      name: `Recording ${id}`,
+      status: 'draft',
+      videoAssetId: null,
+      recording: { id: `rec-${id}`, state: 'recording', interrupted },
+    });
+    const saved: Project = {
+      ...PROJECT,
+      id: 'saved',
+      status: 'uploaded',
+      recording: { id: 'rec-saved', state: 'completed', interrupted: false },
+    };
+    const { fixture } = await setup(
+      vi.fn(() => of(undefined)),
+      vi.fn(() =>
+        of({
+          items: [recordingProject('live', false), recordingProject('lost', true), saved],
+          total: 3,
+        }),
+      ),
+    );
+    const element: HTMLElement = fixture.nativeElement;
+    const pills = Array.from(element.querySelectorAll('[data-label="Status"] .ns-pill')).map(
+      (pill) => pill.textContent?.trim(),
+    );
+    expect(pills).toEqual(['Recording', 'Recording interrupted', 'Not processed']);
+    expect(element.querySelector('.page-header a[href="/record"]')?.textContent).toContain(
+      'Record',
+    );
+
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    fixture.componentInstance.openProject(recordingProject('lost', true));
+    expect(navigate).toHaveBeenCalledWith(['/record'], { queryParams: { recording: 'rec-lost' } });
+    fixture.componentInstance.openProject(saved);
+    expect(navigate).toHaveBeenLastCalledWith(['/projects/new'], {
+      queryParams: { projectId: 'saved' },
+    });
   });
 });

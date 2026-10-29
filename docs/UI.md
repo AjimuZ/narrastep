@@ -57,6 +57,7 @@ Every status pill takes its word and tone from `apps/web/src/app/shared/status-l
 | Project | `draft` No video (info), `uploaded` Not processed (info), `queued` Queued (wait), `processing` Processing (wait), `review` Ready for review (ok), `exporting` Creating package (wait), `completed` Package ready (ok), `failed` Failed (error) |
 | Processing job | `queued` Queued, `processing` Processing, `cancelling` Cancelling (wait); `completed` Done (ok); `cancelled` Cancelled (info); `failed` Failed, `interrupted` Interrupted (error) |
 | Package | `queued` Queued, `processing` Creating (wait); `completed` Ready (ok); `failed` Failed (error) |
+| Recording (open session of a recorder project) | still receiving chunks: Recording (wait); no chunk for `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS`: Recording interrupted (error). Shown instead of the project word "No video" (P05.3) |
 | Services (header) | Checking services (info), Services ready (ok), Processing unavailable (wait: Redis or the worker does not answer), Services offline (error: the API does not answer) |
 
 ### Project type labels
@@ -231,10 +232,10 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - **Shell:** compact header (product name, health pill, language switch) and a vertical menu on
   the left: Projects, Record, New project, Settings. Below 768 px the menu becomes a top bar with the same
   entries.
-  - Implemented (P04.3, P04.4, `apps/web/src/app/app.component.ts`): the header shows the product
-    name, the health pill and the language switch; the menu holds **Projects** and **New project**.
-    Record joins with the recorder (P05.3) and Settings with its screen (P06.4), because planned
-    screens must not appear as enabled entries.
+  - Implemented (P04.3, P04.4, P05.3, `apps/web/src/app/app.component.ts`): the header shows the
+    product name, the health pill and the language switch; the menu holds **Projects**, **Record**
+    and **New project**. Settings joins with its screen (P06.4), because planned screens must not
+    appear as enabled entries.
   - The current entry has `aria-current="page"`; every project screen counts as Projects except the
     new-project form.
   - The health pill asks `GET /api/v1/health` (same origin, no other request) at start and every
@@ -262,7 +263,8 @@ The table above is the target. What the English interface does today:
 
 | Screen | Implemented |
 | --- | --- |
-| Projects | Title, **New project**; one primary window with search, type, status and sort filters; rows are a table when the list is at least 68 rem wide and labelled cards below. Status pill, type, duration ("Unknown" without a video), segments, screenshots, last change, Open and Delete. Record and Process are not offered yet (P05) |
+| Projects | Title, **Record** and **New project** (also in the empty state); one primary window with search, type, status and sort filters; rows are a table when the list is at least 68 rem wide and labelled cards below. Status pill (Recording or Recording interrupted for an open recorder session, P05.3), type, duration ("Unknown" without a video), segments, screenshots, last change, Open and Delete. Open on an open recorder session leads to the recorder. Process is not offered yet (P05.4) |
+| Recorder | Title "Record"; Sources window (screen, system audio, microphone with device list and level gauge, consent and headset notices, **Start recording**); Recording window (state pill, length, uploaded size, sources, gauge, retry notice, Pause or Resume, **Stop**); Save recording window (length, uploaded size, parts still uploading, optional name, **Save** or **Save what was recorded**, Discard); Recording saved window (Open projects, Record again). `/record?recording={id}` opens an interrupted session. Details in [Recording](RECORDING.md#recorder-screen-p053) (P05.3) |
 | New project | Three steps (Project, Video, Processing) each in one primary window; type cards are `.ns-row` radio cards; **Create project**, then **Upload video** with a segmented upload gauge fed by the real upload percentage, then **Start processing** or Process later |
 | Processing | Title "Processing" with the project name; the stage list is the primary window. The API reports progress for the whole job only, so one overall gauge shows that value, finished stages show a full gauge, the running stage an activity line and pending stages only a word. **Open review**, Cancel processing, Retry processing; Project, Processing settings and Counters windows beside it |
 | Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen |
@@ -273,10 +275,13 @@ The table above is the target. What the English interface does today:
 
 The browser checks live in `apps/web/tests/e2e/accessibility.spec.ts` (with `support/fake-api.ts` and
 `support/contrast.ts`) and run with `npx playwright test`, in desktop and mobile Chromium. They
-open all seven screens (Projects, New project, Processing, Processing failed, Review, Export, Not
-found) in English and Italian against a deterministic fake API, and run the confirm, split and
-screenshot-preview dialogs on top of them. The last full run (2026-10-29) passed 314 tests, 154 of
-them in this file per Chromium project.
+open all eight screens (Projects, New project, Recorder, Processing, Processing failed, Review,
+Export, Not found) in English and Italian against a deterministic fake API, and run the confirm,
+split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
+(the source checks); `tests/e2e/recorder.spec.ts` adds contrast and 320 px reflow of the checks,
+recording and save windows with fake devices in both languages. The last full run (2026-10-29,
+P05.3) passed 364 tests: 174 accessibility checks and 5 recorder tests per Chromium project, plus
+the 6 contract tests.
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).

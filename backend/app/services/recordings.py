@@ -119,7 +119,11 @@ def project_recording_payload(
 def recording_payload(
     session: Session, recording: RecordingSession, settings: Settings
 ) -> dict[str, object]:
-    """Return the full session state with one summary per track, both tracks always listed."""
+    """Return the full session state with one summary per track, both tracks always listed.
+
+    `capture` carries the configured chunk length, video bitrate and frame rate, so the recorder
+    screen follows the server's settings without a separate request.
+    """
     rows = session.execute(
         select(RecordingChunk.track, RecordingChunk.sequence, RecordingChunk.size_bytes)
         .where(RecordingChunk.recording_id == recording.id)
@@ -147,6 +151,11 @@ def recording_payload(
         "updatedAt": recording.updated_at,
         "lastChunkAt": recording.last_chunk_at,
         "tracks": tracks,
+        "capture": {
+            "chunkSeconds": settings.recording_chunk_seconds,
+            "videoBitsPerSecond": settings.recording_video_bits_per_second,
+            "maxFrameRate": settings.recording_max_frame_rate,
+        },
     }
 
 

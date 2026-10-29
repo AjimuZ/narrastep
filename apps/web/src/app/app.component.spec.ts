@@ -28,6 +28,7 @@ async function setup(health: () => Observable<HealthResponse>) {
         { path: 'projects', component: BlankComponent },
         { path: 'projects/new', component: BlankComponent },
         { path: 'projects/:id', component: BlankComponent },
+        { path: 'record', component: BlankComponent },
       ]),
       { provide: ApiService, useValue: { health: vi.fn(health) } },
     ],
@@ -53,9 +54,14 @@ describe('AppComponent shell', () => {
     const nav = element.querySelector('nav[aria-label="Main menu"]') as HTMLElement;
     expect(Array.from(nav.querySelectorAll('a')).map((a) => a.textContent?.trim())).toEqual([
       'Projects',
+      'Record',
       'New project',
     ]);
-    expect(MENU_ENTRIES.map((entry) => entry.path)).toEqual(['/projects', '/projects/new']);
+    expect(MENU_ENTRIES.map((entry) => entry.path)).toEqual([
+      '/projects',
+      '/record',
+      '/projects/new',
+    ]);
   });
 
   it('marks the current menu entry with aria-current', async () => {
@@ -66,6 +72,9 @@ describe('AppComponent shell', () => {
     await router.navigateByUrl('/projects/abc?tab=1');
     fixture.detectChanges();
     expect(currentEntries(element)).toEqual(['Projects']);
+    await router.navigateByUrl('/record?recording=rec-1');
+    fixture.detectChanges();
+    expect(currentEntries(element)).toEqual(['Record']);
   });
 
   it('reports healthy, degraded and unreachable services with a word', async () => {

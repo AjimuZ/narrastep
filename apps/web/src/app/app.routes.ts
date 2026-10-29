@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { recorderLeaveGuard } from './features/recorder/recorder-leave.guard';
 import { pendingReviewChangesGuard } from './features/review/pending-review-changes.guard';
 
 export const routes: Routes = [
@@ -23,6 +24,13 @@ export const routes: Routes = [
         (module) => module.NewProjectComponent,
       ),
     title: 'New project · Narrastep',
+  },
+  {
+    path: 'record',
+    canDeactivate: [recorderLeaveGuard],
+    loadComponent: () =>
+      import('./features/recorder/recorder.component').then((module) => module.RecorderComponent),
+    title: 'Record · Narrastep',
   },
   {
     path: 'projects/:projectId',

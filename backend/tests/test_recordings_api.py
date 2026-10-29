@@ -87,6 +87,11 @@ def test_create_opens_session_with_dated_project_and_empty_tracks(client: TestCl
     assert recording["storedBytes"] == 0
     assert recording["maxBytes"] == get_settings().max_upload_bytes
     assert recording["lastChunkAt"] is None
+    assert recording["capture"] == {
+        "chunkSeconds": 5,
+        "videoBitsPerSecond": 2_500_000,
+        "maxFrameRate": 15,
+    }
     for name in ("screen", "microphone"):
         assert _track(recording, name) == {
             "track": name,

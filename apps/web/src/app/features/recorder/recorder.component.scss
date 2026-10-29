@@ -1,0 +1,117 @@
+// Recorder screen layout: source check rows, recording facts with the timer, level gauge and action rows.
+// Rows wrap instead of shrinking, so long Italian labels stay whole at 320 px.
+:host {
+  display: block;
+}
+
+.recorder-page {
+  max-width: 48rem;
+}
+
+.recorder-notice {
+  margin-bottom: var(--space-4);
+}
+
+.recorder-notice p {
+  margin: 0;
+}
+
+.recorder-notice p + p {
+  margin-top: var(--space-2);
+}
+
+.source-checks {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.source-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+}
+
+.source-check__head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.source-check__name {
+  color: var(--color-text-strong);
+  font-weight: 600;
+}
+
+// Details (help, errors, device list, level) take a full row under the head and the button.
+.source-check__detail {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.level {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.source-check .level {
+  margin-bottom: 0;
+}
+
+.recording-status {
+  margin-bottom: var(--space-3);
+}
+
+.recording-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.recording-facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.recording-facts dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-strong);
+}
+
+.recording-timer {
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+}
+
+.pending {
+  margin-bottom: var(--space-4);
+}
+
+.pending p {
+  margin: var(--space-2) 0 0;
+}
+
+.name-field {
+  margin-bottom: var(--space-4);
+}
+
+.recorder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}

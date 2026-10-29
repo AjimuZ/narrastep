@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     recording_max_chunk_mb: int = Field(default=64, ge=1)
     # A session still recording with no chunk for this long is reported as interrupted.
     recording_interrupted_after_seconds: int = Field(default=30, ge=5)
+    # Capture settings the recorder screen reads from each session response (P05.3). Chunks
+    # shorter than a second multiply requests; longer than a minute risk more on a closed tab.
+    recording_chunk_seconds: int = Field(default=5, ge=1, le=60)
+    # 2.5 Mbit/s keeps screen text readable at about 1.1 GB per hour.
+    recording_video_bits_per_second: int = Field(default=2_500_000, ge=100_000, le=50_000_000)
+    # Screen content rarely needs more; the browser may deliver fewer frames.
+    recording_max_frame_rate: int = Field(default=15, ge=1, le=60)
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     ffmpeg_timeout_seconds: int = Field(

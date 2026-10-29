@@ -1,9 +1,14 @@
 <section class="page">
   <header class="page-header">
     <h1 i18n="@@projects.title">Projects</h1>
-    <a class="ns-button ns-button--primary" routerLink="/projects/new">
-      <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
-    </a>
+    <div class="page-header__actions">
+      <a class="ns-button" routerLink="/record">
+        <ns-pixel-icon name="record" /><span i18n="@@projects.record">Record</span>
+      </a>
+      <a class="ns-button ns-button--primary" routerLink="/projects/new">
+        <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
+      </a>
+    </div>
   </header>
 
   @if (errorMessage(); as message) {
@@ -29,12 +34,17 @@
     </div>
   } @else if (projects().length === 0) {
     <ns-window title="No projects yet" i18n-title="@@projects.empty_title" [primary]="true">
-      <p class="muted" i18n="@@projects.empty_help">
-        Create a project, then upload a screen recording to process it.
+      <p class="muted" i18n="@@projects.empty_help_record">
+        Record your screen, or create a project and upload a screen recording.
       </p>
-      <a class="ns-button ns-button--primary" routerLink="/projects/new">
-        <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
-      </a>
+      <div class="empty-actions">
+        <a class="ns-button" routerLink="/record">
+          <ns-pixel-icon name="record" /><span i18n="@@projects.record">Record</span>
+        </a>
+        <a class="ns-button ns-button--primary" routerLink="/projects/new">
+          <ns-pixel-icon name="plus" /><span i18n="@@projects.new_project">New project</span>
+        </a>
+      </div>
     </ns-window>
   } @else {
     <ns-window [title]="listTitle()" [primary]="true">

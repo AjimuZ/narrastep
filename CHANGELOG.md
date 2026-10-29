@@ -45,7 +45,21 @@ All notable changes to Narrastep are documented in this file.
   name; no processing starts. The aligned microphone is kept as `source/microphone.webm` for the
   coming speaker labels, and the chunks are deleted. A missing chunk refuses the save with the new
   error `RECORDING_INCOMPLETE` (translated in Italian) unless the caller asks to save what was
-  recorded before it. Recordings cannot be made from the interface yet.
+  recorded before it.
+
+- Recorder: **Record** in the menu (and on the Projects screen) opens a screen that records the
+  screen, the computer sound and the microphone. Before starting it shows which screen, window or
+  tab is shared, whether system audio is included (and how to include it), the microphone with a
+  device choice and a live level gauge, a consent reminder and a headset recommendation. While
+  recording it shows the length, the uploaded size and Pause, Resume and Stop; parts are uploaded
+  every few seconds and retried when the local service does not answer. Stop asks for an optional
+  name with Save and Discard. Saving never starts processing: the project appears in Projects as
+  **Not processed**. Leaving the screen or switching the language while recording asks first.
+  Recordings that stopped before they were saved show as **Recording interrupted** in Projects and
+  open in the recorder with "Save what was recorded" and Discard. English and Italian.
+- New settings `NARRASTEP_RECORDING_CHUNK_SECONDS` (5), `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND`
+  (2500000) and `NARRASTEP_RECORDING_MAX_FRAME_RATE` (15), sent to the recorder in the new
+  `capture` field of recording session responses.
 
 ### Changed
 

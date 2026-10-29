@@ -535,6 +535,27 @@
         "title": "ProjectUpdate",
         "type": "object"
       },
+      "RecordingCaptureResponse": {
+        "description": "Capture settings the recorder applies to its `MediaRecorder` instances (P05.3).\n\n`chunkSeconds` is the `MediaRecorder` timeslice, `videoBitsPerSecond` the screen track's video\nbitrate and `maxFrameRate` the highest frame rate requested from the screen capture.",
+        "properties": {
+          "chunkSeconds": {
+            "title": "Chunkseconds"
+          },
+          "maxFrameRate": {
+            "title": "Maxframerate"
+          },
+          "videoBitsPerSecond": {
+            "title": "Videobitspersecond"
+          }
+        },
+        "required": [
+          "chunkSeconds",
+          "videoBitsPerSecond",
+          "maxFrameRate"
+        ],
+        "title": "RecordingCaptureResponse",
+        "type": "object"
+      },
       "RecordingChunkResponse": {
         "description": "Acknowledge one durably stored chunk; `duplicate` is true for a repeated identical upload.",
         "properties": {
@@ -610,8 +631,9 @@
         "type": "object"
       },
       "RecordingResponse": {
-        "description": "Expose the state and per-track storage of one recording session.",
+        "description": "Expose the state, per-track storage and capture settings of one recording session.",
         "properties": {
+          "capture": {},
           "createdAt": {
             "title": "Createdat"
           },
@@ -651,7 +673,8 @@
           "createdAt",
           "updatedAt",
           "lastChunkAt",
-          "tracks"
+          "tracks",
+          "capture"
         ],
         "title": "RecordingResponse",
         "type": "object"

@@ -135,9 +135,13 @@ return:
      "missingSequences": [1], "missingCount": 1, "startOffsetMs": 0},
     {"track": "microphone", "chunkCount": 2, "storedBytes": 131072, "nextSequence": 2,
      "missingSequences": [], "missingCount": 0, "startOffsetMs": 40}
-  ]
+  ],
+  "capture": {"chunkSeconds": 5, "videoBitsPerSecond": 2500000, "maxFrameRate": 15}
 }
 ```
+
+`capture` (P05.3) carries the recorder settings `NARRASTEP_RECORDING_CHUNK_SECONDS`,
+`NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` and `NARRASTEP_RECORDING_MAX_FRAME_RATE`.
 
 `PUT .../tracks/{track}/chunks/{sequence}?startOffsetMs=40` takes the raw chunk bytes with
 `Content-Type: video/webm`, `audio/webm` or `application/octet-stream` and answers `201` with

@@ -30,6 +30,9 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     monkeypatch.setenv("NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH", "17")
     monkeypatch.setenv("NARRASTEP_RECORDING_MAX_CHUNK_MB", "8")
     monkeypatch.setenv("NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS", "45")
+    monkeypatch.setenv("NARRASTEP_RECORDING_CHUNK_SECONDS", "3")
+    monkeypatch.setenv("NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND", "1500000")
+    monkeypatch.setenv("NARRASTEP_RECORDING_MAX_FRAME_RATE", "10")
     settings = Settings()
 
     assert settings.data_root == tmp_path.resolve()
@@ -40,6 +43,9 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert settings.chatgpt_max_files_per_batch == 17
     assert settings.recording_max_chunk_bytes == 8 * 1024 * 1024
     assert settings.recording_interrupted_after_seconds == 45
+    assert settings.recording_chunk_seconds == 3
+    assert settings.recording_video_bits_per_second == 1_500_000
+    assert settings.recording_max_frame_rate == 10
 
 
 def test_workspace_path_rejects_traversal(tmp_path: Path) -> None:

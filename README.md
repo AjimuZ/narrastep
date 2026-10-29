@@ -89,6 +89,9 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | `NARRASTEP_MAX_UPLOAD_SIZE_MB` | `4096` | Upload size limit, also for one whole recording |
 | `NARRASTEP_RECORDING_MAX_CHUNK_MB` | `64` | Largest accepted recording chunk |
 | `NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS` | `30` | Time without chunks before a recording counts as interrupted |
+| `NARRASTEP_RECORDING_CHUNK_SECONDS` | `5` | Length of each recording chunk the recorder uploads |
+| `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate of the recorder (about 1.1 GB per hour) |
+| `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Highest frame rate the recorder asks for |
 | `NARRASTEP_WHISPER_MODEL` | `small` | Whisper model baked into the image at build |
 | `NARRASTEP_SCREENSHOT_SELECTION_STRATEGY` | `legacy` | `legacy` or experimental `adaptive_v1` |
 | `NARRASTEP_IMAGE_BUDGET_PROFILE` | `balanced` | `compact`, `balanced` or `detailed` |
