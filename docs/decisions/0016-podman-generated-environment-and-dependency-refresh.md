@@ -1,6 +1,6 @@
 # ADR 0016: Podman launcher, generated environment file and dependency refresh
 
-Status: accepted (2026-10-29), planned in roadmap package P08; nothing below is implemented yet.
+Status: accepted (2026-10-29), planned in roadmap package P08; each "Applied", "Done" or "Implemented" note below marks what exists, the rest is planned.
 Supersedes: none. Refines: the "Docker is required" constraint in [Requirements](../REQUIREMENTS.md).
 
 ## Context
@@ -91,8 +91,14 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   Free disk comes from `df` on the project folder. A value that cannot be measured is reported as
   unknown and the default of `.env.example` is used for it. Nothing is invented and nothing is sent
   anywhere.
-- **Initial profile**, deterministic and covered by tests with fixed hardware. P08.6 may refine
-  the thresholds with measured evidence and must then update this table:
+- **Profile**, deterministic and covered by tests with fixed hardware. *Implemented in P08.6
+  (2026-10-30):* `scripts/generate-env.sh` prints it and the table below equals its code; the
+  thresholds are unchanged from the initial proposal. A memory or CPU count that cannot be measured
+  chooses `small` and omits the thread count; `medium` also needs a measured CPU count. The
+  generator takes `--engine docker|podman` to ask the engine; the start scripts that pass it come
+  with P08.8 and P08.10. Ports in use are read from the local socket table (`ss` or `netstat`), not
+  by connecting, so no network tool runs; when neither exists every port counts as free. The
+  `NARRASTEP_WEB_PORT` and `NARRASTEP_API_PORT` choices never coincide.
 
 | Key | Rule |
 | --- | --- |
@@ -102,7 +108,7 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
 | `NARRASTEP_MAX_UPLOAD_SIZE_MB`, `NARRASTEP_MIN_FREE_DISK_MB` | Never above what the free disk can hold: the upload limit is the default 4096 MB, lowered to a quarter of the free disk when that is smaller (at least 512 MB), and the free-disk guard keeps its default |
 | `NARRASTEP_WEB_PORT`, `NARRASTEP_API_PORT` | The default 4200 and 8002, or the next free port above (at most 20 steps) when the default is in use on `127.0.0.1`; the choice is written in the header |
 | `NARRASTEP_CORS_ORIGINS` | Rebuilt from the chosen web port, so a changed port never breaks the API |
-| All other keys | The values of `.env.example` |
+| All other keys | The values of `.env.example`. The generator writes only `NARRASTEP_ENV` and `NARRASTEP_LOG_LEVEL` besides the rows above; a key left out takes the default of `docker-compose.yml`, which `.env.example` repeats |
 
 - The Celery worker stays at `--concurrency=1`: one job at a time is an architecture rule
   ([ADR 0003](0003-celery-and-redis.md)), not a tuning knob.

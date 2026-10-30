@@ -21,6 +21,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Where the page has no bridge to the shell, derive the host from the user agent rather than adding a preload or IPC channel; this leaves the isolation rules untouched.
 - Scripts that run from stdin inside a container must not touch `__file__` at import. Resolve repository paths lazily, in the code path that needs them.
 - Keep a container-inventory script as a pure compare function plus a thin engine call. Test the compare function with fixed listings and edited copies of the document, and test the stdin path with a subprocess.
+- Write host-probing shell scripts as pure profile functions plus probes. Let a NARRASTEP_PROBE_* variable (set but empty means unknown) replace each probe, so tests fix the hardware without root or fake /proc files.
+- Prove that a script calls no network tool by putting failing stubs for curl, wget, nc and similar commands on PATH while it probes the real machine. Add a scan of the script text with comments removed.
 
 ---
 
@@ -138,4 +140,16 @@ Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfil
   - The script uses `except A, B:` without parentheses, which needs Python 3.14 or newer. The sandbox and the image have it. The host had 3.15.1.
   - The previous attempt had ticked the P08.5 checkbox in docs/ROADMAP.md. This attempt reverted it to `[ ]`, so the orchestrator ticks it.
   - Inside the image, the Debian listing has about 300 packages and 69 Python distributions. Only the packages named in the Dockerfile's apt-get install are compared, 9 of them.
+---
+
+## 2026-10-30T22:04:52Z - P08.6
+- Added scripts/generate-env.sh. It prints a .env with header comments on standard output and writes nothing. It follows the ADR 0016 table. The profile is split from the hardware probes. A NARRASTEP_PROBE_* variable replaces each probe, so tests can fix the hardware. desktop/test/generate-env.test.cjs covers each table row, an unknown value, busy ports, the low-memory warning, fake docker and podman, and a no-network-tool check. check.sh desktop passed 197 of 197, check.sh docs passed, and sh -n passed. .env.example could not be read here (denied), so the script writes only NARRASTEP_ENV and NARRASTEP_LOG_LEVEL besides the table keys, and the rest fall back to the Compose defaults. Not run: macOS, a real Docker Desktop or Podman machine, and the port probe where neither ss nor netstat exists. The script is not marked executable, so the tests run it as `sh scripts/generate-env.sh`.
+- Files changed: scripts/generate-env.sh, desktop/test/generate-env.test.cjs, docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md, docs/ROADMAP.md, docs/STATUS.md
+- **Learnings for future iterations:**
+  - The generator is run as `sh scripts/generate-env.sh [--engine docker|podman]`. The orchestrator did not mark it executable, so P08.8 should call it through `sh` or set the git mode.
+  - NARRASTEP_PROBE_HOST_CPUS, HOST_MEMORY_MB, ENGINE_CPUS, ENGINE_MEMORY_MB, FREE_DISK_MB, LISTENING_PORTS (space separated) and DATE replace the probes. A variable that is set but empty means unknown. The start scripts must not set them.
+  - .env.example was not readable in this session (permission denied). The generator emits only the ADR table keys plus NARRASTEP_ENV and NARRASTEP_LOG_LEVEL. P08.7 should read .env.example and add its keys to the generator, or confirm that the Compose defaults are enough.
+  - NARRASTEP_WHISPER_CPU_THREADS is already emitted, but config.py and docker-compose.yml do not know it yet (P08.7). The key is omitted when the CPU count is unknown.
+  - The tests skip on win32 and write fake tools inside desktop/test/.generate-env-test-*, as start-script.test.cjs does. The Prettier check in check.sh desktop applies to the new test file. Format with `./scripts/ralph/sandbox.sh 'cd apps/web && npx prettier --write ../../desktop/test/<file>'`.
+  - The ADR 0016 test checks the key names and four threshold sentences of the table against the generator output. If the table wording changes, update the regular expressions in the last test of generate-env.test.cjs.
 ---
