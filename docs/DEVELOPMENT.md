@@ -377,7 +377,7 @@ package, when a step fails or a speech clip lacks the words "settings" and "save
 network and takes about 10 s with `small` on 4 CPUs. To run it in a built image or natively:
 
 ```bash
-docker run --rm narrastep-backend:0.2.0 python scripts/check_transcription_stack.py
+docker run --rm localhost/narrastep-backend:0.2.0 python scripts/check_transcription_stack.py
 python scripts/check_transcription_stack.py --model-path /path/to/model --ffmpeg ffmpeg --ffprobe ffprobe
 ```
 
@@ -445,8 +445,8 @@ libraries or is not the pinned build. To check a built image and its size:
 
 ```bash
 docker compose build api
-docker run --rm narrastep-backend:0.2.0 python scripts/check_llama_server.py
-docker history narrastep-backend:0.2.0
+docker run --rm localhost/narrastep-backend:0.2.0 python scripts/check_llama_server.py
+docker history localhost/narrastep-backend:0.2.0
 ```
 
 The `COPY /opt/llama.cpp/` line of `docker history` is the size the server adds. A native backend

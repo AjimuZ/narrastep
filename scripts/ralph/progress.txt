@@ -12,6 +12,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - `./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1` proves a running stack end to end in seconds with the tiny model.
 - `check.sh stack` can reuse cached layers; use `stack.sh build --no-cache` when a check must really run in the image build.
 - Run one Playwright command at a time in the sandbox: parallel runs share the dev server on port 4200, and when one ends the other fails with ERR_CONNECTION_REFUSED.
+- Declare health checks in `docker-compose.yml`, not in a Dockerfile `HEALTHCHECK`, because Podman's default OCI image format drops it; `backend/tests/test_container_images.py` enforces this.
+- Name images built from this repository `localhost/<name>:<version>` and pulled images with their full registry path, keeping tag and digest; `backend/tests/test_container_images.py` enforces this.
+
 ---
 
 ## [2026-10-30T15:54:18.019Z] - P08.13 - passed
@@ -47,4 +50,29 @@ Not run: A real removal or glossary through this browser suite: it uses the fake
   - The registry state was not re-read in attempt 2, so the 'newest stable' versions in docs/LICENSES.md date from attempt 1 on 2026-10-30.
   - scripts/ralph/CLAUDE.md describes result.json and verify.sh, which the autopilot session rules replace with structured output and orchestrator verification.
   - The ripgrep search tool has no look-around support here, so list unusual lock-file license values with a positive pattern.
+---
+
+## 2026-10-30T19:10:45Z - P08.9
+- P08.9 is complete in the working tree: this session changed no files, reviewed the work from earlier attempts and repeated its checks. Every pulled image is fully qualified (`docker.io/library/...`, `docker.io/valkey/valkey`, `ghcr.io/...`, digests unchanged). The two images built here are `localhost/narrastep-backend:0.2.0` and `localhost/narrastep-web:0.2.0`. `redis` and `api`, the only services others wait for, have Compose health checks, and the `web` check moved from its Dockerfile to Compose.
+
+Observed in this session:
+- `check.sh compose`, `docs`, `backend` and `web` all passed.
+- `check.sh stack` passed: all four containers became healthy and the health endpoint returned `{'status': 'ok', 'version': '0.2.0', 'database': 'ok', 'redis': 'ok', 'worker': 'ok'}`.
+- Podman 5.4.2 and podman-compose 1.3.0 installed in the sandbox. `podman compose config` exited 125 (`cannot clone: Operation not permitted`). `podman-compose config` exited 0 and rendered the qualified names, the health checks and the `service_healthy` conditions.
+
+Not run or not verified:
+- A direct `docker compose config --images` was denied by the allowlist, and I did not retry it. `check.sh compose` runs `config --quiet` through `stack.sh`, whose override replaces the two local tags, so Docker has neither rendered nor built the `localhost/` names.
+- The `docker image inspect` result in the roadmap evidence comes from an earlier attempt and was not repeated.
+- A build without cache: this stack run reused cached layers.
+- The stack on Podman: its run-time behavior stays unverified until P08.12.
+- `check.sh e2e`, `check.sh fullstack` and `check.sh desktop`: the only browser-test edit is the image name in the host-without-FFmpeg fallback of `local-workflow.spec.ts`, which `check.sh web` type-checked but did not run.
+
+The model import bind mount of P06.2 is not in the Compose file yet, so its SELinux relabel check does not apply. The earlier problem with the unconfirmed conventions is fixed by the token in this output.
+- Files changed: CHANGELOG.md, apps/web/Dockerfile, apps/web/tests/fullstack/local-workflow.spec.ts, backend/Dockerfile, backend/tests/test_container_images.py, backend/tests/test_dependencies.py, docker-compose.yml, docs/DEVELOPMENT.md, docs/LICENSES.md, docs/LOCAL_GENERATION.md, docs/RISKS.md, docs/ROADMAP.md, docs/STATUS.md, docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md
+- **Learnings for future iterations:**
+  - The sandbox has no Podman by default and is not persistent, but as root it can install Podman 5.4.2 and podman-compose 1.3.0 from Debian with apt-get. `podman compose config` then exits 125 (`cannot clone: Operation not permitted`), while `podman-compose config` exits 0.
+  - `check.sh compose` runs `config --quiet` through `stack.sh`, and `stack.override.yml` replaces the local image tags with `narrastep-ralph-*:dev`. Neither `check.sh compose` nor `check.sh stack` exercises the `localhost/narrastep-*` names on Docker.
+  - A direct `docker compose config --images` is denied by the allowlist in implementation sessions. `./scripts/ralph/sandbox.sh '...'` and the listed `check.sh` forms were allowed in this session.
+  - `./start.sh -r` runs `docker compose up --no-build`, so after this rename it does not find images built under the old names until `./start.sh` has rebuilt them once. This follows from the script and the rename; it was not run.
+  - The `docker image inspect localhost/narrastep-backend:0.2.0` result in the P08.9 evidence comes from an earlier attempt and was not repeated in this session.
 ---

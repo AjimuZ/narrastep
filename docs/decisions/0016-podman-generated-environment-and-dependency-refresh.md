@@ -61,6 +61,9 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   model import folder on the `api` service ([Local generation](../LOCAL_GENERATION.md#import-from-disk)).
   The start scripts create the folder first and the Compose entry adds the SELinux relabel option,
   which P08.9 must verify on Podman.
+  *Applied in P08.9 (2026-10-30):* images built from this repository are named `localhost/...`,
+  so no short name remains. The cost is one rebuild, because `./start.sh -r` does not find the old
+  names. The model import bind mount does not exist yet, so its relabel option was not checked.
 - Shared logic (option parsing, the watcher that opens the window, the `.env` step) moves into one
   sourced file under `scripts/`, so `start.sh` and `start-podman.sh` cannot drift apart. The
   behavior of `./start.sh` and its tests (`desktop/test/start-script.test.cjs`) must not change.

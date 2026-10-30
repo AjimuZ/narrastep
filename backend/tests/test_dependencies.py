@@ -144,7 +144,8 @@ def test_python_version_agrees_across_project_image_ci_and_locks() -> None:
     assert tools["mypy"]["python_version"] == "3.14"
     dockerfile = (BACKEND / "Dockerfile").read_text(encoding="utf-8")
     image = re.search(
-        r"^FROM python:(\d+\.\d+)\.(\d+)-slim-trixie@sha256:[0-9a-f]{64} AS runtime$",
+        r"^FROM docker\.io/library/python:(\d+\.\d+)\.(\d+)-slim-trixie@sha256:[0-9a-f]{64}"
+        r" AS runtime$",
         dockerfile,
         re.M,
     )

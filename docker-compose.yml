@@ -1,5 +1,7 @@
+# Every image name is fully qualified, because Podman without a configured search registry asks or
+# fails for a short one (ADR 0016). `localhost/` names an image built here; no registry holds it.
 x-backend-image: &backend-image
-  image: narrastep-backend:0.2.0
+  image: localhost/narrastep-backend:0.2.0
   build:
     context: ./backend
     args:
@@ -53,7 +55,7 @@ services:
   # protocol name `redis`; Valkey reads the files Redis 7.2 left in the volume and runs as the
   # same uid 999.
   redis:
-    image: valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
+    image: docker.io/valkey/valkey:9.1.3-alpine@sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
       - narrastep-redis:/data
@@ -102,7 +104,7 @@ services:
         condition: service_healthy
 
   web:
-    image: narrastep-web:0.2.0
+    image: localhost/narrastep-web:0.2.0
     build:
       context: ./apps/web
     ports:
@@ -112,6 +114,13 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    # Declared here, not in the Dockerfile: Podman's default OCI image format drops `HEALTHCHECK`.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
 
 volumes:
   narrastep-data:

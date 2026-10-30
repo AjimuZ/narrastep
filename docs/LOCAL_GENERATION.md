@@ -92,8 +92,8 @@ layers, before any image was built:
 - Docker reports the uncompressed layer size, so the backend image grows by about 40 MB on
   amd64. The first build also downloads the pinned image once (about 300 MB compressed on amd64,
   mostly its Ubuntu packages); it stays in the build cache and is not part of the backend image.
-- To measure again: `docker compose build api`, then `docker history narrastep-backend:0.2.0` shows
-  the `COPY /opt/llama.cpp/` layer size.
+- To measure again: `docker compose build api`, then `docker history localhost/narrastep-backend:0.2.0`
+  shows the `COPY /opt/llama.cpp/` layer size.
 
 ## States
 

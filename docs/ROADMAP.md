@@ -222,9 +222,20 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
 - [ ] P08.8 `start.sh` generates `.env` when it is missing and never touches an existing one.
   **Requires tasks:** P08.7.
   Exit: shell tests with a stubbed engine show that a missing `.env` is created before Compose starts, an existing or empty `.env` is left byte-identical, a failed generation stops the start with a readable message, the generated web port reaches the desktop launcher, and the existing start-script tests still pass; `docs/DEVELOPMENT.md` and `README.md` describe the step.
-- [ ] P08.9 Make `docker-compose.yml` and the Dockerfiles engine-neutral.
+- [x] P08.9 Make `docker-compose.yml` and the Dockerfiles engine-neutral.
   **Requires tasks:** P08.3.
   Exit: `docker compose config` and `podman compose config` both render the file; every image name is fully qualified; each service that others wait for has a Compose health check; the stack becomes healthy on Docker with the output recorded; the same on Podman is recorded or reported as not run. If P06.2 has already added the model import bind mount, its SELinux relabel option and the folder created by the start scripts are checked here too.
+  Evidence (2026-10-30): every pulled image is fully qualified (`docker.io/library/python`, `docker.io/library/node`, `docker.io/library/nginx`, `docker.io/valkey/valkey`, `ghcr.io/ggml-org/llama.cpp`, digests unchanged) and the two images built here are `localhost/narrastep-backend:0.2.0` and `localhost/narrastep-web:0.2.0`. `redis` and `api`, the only services others wait for, already had Compose health checks; the `web` check moved from its Dockerfile to Compose, because Podman's OCI image format drops `HEALTHCHECK`. New tests in `tests/test_container_images.py` fail on a short name, on a waited-for service without a Compose check and on a `HEALTHCHECK` line, and `tests/test_dependencies.py` follows the new name. On Docker, `./scripts/ralph/check.sh compose` passed (`compose: configuration renders -> passed`) and `./scripts/ralph/check.sh stack` built from the qualified base names and ended with:
+  ```text
+  Container narrastep-ralph-redis-1 Healthy
+  Container narrastep-ralph-api-1 Healthy
+  Container narrastep-ralph-worker-1 Healthy
+  Container narrastep-ralph-web-1 Healthy
+  check: stack: health endpoint ...
+  {'status': 'ok', 'version': '0.2.0', 'database': 'ok', 'redis': 'ok', 'worker': 'ok'}
+  check: stack -> passed
+  ```
+  That build reused cached layers, and the isolated stack replaces the two local tags with its own, so Docker did not build or render the `localhost/` names. `docker image inspect localhost/narrastep-backend:0.2.0` got past name parsing (`No such image`), the only direct Docker observation of them. Podman 5.4.2 and podman-compose 1.3.0 installed in the sandbox from Debian 13: `podman compose config` itself did not run (exit 125, `cannot clone: Operation not permitted`, because the sandbox has no `CAP_SYS_ADMIN`), while the provider it calls, `podman-compose config`, exited 0 and rendered all four services with the qualified names, the three health checks and the `service_healthy` conditions. Not run: the stack on Podman, so `depends_on` health conditions, rootless volume ownership and the health checks at run time stay unverified until P08.12; a build without cache. The model import bind mount of P06.2 is not in the Compose file yet, so its relabel check does not apply. `scripts/ralph/checks.Dockerfile` and `stack.override.yml` keep short names: they are development tools outside this item's product files.
 - [ ] P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`.
   **Requires tasks:** P08.8, P08.9.
   Exit: `./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests; it prefers `podman compose`, falls back to `podman-compose` and explains a missing provider; it never uses `sudo` or `--privileged`; the Podman script is executable in Git; the `.env` step reads `podman info`; a failure leaves the stack usable in a browser as in P07.2.

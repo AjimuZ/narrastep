@@ -111,6 +111,12 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- The Compose file and Dockerfiles now use fully qualified image names and declare the web health
+  check in Compose, so one definition can serve Docker and Podman (Podman itself is not supported
+  yet). The images built here are now named `localhost/narrastep-backend:0.2.0` and
+  `localhost/narrastep-web:0.2.0`: run `./start.sh` once to build them, because `./start.sh -r` does
+  not find images built under the old names. The old images can then be removed.
+
 - Development only, no change to the product: `scripts/ralph/` works through the roadmap without
   supervision, one fresh Claude Code process per task. Each task is verified in a container and
   committed and pushed on `main` by the runner. The outdated `.python-version` and the

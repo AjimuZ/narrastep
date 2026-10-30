@@ -18,7 +18,7 @@ RUN mkdir /opt/llama.cpp \
 # base (Debian 13.7, published 2026-10-28; P08.3). The apt packages below come from Debian 13 and
 # its security updates at build time: Debian removes superseded versions, so exact apt pins would
 # break later builds, and the two build checks below fail on an incompatible update instead.
-FROM python:3.14.10-slim-trixie@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999 AS runtime
+FROM docker.io/library/python:3.14.10-slim-trixie@sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

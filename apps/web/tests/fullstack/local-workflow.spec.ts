@@ -158,7 +158,7 @@ function generateSyntheticVideo(destination: string): void {
         'none',
         '--volume',
         `${dirname(destination)}:/fixtures`,
-        'narrastep-backend:0.2.0',
+        'localhost/narrastep-backend:0.2.0',
         'ffmpeg',
         ...syntheticVideoArguments(containerDestination),
       ],
