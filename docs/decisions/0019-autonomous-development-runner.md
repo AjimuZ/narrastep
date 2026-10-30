@@ -1,6 +1,7 @@
 # ADR 0019: Autonomous development runner
 
-Status: accepted (2026-10-30, requested by the owner). Supersedes: none.
+Status: accepted (2026-10-30, requested by the owner), amended the same day (automatic push, jobs
+for the former owner checks). Supersedes: none.
 
 ## Context
 
@@ -8,7 +9,8 @@ The owner wants the roadmap completed incrementally by Claude Code without one l
 fills its context: every iteration starts clean, reads the persistent state, does one task, verifies
 it, commits and ends. The owner named [snarktank/ralph](https://github.com/snarktank/ralph) as the
 implementation, and asked that completion follow verified state and not the agent's statement, that
-Claude Code's safety controls stay on, and that all work happens on `main`, with no push.
+Claude Code's safety controls stay on, and that all work happens on `main`. The first setup did not
+push; after seeing it, the owner asked for the push to be automatic.
 
 Upstream's `ralph.sh` does not meet those conditions as it is: it runs with
 `--dangerously-skip-permissions`, ends when the output says `<promise>COMPLETE</promise>`, lets the
@@ -36,7 +38,24 @@ owner's project volume.
 - **Owner checks stay with the owner.** Tasks that need a real call, a display or Podman are marked
   `owner`, are never given to an agent and do not prevent completion.
 - **The runner works on `main`** in the owner's working tree (owner's decision, 2026-10-30), and
-  refuses to start when `main` is behind `origin`, because the roadmap would be out of date.
+  stops when `main` is behind `origin`, because the roadmap would be out of date.
+- **The runner pushes `main`** after each verified commit (owner's decision, 2026-10-30). The agent
+  still cannot. There is no force and there are no tags. Every waiting commit is checked again first
+  for forbidden paths, secrets and authorship words. A network failure only delays the push; a
+  refused push or unsafe content stops the run.
+- **Long checks need no session.** A task's `job` runs before its agent, so a benchmark that takes
+  hours uses no usage quota. The window (P07.2), Podman (P08.12) and the benchmark (P06.5) became
+  such tasks with the owner's approval, because only a real call needs a person. Podman runs inside
+  a privileged container since the owner cannot install it, so `podman machine` on Windows stays
+  unverified. The call and the single-window check are one guided session,
+  `scripts/ralph/owner-check.cjs`, which reads numbers from the local API and never transcript text.
+- **Regressions are looked for on every task:** every task runs all the suites, the real stack runs
+  at every fifth, and a change may not delete tests or add `.only`, `.skip`, `fixme` or `xfail`.
+- **Other programs share the computer.** The suites run with 4 workers, and a check repeats only when
+  its output shows a lack of resources, so the load of another project costs no attempt.
+- **Waiting beats failing.** A usage limit waits up to 7 days. A failed session waits and repeats,
+  and only six in a row stop the run, so the runner does not depend on recognising the exact
+  message of a limit it has never seen.
 
 ## Alternatives
 
@@ -52,12 +71,16 @@ owner's project volume.
 - Development can continue without the owner, one verified commit per task, and stops by itself.
 - **Limits of the isolation.** This is a tool policy, not a security boundary. The allowed scripts
   run containers with network access; the sandbox can read and write the whole repository except
-  `.git`, `.env`, `data/` and `.claude/`; and a Compose file changed by the agent is what `stack.sh`
-  starts, so a hostile change could mount a host folder. Pattern rules for shell commands are
+  `.git`, `.env`, `data/` and `.claude/`. `stack.sh` refuses a Compose file with host folders,
+  privileged containers or the Docker socket, but `desktop-smoke.sh` runs the repository's `start.sh`
+  and Electron on the host, so code the agent wrote does run there, and `podman-smoke.sh` uses a
+  privileged container inside Docker's virtual machine. The sandbox's network access is accepted: the
+  repository is public, and the sandbox holds no credentials. Pattern rules for shell commands are
   best-effort. Risk K18 records this.
-- **Work on `main` is not separated.** Each commit goes directly to local `main`, so a task that
-  passes its checks but is wrong needs a later fix or a revert. Nothing leaves the computer until the
-  owner pushes. The owner should not edit this working tree during a run.
+- **Nothing stands between a commit and the public.** Each verified commit is published at once, with
+  no person reading it first, so a task that passes its checks but is wrong needs a later fix or a
+  revert, and stays visible in the history. The owner should not edit this working tree during a
+  run, and no other session should push to `main`, because either one stops it.
 - **Rule 17 of `CLAUDE.md`** (no paid services) applies to what the project depends on. Claude Code
   needs the owner's own plan and is not a dependency: the product, its build, its tests and its CI
   do not use it, and contributors do not need it. Rule 11 is unchanged for the same reason. The agent

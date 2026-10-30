@@ -57,7 +57,8 @@
       "dependsOn": [],
       "acceptanceCriteria": [
         "`./scripts/ralph/check.sh stack` passes: all images build, including the transcription and llama.cpp checks of the image build, and `/api/v1/health` reports `status: ok` for database, broker and worker",
-        "A full job completes on the isolated stack through the API at 127.0.0.1:18002: a generated MP4 with speech is uploaded, processed with the baked model, and exported, and the downloaded ZIP has the expected layout",
+        "`backend/scripts/full_job_check.py` (standard library and FFmpeg only, with an `--api` option) generates an MP4 with speech, uploads it, processes it with the baked model, exports it and checks the layout of the downloaded ZIP; it prints numbers, never transcript text",
+        "`./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1` passes on the isolated stack, and a unit test covers the script",
         "Every external image has an exact tag and digest, or a recorded reason (`backend/tests/test_container_images.py` passes)",
         "docs/STATUS.md no longer says \"build not yet run\" for the pinned images, the transcription stack check and the backend lock, and records the date; ADR 0017 and risk K9 say what was verified",
         "P08.3 is checked in docs/ROADMAP.md with dated evidence that holds the real output"
@@ -71,7 +72,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "Setup baseline on 2026-10-30: the stack built and reported ok through `check.sh stack` in about 2.5 minutes, with the tiny model. The full job was not run. Generate the media in a script or test; never use a real recording."
+      "notes": "Setup baseline on 2026-10-30: the stack built and reported ok through `check.sh stack` in about 2.5 minutes, with the tiny model. The full job was not run. The sandbox cannot reach the ports published on the host, which is why the script runs inside the api container. Never use a real recording."
     },
     {
       "id": "P06.1",
@@ -129,7 +130,7 @@
       ],
       "acceptanceCriteria": [
         "`apps/web/nginx.conf` sends `microphone=(self)` wherever it sends Permissions-Policy, and camera and geolocation stay denied",
-        "Through the isolated stack, `curl -sI http://127.0.0.1:14200/` run in the sandbox or an equivalent test shows the new header on the app page",
+        "On the isolated stack, `./scripts/ralph/stack.sh exec -T web wget -S -O /dev/null http://127.0.0.1/` shows the new header on the app page",
         "A browser test against the nginx configuration, or the same headers, shows `getUserMedia` for the microphone is no longer refused by the policy; it must fail with the old header",
         "Risk K14 in docs/RISKS.md says it is fixed and how it was checked; CHANGELOG.md has the entry; P05.7 is checked with dated evidence"
       ],
@@ -607,26 +608,37 @@
     },
     {
       "id": "P08.12",
-      "title": "Owner smoke test of start-podman.sh on a real computer",
-      "description": "Podman is not installed here, and the check needs the owner's computer.",
+      "title": "Prove start-podman.sh with real Podman inside a container",
+      "description": "Podman cannot be installed on the owner's computer, so the job runs real Podman in a privileged Docker container. Record the result, and fix what it finds.",
       "roadmapItems": [
         "P08.12"
       ],
       "closes": [
         "P08.12"
       ],
-      "owner": true,
+      "owner": false,
       "userVisible": false,
-      "areas": [],
+      "areas": [
+        "desktop"
+      ],
       "dependsOn": [
-        "P08.11"
+        "P08.11",
+        "P08.3"
       ],
       "acceptanceCriteria": [
-        "The owner runs `./start-podman.sh` without a `.env`, records the generated values next to the real CPU, memory and free disk, confirms the window opens after health, transcribes a real video, then repeats the start with Docker",
-        "Results with `podman version`, `podman compose version`, `docker version` and `node --version` are in docs/STATUS.md with the date"
+        "`./scripts/ralph/podman-smoke.sh` passes: `./start-podman.sh --headless` without a `.env` generates one, the stack becomes healthy under Podman, and a full job with a generated video passes",
+        "The versions and the generated values are in docs/STATUS.md with the date",
+        "docs/ROADMAP.md lists `podman machine` on Windows as not verified, among the candidates, and docs/REQUIREMENTS.md and README.md say the same",
+        "P08.12 is checked with dated evidence"
       ],
       "verify": [],
-      "verifyHost": [],
+      "verifyHost": [
+        "./scripts/ralph/podman-smoke.sh"
+      ],
+      "job": {
+        "command": "./scripts/ralph/podman-smoke.sh",
+        "timeoutSeconds": 5400
+      },
       "priority": 18,
       "passes": false,
       "attempts": 0,
@@ -634,7 +646,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Do not run the script yourself. If Podman itself cannot run inside this container, report blocked with the error; other tasks continue."
     },
     {
       "id": "P06.2a",
@@ -1096,7 +1108,7 @@
         "P06.3e"
       ],
       "acceptanceCriteria": [
-        "A script generates synthetic 10-minute and 60-minute projects and reports generation time and peak memory for E2B and E4B",
+        "`backend/scripts/benchmark_generation.py` runs in the api container and uses the API: it installs both models, generates synthetic 10-minute and 60-minute projects, and reports generation time and peak memory for E2B and E4B, with numbers only",
         "It applies the fixed thresholds of \"Default model rule\" in docs/LOCAL_GENERATION.md and prints whether E4B passes",
         "docs/DEVELOPMENT.md has the procedure; tests cover the report and the threshold logic with stand-ins"
       ],
@@ -1113,25 +1125,34 @@
     },
     {
       "id": "P06.5",
-      "title": "Owner benchmark of E2B and E4B on the real computer",
-      "description": "The thresholds are fixed; the measurement belongs on the owner's computer.",
+      "title": "Record the benchmark of E2B and E4B from this computer",
+      "description": "The thresholds are fixed. The runner ran the benchmark as this task's job, without an agent session; record the figures and apply the rule.",
       "roadmapItems": [
         "P06.5"
       ],
       "closes": [
         "P06.5"
       ],
-      "owner": true,
+      "owner": false,
       "userVisible": false,
-      "areas": [],
+      "areas": [
+        "backend"
+      ],
       "dependsOn": [
         "P06.5a"
       ],
       "acceptanceCriteria": [
-        "The owner runs the benchmark for 10 and 60 minutes with E2B and E4B; the results are in docs/STATUS.md and apply the default model rule"
+        "The figures of the job for 10 and 60 minutes with E2B and E4B are in docs/STATUS.md and docs/LOCAL_GENERATION.md, with the computer's CPU and Docker memory",
+        "The default model rule of docs/LOCAL_GENERATION.md is applied exactly: the default changes to E4B only if both thresholds pass",
+        "Assumption A2 and risks K3 and K5 in docs/RISKS.md are updated from the measurement",
+        "P06.5 is checked with dated evidence"
       ],
       "verify": [],
       "verifyHost": [],
+      "job": {
+        "command": "./scripts/ralph/stack.sh up --build --detach --wait && ./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py; status=$?; ./scripts/ralph/stack.sh down --volumes --remove-orphans; exit $status",
+        "timeoutSeconds": 28800
+      },
       "priority": 33,
       "passes": false,
       "attempts": 0,
@@ -1139,7 +1160,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+      "notes": "The job downloads about 8.6 GB and takes hours. When it failed, fix the cause: the next attempt runs it again. When the output cannot be measured on this computer, report blocked."
     },
     {
       "id": "P06.6a",
@@ -1379,23 +1400,37 @@
     },
     {
       "id": "P07.2",
-      "title": "Owner smoke test of the desktop window on the Docker stack",
-      "description": "Everything but this check is done; it needs a display on the owner's computer.",
+      "title": "Prove the desktop window on the real stack with the smoke script",
+      "description": "The job runs the real start.sh, launcher and Electron on the real images and reads the window titles. Record the result, and fix what it finds.",
       "roadmapItems": [
         "P07.2"
       ],
       "closes": [
         "P07.2"
       ],
-      "owner": true,
+      "owner": false,
       "userVisible": false,
-      "areas": [],
-      "dependsOn": [],
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P07.4b",
+        "P08.10b"
+      ],
       "acceptanceCriteria": [
-        "The owner follows \"Manual smoke test on Docker\" in docs/DEVELOPMENT.md and records each step with the versions"
+        "`./scripts/ralph/desktop-smoke.sh` passes every step: first launch installs Electron and opens one window after health, closing the window leaves the stack running, stopping the stack closes the window, a second launch installs nothing, and `--headless` opens no window",
+        "A step that fails on Windows is fixed in `start.sh` or `desktop/`, with a test; `desktop/test/start-script.test.cjs` still passes",
+        "docs/DEVELOPMENT.md replaces the manual procedure with this script, and names what it does not cover: delivery of `Ctrl+C` from a real terminal, and macOS and Linux desktops",
+        "P07.2 is checked with dated evidence that holds the versions"
       ],
       "verify": [],
-      "verifyHost": [],
+      "verifyHost": [
+        "./scripts/ralph/desktop-smoke.sh"
+      ],
+      "job": {
+        "command": "./scripts/ralph/desktop-smoke.sh",
+        "timeoutSeconds": 3600
+      },
       "priority": 41,
       "passes": false,
       "attempts": 0,
@@ -1403,7 +1438,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Do not run the script yourself: the runner ran it as the job and repeats it after your change. The script is not yours to edit; report blocked if it is wrong."
     },
     {
       "id": "P07-CHECK",
@@ -1431,7 +1466,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+      "notes": "Only a person can do this: run `node scripts/ralph/owner-check.cjs` once P07.4b has passed. One guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes."
     },
     {
       "id": "P05.6",
@@ -1461,7 +1496,7 @@
       "blockedReason": "",
       "lastFailure": "",
       "verifiedAt": null,
-      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+      "notes": "Only a person can do this: run `node scripts/ralph/owner-check.cjs` once P07.4b has passed. One guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes."
     },
     {
       "id": "P10.2",
@@ -1492,7 +1527,8 @@
       "acceptanceCriteria": [
         "Every area passes together, and the opt-in full-stack journey `npm run e2e:fullstack` passes against the isolated stack",
         "README.md no longer lists delivered work as planned, and docs/STATUS.md, docs/ROADMAP.md, docs/UI.md, docs/RECORDING.md and docs/LOCAL_GENERATION.md agree with the code",
-        "Every remaining open roadmap item is an owner check, listed with what the owner must do",
+        "Every remaining open roadmap item is listed with what must happen, and the owner session is named for P05.6",
+        "The whole diff since the tag `ralph-start-*` of the first run is reviewed for broken rules of `CLAUDE.md`, telemetry, remote services and weakened tests, and every finding is fixed or named in the evidence",
         "P10.2 is checked with dated evidence"
       ],
       "verify": [],

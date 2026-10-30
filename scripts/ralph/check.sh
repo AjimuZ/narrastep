@@ -23,9 +23,28 @@ run_step() {
   [ "$status" -eq 0 ] || exit "$status"
 }
 
+# What only an overloaded computer causes, never a wrong line of code: out of memory, a test worker
+# that could not start, or a dev server that died. Other programs share Docker's memory here.
+RESOURCE_FAILURE='ENOMEM|Cannot allocate memory|Timeout starting forks runner|ERR_CONNECTION_REFUSED|ERR_CONNECTION_RESET'
+RESOURCE_RETRIES=2
+
+# Runs a command in the sandbox and repeats it, after a pause, only when it failed for lack of
+# resources, so that this does not cost the task an attempt. Any other failure counts at once.
 in_sandbox() {
-  local label="$1"
-  run_step "$label" "$SANDBOX" "$2"
+  local label="$1" command="$2" started=$SECONDS status tries=0 output
+  output="$(mktemp)"
+  echo "check: $label ..."
+  while :; do
+    "$SANDBOX" "$command" 2>&1 | tee "$output"
+    status="${PIPESTATUS[0]}"
+    [ "$status" -ne 0 ] && [ "$tries" -lt "$RESOURCE_RETRIES" ] && grep -qE "$RESOURCE_FAILURE" "$output" || break
+    tries=$((tries + 1))
+    echo "check: $label ran out of resources; trying again ($tries of $RESOURCE_RETRIES)"
+    sleep "${RALPH_RESOURCE_WAIT_SECONDS:-60}"
+  done
+  rm -f "$output"
+  echo "check: $label -> $([ "$status" -eq 0 ] && echo passed || echo "FAILED ($status)") in $((SECONDS - started)) s"
+  [ "$status" -eq 0 ] || exit "$status"
 }
 
 check_stack() {
@@ -85,7 +104,7 @@ for area in "$@"; do
       ;;
     e2e)
       in_sandbox "e2e: browser contract and accessibility" \
-        "cd apps/web && npx playwright install chromium && npm run --silent e2e -- --reporter=dot"
+        "cd apps/web && npx playwright install chromium && npm run --silent e2e -- --reporter=dot --workers=4"
       ;;
     desktop)
       in_sandbox "desktop: format" \
@@ -94,7 +113,7 @@ for area in "$@"; do
       ;;
     ralph)
       in_sandbox "ralph: runner tests and task list" \
-        "node --test 'scripts/ralph/test/*.test.cjs' && node scripts/ralph/prd.cjs validate"
+        "node --test 'scripts/ralph/test/*.test.cjs' && node scripts/ralph/prd.cjs validate --committed"
       ;;
     compose)
       run_step "compose: configuration renders" "$STACK" config --quiet

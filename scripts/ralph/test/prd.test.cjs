@@ -213,3 +213,33 @@ test('text quoted by a session or the end of a killed one is not taken for a lim
   assert.equal(classifyRun({ result: 'Crashed', is_error: true }, 1, 'the code says rate limit'), 'error');
   assert.equal(classifyRun({ missing: true }, 124, 'rate limit in the last output'), 'error');
 });
+
+test('every task runs the base areas and its own, and the real stack at every fifth', () => {
+  const prd = prdOf(story('A', 1, { areas: ['stack', 'docs'] }), story('B', 2));
+  assert.deepEqual(prdModule.verificationAreas(prd, 'B', ['docs', 'web']), ['docs', 'web']);
+  assert.deepEqual(prdModule.verificationAreas(prd, 'A', ['docs', 'web']), ['docs', 'web', 'stack']);
+  const four = prdOf(...['A', 'B', 'C', 'D'].map((id, index) => story(id, index + 1, { passes: true })), story('E', 5));
+  assert.ok(prdModule.verificationAreas(four, 'E', ['docs']).includes('stack'));
+  assert.ok(!prdModule.verificationAreas(four, 'E', ['docs'], 0).includes('stack'));
+});
+
+test('a Compose configuration may not reach the host', () => {
+  const { composeProblems } = prdModule;
+  const allowed = { type: 'bind', source: 'C:\\project\\data\\models-import', target: '/import', read_only: true };
+  assert.deepEqual(composeProblems({ services: { api: { volumes: [{ type: 'volume', source: 'x' }, allowed] } } }), []);
+  const problems = (service) => composeProblems({ services: { api: service } }).join();
+  assert.match(problems({ volumes: [{ ...allowed, read_only: false }] }), /must be read-only/);
+  assert.match(problems({ volumes: [{ type: 'bind', source: '/var/run/docker.sock' }] }), /Docker socket/);
+  assert.match(problems({ volumes: [{ type: 'bind', source: '/home/owner' }] }), /host folder/);
+  assert.match(problems({ privileged: true }), /privileged/);
+  assert.match(problems({ network_mode: 'host' }), /network_mode host/);
+  assert.match(problems({ cap_add: ['SYS_ADMIN'] }), /cap_add/);
+  assert.match(problems({ devices: ['/dev/sda:/dev/sda'] }), /devices/);
+});
+
+test('the GitHub repository is read from either form of remote address', () => {
+  const { githubRepository } = prdModule;
+  assert.equal(githubRepository('https://github.com/AjimuZ/narrastep.git\n'), 'AjimuZ/narrastep');
+  assert.equal(githubRepository('git@github.com:AjimuZ/narrastep.git'), 'AjimuZ/narrastep');
+  assert.equal(githubRepository('C:/temporary/remote'), null);
+});

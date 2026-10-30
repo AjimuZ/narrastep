@@ -52,8 +52,10 @@ Claude Code and every contributor working in this repository must follow these r
     coordination infrastructure.
 16. Use safe subprocess argument arrays, validate all media with FFprobe, keep user paths below
     configured roots, and never expose stack traces or sensitive transcript text in normal logs.
-17. Use only free, open-source-compatible licenses and no paid services or certificates. The
-    project is public and non-commercial. Record every new dependency in `docs/LICENSES.md`.
+17. Use only free, open-source-compatible licenses and no paid services or certificates in what the
+    project depends on. The owner's personal development tools, such as the plan behind Claude Code,
+    are not dependencies: nobody needs them to build, run or contribute. The project is public and
+    non-commercial. Record every new dependency in `docs/LICENSES.md`.
 
 ## Commits
 
@@ -63,7 +65,8 @@ Claude Code and every contributor working in this repository must follow these r
     `python .claude/skills/ajimu-conventions/scripts/check_commit_message.py .git/COMMIT_EDITMSG`.
     Never commit `.claude/` or `skills-lock.json`.
 19. Commit, push or publish only when the owner asks. Starting the runner is asking it to commit
-    verified tasks on `main`; it never pushes. Never bypass hooks or change Git configuration.
+    and push verified tasks on `main`, never with force. Never bypass hooks or change Git
+    configuration.
 
 ## Autonomous runner
 

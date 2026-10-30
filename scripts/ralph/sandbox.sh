@@ -47,6 +47,10 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     --tag "$IMAGE" \
     --file "$HOST_ROOT/scripts/ralph/checks.Dockerfile" \
     "$HOST_ROOT/scripts/ralph" >&2
+  # A version change leaves the previous image unused, and only this runner's images are touched.
+  docker image ls narrastep-ralph-checks --format '{{.Repository}}:{{.Tag}}' \
+    | { grep -v "^$IMAGE\$" || true; } \
+    | while read -r stale; do docker image rm "$stale" >/dev/null 2>&1 || true; done
 fi
 
 if [ "$1" = "--build-only" ]; then
@@ -60,6 +64,8 @@ mounts=(
   --volume "narrastep-ralph-venv:/opt/venv"
   --volume "narrastep-ralph-web-modules:/work/apps/web/node_modules"
   --volume "narrastep-ralph-desktop-modules:/work/desktop/node_modules"
+  # esbuild's cache writes fail on the Windows mount, which kills the dev server of the browser tests.
+  --volume "narrastep-ralph-web-angular:/work/apps/web/.angular"
   --volume "narrastep-ralph-cache:/cache"
 )
 # Each hidden path is mounted only when it exists, so the mount never creates it on the host.
@@ -73,6 +79,7 @@ fi
 
 # --init reaps orphaned processes: tests that wait for a stopped process would otherwise see a zombie.
 exec docker run --rm --interactive --init \
+  --label narrastep.ralph=sandbox \
   "${mounts[@]}" \
   --workdir /work \
   --env "CI=${RALPH_SANDBOX_CI:-}" \
@@ -80,5 +87,6 @@ exec docker run --rm --interactive --init \
   --env npm_config_cache=/cache/npm \
   --env PLAYWRIGHT_BROWSERS_PATH=/cache/ms-playwright \
   --env PYTHONDONTWRITEBYTECODE=1 \
+  --env VITEST_MAX_WORKERS=4 \
   "$IMAGE" \
   bash /work/scripts/ralph/sandbox-entry.sh "$1"

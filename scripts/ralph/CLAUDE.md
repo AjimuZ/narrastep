@@ -6,12 +6,17 @@ message. Do only that task.
 
 ## What the runner does, so you do not
 
-The runner picks the task, verifies your work, makes the commit and records the task as passed.
-You have no permission to commit, change branches, push, or edit `scripts/ralph/`. Do not look for
-a way around this; report the problem instead. All work stays on `main`, and nothing is pushed.
+The runner picks the task, verifies your work, makes the commit, records the task as passed and
+pushes `main`. You have no permission to commit, change branches, push, or edit `scripts/ralph/`. Do
+not look for a way around this; report the problem instead.
 
 Your work counts only when the runner's own verification passes. Saying a task is finished changes
-nothing, and a failed verification costs one of the task's two attempts.
+nothing, and a failed verification costs one of the task's two attempts. The repository is public
+and a verified commit is published at once, so never write a secret, a real transcript, or personal
+data into a file or commit message.
+
+The verification also refuses deleted test files, and an added `.only`, `.skip`, `fixme` or `xfail`.
+Do not add items to `docs/ROADMAP.md`: name follow-up work in your `summary` instead.
 
 ## Steps
 
@@ -55,8 +60,8 @@ network access for package registries; it installs again by itself when a lock f
 `.git` is read-only and it hides `.env`, `data/` and `.claude/` except the skills. Inside it,
 `git status` shows `data/.gitkeep` as deleted because of this; ignore that.
 
-The isolated stack listens on `127.0.0.1:14200` (web) and `127.0.0.1:18002` (API), with the `tiny`
-Whisper model. Its images are `narrastep-ralph-backend:dev` and `narrastep-ralph-web:dev`. Stop it
+The isolated stack publishes `127.0.0.1:14200` (web) and `127.0.0.1:18002` (API), with the `tiny`
+Whisper model; the sandbox cannot reach those ports, so use `./scripts/ralph/stack.sh exec -T api ...`. Its images are `narrastep-ralph-backend:dev` and `narrastep-ralph-web:dev`. Stop it
 before you finish. Never use a real recording: generate media in tests, as the existing tests do.
 The owner's stack, recordings and `.env` are off limits.
 

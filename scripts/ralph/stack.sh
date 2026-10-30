@@ -22,9 +22,20 @@ for argument in "$@"; do
 done
 
 cd "$ROOT"
-exec docker compose \
-  --project-name narrastep-ralph \
-  --env-file scripts/ralph/stack.env \
-  --file docker-compose.yml \
-  --file scripts/ralph/stack.override.yml \
-  "$@"
+compose=(
+  docker compose
+  --project-name narrastep-ralph
+  --env-file scripts/ralph/stack.env
+  --file docker-compose.yml
+  --file scripts/ralph/stack.override.yml
+)
+
+# The agent can edit the Compose file, so what would start is checked first: no host folders except
+# the read-only model import, no privileged containers and no Docker socket.
+case "${1:-}" in
+  up | run | create)
+    "${compose[@]}" config --format json | node "$SCRIPT_DIR/prd.cjs" compose-check || exit 2
+    ;;
+esac
+
+exec "${compose[@]}" "$@"

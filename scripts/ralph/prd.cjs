@@ -11,6 +11,16 @@ const KEPT_PROGRESS_ENTRIES = 12;
 const BRIEF_PROGRESS_ENTRIES = 3;
 const MAX_FAILURE_CHARS = 4000;
 const AREAS = new Set(['docs', 'backend', 'web', 'e2e', 'desktop', 'ralph', 'compose', 'stack']);
+// Every task runs these, which take about four minutes and use no agent session. A change can
+// break another part, and with the push there is no later review to catch it.
+const BASE_AREAS = ['docs', 'backend', 'web', 'e2e', 'desktop', 'ralph', 'compose'];
+const STACK_EVERY_TASKS = 5;
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const MAX_JOB_OUTPUT_CHARS = 6000;
+const CI_CACHE_MILLISECONDS = 5 * 60 * 1000;
+const TEST_FILE = /(^|\/)tests?\/|(^|\/)e2e\/|\.(spec|test)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$/;
+// `pytest.mark.skipif` stays allowed: the opt-in tests depend on it.
+const WEAKENED_TEST = /\b(?:it|test|describe)(?:\.\w+)*\.(?:only|skip|fixme)\s*\(|\bx(?:it|describe)\s*\(|pytest\.mark\.(?:skip|xfail)\b|@unittest\.skip|\bpytest\.xfail\s*\(/;
 
 // Same words as the local commit-message check, which is absent from a fresh clone.
 const FORBIDDEN_COMMIT_WORDS =
@@ -97,6 +107,9 @@ function validatePrd(prd) {
     if (!Array.isArray(story.areas)) errors.push(`${story.id}: areas is not a list`);
     for (const area of story.areas ?? []) {
       if (!AREAS.has(area)) errors.push(`${story.id}: unknown area '${area}'`);
+    }
+    if (story.job && (typeof story.job.command !== 'string' || !Number.isInteger(story.job.timeoutSeconds))) {
+      errors.push(`${story.id}: a job needs a command and timeoutSeconds`);
     }
   }
   for (const story of prd.userStories) {
@@ -245,8 +258,38 @@ function appendProgress(paths, entry, learnings = []) {
   fs.writeFileSync(paths.progress, text);
 }
 
+/**
+ * Returns the areas a task must pass: the base areas, its own, and the real stack at every fifth
+ * passed task. `everyTasks` 0 turns that last rule off.
+ */
+function verificationAreas(prd, id, base = BASE_AREAS, everyTasks = STACK_EVERY_TASKS) {
+  const passed = prd.userStories.filter((story) => story.passes).length;
+  const areas = [...base, ...(findStory(prd, id).areas ?? [])];
+  if (everyTasks > 0 && (passed + 1) % everyTasks === 0) areas.push('stack');
+  return [...new Set(areas)];
+}
+
+/** Returns the settings-aware areas of a task; the tests narrow them through the environment. */
+function areasFromEnvironment(prd, id) {
+  const base = process.env.RALPH_BASE_AREAS?.split(' ').filter(Boolean) ?? BASE_AREAS;
+  const every = process.env.RALPH_STACK_EVERY === undefined ? STACK_EVERY_TASKS : Number(process.env.RALPH_STACK_EVERY);
+  return verificationAreas(prd, id, base, every);
+}
+
+/** Returns the stored output of a task's job, or null when it has none or the job has not run. */
+function jobReport(paths, id) {
+  const state = path.dirname(paths.result);
+  try {
+    const status = fs.readFileSync(path.join(state, `job-${id}.status`), 'utf8').trim();
+    const output = fs.readFileSync(path.join(state, `job-${id}.log`), 'utf8').slice(-MAX_JOB_OUTPUT_CHARS);
+    return { status, output };
+  } catch {
+    return null;
+  }
+}
+
 /** Returns the context one iteration needs for one task, and nothing about the other sessions. */
-function brief(prd, id, progressText) {
+function brief(prd, id, progressText, job = null) {
   const story = findStory(prd, id);
   const state = (dependency) => `${dependency} (${findStory(prd, dependency).passes ? 'passed' : 'open'})`;
   const lines = [
@@ -257,7 +300,7 @@ function brief(prd, id, progressText) {
     `Roadmap items: ${(story.roadmapItems ?? []).join(', ') || 'none'}.`,
     `Tick in docs/ROADMAP.md, with dated evidence: ${(story.closes ?? []).join(', ') || 'none; record progress under the item, leave it unchecked'}.`,
     `Dependencies: ${(story.dependsOn ?? []).map(state).join(', ') || 'none'}.`,
-    `Areas checked by the runner: ${['docs', ...(story.areas ?? [])].join(', ')}.`,
+    `Areas checked by the runner: ${areasFromEnvironment(prd, id).join(', ')}.`,
     `User-visible, so CHANGELOG.md must change: ${story.userVisible ? 'yes' : 'no'}.`,
     '',
     '## Acceptance criteria',
@@ -268,6 +311,16 @@ function brief(prd, id, progressText) {
     lines.push('', '## Extra commands the runner will run', ...verifications.map((command) => `- \`${command}\``));
   }
   if (story.notes) lines.push('', '## Technical notes', story.notes);
+  if (job) {
+    lines.push(
+      '',
+      `## Output of this task's job (exit status ${job.status})`,
+      'The runner already ran it, so do not run it again. Record what it measured; when it failed, find out why and fix it.',
+      '```text',
+      job.output,
+      '```',
+    );
+  }
   if (story.attempts > 0) {
     lines.push(
       '',
@@ -366,8 +419,37 @@ function hasRoadmapEvidence(roadmapText, item) {
 }
 
 /**
+ * Returns the ways a change weakens the tests: test files deleted, or `.only`, `.skip`, `fixme` or
+ * `xfail` added. A task whose purpose is to move tests sets `allowTestChanges`.
+ */
+function weakenedTests(root, changed) {
+  const problems = [];
+  const deleted = new Set(git(root, 'ls-files', '--deleted').split('\n').filter(Boolean));
+  for (const file of deleted) {
+    if (TEST_FILE.test(file)) problems.push(`${file}: a test file must not be deleted`);
+  }
+  for (const file of changed.filter((candidate) => TEST_FILE.test(candidate) && !deleted.has(candidate))) {
+    let added;
+    if (git(root, 'ls-files', '--', file).trim()) {
+      const diff = git(root, 'diff', '--unified=0', 'HEAD', '--', file);
+      added = diff.split('\n').filter((line) => line.startsWith('+') && !line.startsWith('+++'));
+    } else {
+      // Untracked, so every line is new. A folder or unreadable path has nothing to check.
+      try {
+        added = fs.readFileSync(path.join(root, file), 'utf8').split('\n');
+      } catch {
+        added = [];
+      }
+    }
+    const match = added.find((line) => WEAKENED_TEST.test(line));
+    if (match) problems.push(`${file}: a test must not be skipped or narrowed: ${match.trim().slice(0, 100)}`);
+  }
+  return problems;
+}
+
+/**
  * Checks everything about a finished task that needs no test run: scope of the changed files,
- * forbidden paths, secrets, required documents, roadmap ticks and the commit message.
+ * forbidden paths, secrets, weakened tests, required documents, roadmap ticks and the commit message.
  * Returns the problems found; an empty list means the checks may run.
  */
 function preflight(root, prd, id, result) {
@@ -383,6 +465,7 @@ function preflight(root, prd, id, result) {
     if (file.startsWith('scripts/ralph/')) problems.push(`${file}: the runner's own files are not part of a task`);
     for (const pattern of secretsIn(path.join(root, file))) problems.push(`${file}: looks like a secret (${pattern})`);
   }
+  if (!story.allowTestChanges) problems.push(...weakenedTests(root, changed));
   for (const document of ['docs/ROADMAP.md', 'docs/STATUS.md']) {
     if (!changed.includes(document)) problems.push(`${document} must be updated in the same change`);
   }
@@ -398,12 +481,117 @@ function preflight(root, prd, id, result) {
   for (const item of closedElsewhere) {
     if (items.get(item) === true) problems.push(`docs/ROADMAP.md: ${item} is checked, but a later task closes it`);
   }
+  // A new open item with no task would stop the next start of the run.
+  const known = new Set(prd.userStories.flatMap((other) => [...(other.roadmapItems ?? []), ...(other.closes ?? [])]));
+  for (const [item, checked] of items) {
+    if (!checked && !known.has(item)) problems.push(`docs/ROADMAP.md: ${item} is new; report it in the summary instead of adding a roadmap item`);
+  }
   try {
     git(root, 'diff', '--check', 'HEAD');
   } catch (error) {
     problems.push(`git diff --check found whitespace errors:\n${error.stdout}`);
   }
   return problems;
+}
+
+/**
+ * Checks the commits about to be published, because the repository is public: every commit in the
+ * range, not only its end result, since history keeps what a later commit removed.
+ * Returns the problems found. A missing `baseRef` means nothing is published yet: all of HEAD counts.
+ */
+function prepushProblems(root, baseRef) {
+  let range = 'HEAD';
+  try {
+    git(root, 'rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`);
+    range = `${baseRef}..HEAD`;
+  } catch {
+    range = 'HEAD';
+  }
+  const problems = [];
+  const paths = git(root, 'log', '--format=', '--name-only', '--diff-filter=d', range).split('\n').filter(Boolean);
+  for (const file of new Set(paths)) {
+    if (FORBIDDEN_PATHS.some((pattern) => pattern.test(file))) problems.push(`${file}: must not be published`);
+  }
+  const patch = git(root, 'log', '--format=', '--no-color', '-p', range);
+  for (const line of patch.split('\n')) {
+    if (!line.startsWith('+') || line.startsWith('+++')) continue;
+    for (const pattern of SECRET_PATTERNS) {
+      if (pattern.test(line)) problems.push(`an added line looks like a secret (${pattern})`);
+    }
+  }
+  const messages = git(root, 'log', '--format=%B', range);
+  const forbidden = messages.match(FORBIDDEN_COMMIT_WORDS);
+  if (forbidden) problems.push(`a commit message has the reference "${forbidden[0]}"`);
+  return [...new Set(problems)];
+}
+
+/**
+ * Returns what a rendered Compose configuration must not do, because the agent can edit that file:
+ * privileged containers, host namespaces, added capabilities, the Docker socket, and host folders
+ * other than the read-only model import.
+ */
+function composeProblems(config) {
+  const problems = [];
+  for (const [name, service] of Object.entries(config.services ?? {})) {
+    if (service.privileged) problems.push(`${name}: privileged is refused`);
+    for (const key of ['pid', 'ipc', 'uts', 'userns_mode', 'network_mode']) {
+      if (service[key] === 'host') problems.push(`${name}: ${key} host is refused`);
+    }
+    if ((service.cap_add ?? []).length > 0) problems.push(`${name}: cap_add is refused`);
+    if ((service.devices ?? []).length > 0) problems.push(`${name}: devices are refused`);
+    for (const volume of service.volumes ?? []) {
+      if (volume.type !== 'bind') continue;
+      const source = String(volume.source).replace(/\\/g, '/');
+      if (source.includes('docker.sock')) problems.push(`${name}: the Docker socket is refused`);
+      else if (!source.endsWith('/data/models-import')) problems.push(`${name}: the host folder ${source} is refused`);
+      else if (volume.read_only !== true) problems.push(`${name}: the model import folder must be read-only`);
+    }
+  }
+  return problems;
+}
+
+/** Returns "owner/name" of a GitHub remote URL, or null for any other remote. */
+function githubRepository(url) {
+  const match = String(url).trim().match(/github\.com[:/]([^/\s]+\/[^/\s]+?)(?:\.git)?$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Prints the CI result of the pushed commit from GitHub's public API, without a login. Reused from
+ * a short-lived cache, as the anonymous limit is 60 requests an hour. Any failure prints "unknown";
+ * this is information only and decides nothing.
+ */
+async function printCiStatus(root, paths, branch) {
+  const cacheFile = path.join(path.dirname(paths.result), 'ci-status.json');
+  let label = 'unknown';
+  let sha = '';
+  try {
+    sha = git(root, 'rev-parse', `origin/${branch}`).trim();
+    const repository = githubRepository(git(root, 'remote', 'get-url', 'origin'));
+    let cached = null;
+    try {
+      cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+    } catch {
+      cached = null;
+    }
+    if (cached?.sha === sha && Date.now() - cached.at < CI_CACHE_MILLISECONDS) {
+      label = cached.label;
+    } else if (repository) {
+      const response = await fetch(`https://api.github.com/repos/${repository}/actions/runs?head_sha=${sha}&per_page=1`, {
+        headers: { 'User-Agent': 'narrastep-ralph', Accept: 'application/vnd.github+json' },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        const run = (await response.json()).workflow_runs?.[0];
+        label = run ? (run.conclusion ?? run.status) : 'no run yet';
+        fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+        fs.writeFileSync(cacheFile, JSON.stringify({ sha, label, at: Date.now() }));
+      }
+    }
+  } catch {
+    label = 'unknown';
+  }
+  process.stdout.write(`CI on ${sha.slice(0, 7) || 'origin'}: ${label}\n`);
 }
 
 /** Prints stream-json output readably, and returns the final result event when one arrived. */
@@ -524,10 +712,29 @@ function main(argv, root) {
       return !story.passes && !story.blocked && !story.owner ? 0 : 1;
     }
     case 'brief':
-      process.stdout.write(brief(prd, args[0], fs.readFileSync(paths.progress, 'utf8')));
+      process.stdout.write(brief(prd, args[0], fs.readFileSync(paths.progress, 'utf8'), jobReport(paths, args[0])));
       return 0;
     case 'areas':
-      out(['docs', ...new Set(findStory(prd, args[0]).areas)].join(' '));
+      out(areasFromEnvironment(prd, args[0]).join(' '));
+      return 0;
+    case 'job-command':
+      out(findStory(prd, args[0]).job?.command ?? '');
+      return 0;
+    case 'job-timeout':
+      out(String(findStory(prd, args[0]).job?.timeoutSeconds ?? 0));
+      return 0;
+    case 'prepush': {
+      const problems = prepushProblems(root, args[0]);
+      problems.forEach((problem) => out(`prepush: ${problem}`));
+      return problems.length === 0 ? 0 : 1;
+    }
+    case 'compose-check': {
+      const problems = composeProblems(JSON.parse(fs.readFileSync(0, 'utf8')));
+      problems.forEach((problem) => process.stderr.write(`stack: ${problem}\n`));
+      return problems.length === 0 ? 0 : 1;
+    }
+    case 'ci-status':
+      printCiStatus(root, paths, prd.branchName);
       return 0;
     case 'verify-commands': {
       const story = findStory(prd, args[0]);
@@ -632,10 +839,13 @@ module.exports = {
   classifyRun,
   codebasePatterns,
   commitMessageProblems,
+  composeProblems,
   finalCommitMessage,
+  githubRepository,
   hasRoadmapEvidence,
   nextStep,
   preflight,
+  prepushProblems,
   progressEntries,
   recordBlocked,
   recordFailure,
@@ -646,4 +856,5 @@ module.exports = {
   unblock,
   validatePrd,
   validateRoadmapCoverage,
+  verificationAreas,
 };

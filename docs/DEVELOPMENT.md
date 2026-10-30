@@ -509,7 +509,7 @@ retained as Playwright artifacts for diagnosis and documentation review.
 ## Autonomous runner
 
 `scripts/ralph/` can complete roadmap tasks without supervision, one fresh Claude Code process per
-task, and commits each verified task on `main`. It never pushes. Its [guide](../scripts/ralph/README.md)
+task, and commits and pushes each verified task on `main`. Its [guide](../scripts/ralph/README.md)
 has every command, and [ADR 0019](decisions/0019-autonomous-development-runner.md) the limits. Two of
 its scripts are useful on their own, because they need nothing on the computer except Docker:
 

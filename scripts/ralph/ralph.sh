@@ -4,10 +4,11 @@
 #
 # Usage: ./scripts/ralph/ralph.sh [--tool claude] [--resume] [--dry-run] [max_iterations]
 #
-# The runner, not the agent, picks the task, verifies the result, commits and sets `passes`.
+# The runner, not the agent, picks the task, verifies the result, commits, pushes and sets `passes`.
 # Exit status: 0 every task an agent can do passed, 1 iteration limit reached, 2 not started,
-# 3 stopped by repeated session failures, 4 repository changed behind the runner's back,
-# 5 only blocked or owner tasks remain, 6 stopped on request.
+# 3 stopped by a lasting usage limit or repeated session failures, 4 repository changed behind the
+# runner's back, 5 only blocked or owner tasks remain, 6 stopped on request, 7 origin has work this
+# branch lacks, 8 a commit waiting to be pushed looks unsafe to publish.
 
 set -uo pipefail
 
@@ -28,9 +29,15 @@ MAX_ITERATIONS=30
 RESUME=0
 DRY_RUN=0
 TIMEOUT_SECONDS="${RALPH_ITERATION_TIMEOUT_SECONDS:-5400}"
+VERIFY_TIMEOUT_SECONDS="${RALPH_VERIFY_TIMEOUT_SECONDS:-3600}"
+# 30 minutes 336 times: a weekly limit also passes by itself, and waiting costs nothing.
 LIMIT_WAIT_SECONDS="${RALPH_LIMIT_WAIT_SECONDS:-1800}"
-LIMIT_MAX_WAITS="${RALPH_LIMIT_MAX_WAITS:-12}"
-MAX_SESSION_FAILURES=2
+LIMIT_MAX_WAITS="${RALPH_LIMIT_MAX_WAITS:-336}"
+# One hour in all: enough for a network outage, and a lost login still ends the run.
+SESSION_WAIT_SECONDS="${RALPH_SESSION_WAIT_SECONDS:-600}"
+MAX_SESSION_FAILURES=6
+MIN_FREE_DISK_GB="${RALPH_MIN_FREE_DISK_GB:-20}"
+USE_DOCKER="${RALPH_DOCKER:-1}"
 VERIFY="${RALPH_VERIFY:-$SCRIPT_DIR/verify.sh}"
 # What the agent must leave alone, apart from the state files that the runner itself changes.
 RUNNER_OWN_FILES=(scripts/ralph ':(exclude)scripts/ralph/prd.json' ':(exclude)scripts/ralph/progress.txt' ':(exclude)scripts/ralph/archive' ':(exclude)scripts/ralph/.state')
@@ -52,7 +59,7 @@ while [ "$#" -gt 0 ]; do
     --tool=claude) shift ;;
     --resume) RESUME=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
-    -h | --help) sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)
       [[ "$1" =~ ^[0-9]+$ ]] || die "unknown argument '$1'"
       MAX_ITERATIONS="$1"
@@ -78,6 +85,14 @@ find_claude() {
   echo "$found"
 }
 
+# Prints how many commits origin has that this branch lacks. Offline counts as none, because a
+# network problem must not stop local work.
+commits_behind_origin() {
+  git -C "$ROOT" remote get-url origin >/dev/null 2>&1 || { echo 0; return 0; }
+  GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git -C "$ROOT" fetch --quiet origin "$BRANCH" 2>/dev/null || { echo 0; return 0; }
+  git -C "$ROOT" rev-list --count "HEAD..FETCH_HEAD" 2>/dev/null || echo 0
+}
+
 # Fails unless the repository, the tools and the task list allow a run.
 preflight() {
   command -v node >/dev/null 2>&1 || die "node is required (the desktop window needs it too)"
@@ -85,21 +100,26 @@ preflight() {
   [ -n "${CLAUDECODE:-}" ] && [ -z "${RALPH_ALLOW_NESTED:-}" ] && \
     die "this is a Claude Code session; start the runner from a separate terminal"
   CLAUDE_BIN="$(find_claude)" || die "Claude Code not found; set RALPH_CLAUDE_BIN to its executable"
+  "$CLAUDE_BIN" auth status 2>/dev/null | grep -q '"loggedIn": *true' || die "Claude Code is not logged in; run its login first"
   "${PRD[@]}" validate --committed || die "the task list is not valid"
 
-  local wanted current
-  wanted="$("${PRD[@]}" branch | tr -d '\r')"
+  local current free_kb
+  BRANCH="$("${PRD[@]}" branch | tr -d '\r')"
   current="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
-  [ "$current" = "$wanted" ] || die "the runner works on '$wanted', but '$current' is checked out"
+  [ "$current" = "$BRANCH" ] || die "the runner works on '$BRANCH', but '$current' is checked out"
   # `git add --all` would otherwise commit the logs, and the reports would look like changes.
   git -C "$ROOT" check-ignore --quiet scripts/ralph/.state/probe || die "scripts/ralph/.state/ must be in .gitignore"
 
-  # A roadmap behind the remote would make the agent redo delivered work. Offline is not an error.
-  if git -C "$ROOT" remote get-url origin >/dev/null 2>&1 && git -C "$ROOT" fetch --quiet origin "$wanted" 2>/dev/null; then
-    local behind
-    behind="$(git -C "$ROOT" rev-list --count "HEAD..FETCH_HEAD" 2>/dev/null || echo 0)"
-    [ "$behind" = "0" ] || die "'$wanted' is $behind commit(s) behind origin; integrate them first"
+  if [ "$USE_DOCKER" = "1" ]; then
+    docker info >/dev/null 2>&1 || die "Docker is not running; start Docker Desktop first"
   fi
+  free_kb="$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')"
+  [ "${free_kb:-0}" -ge "$((MIN_FREE_DISK_GB * 1024 * 1024))" ] || die "less than $MIN_FREE_DISK_GB GB of disk is free"
+
+  # A roadmap behind the remote would make the agent redo delivered work.
+  local behind
+  behind="$(commits_behind_origin)"
+  [ "$behind" = "0" ] || die "'$BRANCH' is $behind commit(s) behind origin; integrate them first"
 
   if [ -n "$(git -C "$ROOT" status --porcelain)" ] && [ "$RESUME" -eq 0 ]; then
     die "the working tree has changes; commit them, or use --resume to continue an interrupted task"
@@ -113,9 +133,61 @@ preflight() {
   fi
 }
 
-# Starts one agent process for the task, with a clean context and limited permissions.
+# Removes what an interrupted session or check may have left running: a killed `docker run` client
+# does not stop its container. Touches only this runner's labelled containers and Compose project.
+clean_up_containers() {
+  [ "$USE_DOCKER" = "1" ] || return 0
+  local leftovers
+  leftovers="$(docker ps --quiet --filter label=narrastep.ralph=sandbox 2>/dev/null || true)"
+  # shellcheck disable=SC2086 # one argument per container ID
+  [ -n "$leftovers" ] && docker rm --force $leftovers >/dev/null 2>&1
+  "$SCRIPT_DIR/stack.sh" down --volumes --remove-orphans >/dev/null 2>&1 || true
+}
+
+# Publishes verified commits on the task branch, never with force. A network or login failure
+# keeps them for the next call. Exits with 8 for unsafe content and 7 when origin moved on.
+push_pending() {
+  [ "${RALPH_PUSH:-1}" = "1" ] || return 0
+  git -C "$ROOT" remote get-url origin >/dev/null 2>&1 || return 0
+  local pending output
+  pending="$(git -C "$ROOT" rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo unknown)"
+  [ "$pending" = "0" ] && return 0
+  if ! output="$("${PRD[@]}" prepush "origin/$BRANCH" 2>&1)"; then
+    log "not pushing: a waiting commit looks unsafe to publish"
+    log "$output"
+    exit 8
+  fi
+  if output="$(GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git -C "$ROOT" push origin "$BRANCH:$BRANCH" 2>&1)"; then
+    log "pushed $pending commit(s) to origin/$BRANCH"
+    return 0
+  fi
+  if echo "$output" | grep -qE 'rejected|non-fast-forward|fetch first'; then
+    log "origin/$BRANCH has work this branch lacks, so the push was refused; integrate it, then --resume"
+    exit 7
+  fi
+  log "push failed, keeping $pending commit(s) for the next try: $(echo "$output" | tail -n 1)"
+}
+
+# Runs the long command of a task, if it has one, before its agent starts, so that waiting for it
+# uses no agent session. A command that passed is not repeated; one that failed runs again.
+run_job() {
+  local task="$1" command seconds job_log="$STATE_DIR/job-$task.log" status_file="$STATE_DIR/job-$task.status" status
+  command="$("${PRD[@]}" job-command "$task" | tr -d '\r')"
+  [ -n "$command" ] || return 0
+  [ "$(cat "$status_file" 2>/dev/null)" = "0" ] && return 0
+  seconds="$("${PRD[@]}" job-timeout "$task" | tr -d '\r')"
+  log "$task: running its job, at most $seconds s; the output is in $job_log"
+  (cd "$ROOT" && timeout --kill-after=30 "$seconds" bash -c "$command") > "$job_log" 2>&1 < /dev/null
+  status=$?
+  echo "$status" > "$status_file"
+  log "$task: the job ended with status $status"
+}
+
+# Starts one agent process for the task, with a clean context and limited permissions. The binary is
+# looked up each time, because the extension's update can remove the one found earlier.
 run_agent() {
-  local task="$1" prompt="$2" raw_log="$3" text_log="$4" event_file="$5"
+  local task="$1" prompt="$2" raw_log="$3" text_log="$4" event_file="$5" binary
+  binary="$(find_claude)" || binary="claude-code-not-found"
   local arguments=(
     -p
     --output-format stream-json
@@ -130,7 +202,7 @@ run_agent() {
   [ -n "${RALPH_MODEL:-}" ] && arguments+=(--model "$RALPH_MODEL")
   [ -n "${RALPH_EFFORT:-}" ] && arguments+=(--effort "$RALPH_EFFORT")
 
-  (cd "$ROOT" && timeout --kill-after=30 "$TIMEOUT_SECONDS" "$CLAUDE_BIN" "${arguments[@]}" < "$prompt" 2>&1) \
+  (cd "$ROOT" && timeout --kill-after=30 "$TIMEOUT_SECONDS" "$binary" "${arguments[@]}" < "$prompt" 2>&1) \
     | tee "$raw_log" \
     | "${PRD[@]}" stream "$event_file" \
     | tee "$text_log"
@@ -167,9 +239,11 @@ record_failure() {
 # Verifies the working tree and commits it. This is the only path that sets `passes`.
 verify_and_commit() {
   local task="$1" verify_log="$2" message_file="$STATE_DIR/commit-message.txt" backup="$STATE_DIR/prd.backup.json"
-  local progress_backup="$STATE_DIR/progress.backup.txt"
+  local progress_backup="$STATE_DIR/progress.backup.txt" status=0
   log "$task: running verification, the output is in $verify_log"
-  if ! "$VERIFY" "$task" > "$verify_log" 2>&1; then
+  timeout --kill-after=30 "$VERIFY_TIMEOUT_SECONDS" "$VERIFY" "$task" > "$verify_log" 2>&1 || status=$?
+  if [ "$status" -ne 0 ]; then
+    [ "$status" -eq 124 ] && echo "verification did not finish in $VERIFY_TIMEOUT_SECONDS s" >> "$verify_log"
     # The size keeps the reason within the Windows limit for one command line.
     record_failure "$task" "Verification failed:
 $(tail -n 40 "$verify_log" | tail -c 3500)"
@@ -206,14 +280,22 @@ fi
 [ -f "$PROGRESS_FILE" ] || { echo "# Ralph Progress Log" > "$PROGRESS_FILE"; printf '\n## Codebase Patterns\n---\n' >> "$PROGRESS_FILE"; }
 rm -f "$STOP_FILE"
 echo "$$" > "$PID_FILE"
-trap 'rm -f "$PID_FILE"' EXIT
+trap 'clean_up_containers; rm -f "$PID_FILE"' EXIT
 trap 'log "interrupted; continue with --resume"; exit 6' INT TERM
 
 log "starting: Claude Code at $CLAUDE_BIN, limit $MAX_ITERATIONS iterations, resume=$RESUME"
+# A local point to return to; tags are not pushed.
+[ "$RESUME" -eq 1 ] || git -C "$ROOT" tag "ralph-start-$(date +%Y%m%d-%H%M%S)" 2>/dev/null
 session_failures=0
 iteration=0
 
 while [ "$iteration" -lt "$MAX_ITERATIONS" ]; do
+  push_pending
+  behind="$(commits_behind_origin)"
+  if [ "$behind" != "0" ]; then
+    log "origin/$BRANCH has $behind commit(s) this branch lacks; integrate them, then --resume"
+    exit 7
+  fi
   if [ -f "$STOP_FILE" ]; then
     log "stopped on request; continue with --resume"
     exit 6
@@ -248,6 +330,9 @@ while [ "$iteration" -lt "$MAX_ITERATIONS" ]; do
   log "iteration $iteration of $MAX_ITERATIONS: $task"
   echo "$task" > "$CURRENT_FILE"
   rm -f "$RESULT_FILE"
+  clean_up_containers
+  run_job "$task"
+  [ -f "$STOP_FILE" ] && { log "stopped on request; continue with --resume"; exit 6; }
 
   prompt_file="$STATE_DIR/prompt.md"
   { cat "$SCRIPT_DIR/CLAUDE.md"; echo; "${PRD[@]}" brief "$task"; } > "$prompt_file"
@@ -301,12 +386,18 @@ while [ "$iteration" -lt "$MAX_ITERATIONS" ]; do
     continue
   fi
   if [ "$kind" = "error" ] && [ ! -f "$RESULT_FILE" ]; then
-    # Not the task's fault, such as a lost login: no attempt counted, and the run stops if it repeats.
+    # Not the task's fault, such as a network outage or a lost login, and whatever the message of a
+    # usage limit may really say: no attempt or iteration is counted, and the run waits. Only
+    # failures that keep repeating end it.
     session_failures=$((session_failures + 1))
+    iteration=$((iteration - 1))
     log "the session failed (status $agent_status, failure $session_failures of $MAX_SESSION_FAILURES): see $LOG_DIR/$stamp.txt"
-    [ "$session_failures" -lt "$MAX_SESSION_FAILURES" ] && continue
-    log "stopping after repeated session failures; continue with --resume"
-    exit 3
+    if [ "$session_failures" -ge "$MAX_SESSION_FAILURES" ]; then
+      log "stopping after repeated session failures; continue with --resume"
+      exit 3
+    fi
+    sleep "$SESSION_WAIT_SECONDS"
+    continue
   fi
   session_failures=0
 
@@ -331,6 +422,7 @@ while [ "$iteration" -lt "$MAX_ITERATIONS" ]; do
   sleep "${RALPH_PAUSE_SECONDS:-2}"
 done
 
+push_pending
 log "reached the limit of $MAX_ITERATIONS iterations; continue with --resume"
 "${PRD[@]}" status
 exit 1

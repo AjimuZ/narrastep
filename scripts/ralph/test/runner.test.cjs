@@ -5,6 +5,7 @@
 const assert = require('node:assert/strict');
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { afterEach, test } = require('node:test');
@@ -56,6 +57,8 @@ function setup(tasks, agent) {
   // The docs area always runs; the real link check has nothing to look at here.
   fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
   fs.writeFileSync(path.join(root, 'scripts', 'check_docs.py'), 'print("links ok")\n');
+  fs.mkdirSync(path.join(root, 'tests'));
+  fs.writeFileSync(path.join(root, 'tests', 'existing.test.js'), "test('kept', () => {});\n");
   fs.writeFileSync(path.join(dir, 'prd.json'), JSON.stringify({ project: 'T', branchName: 'main', userStories: tasks }, null, 2));
   fs.writeFileSync(path.join(dir, 'progress.txt'), '# Ralph Progress Log\n\n## Codebase Patterns\n- Known\n---\n');
   const items = tasks.flatMap((entry) => entry.closes ?? []);
@@ -69,6 +72,11 @@ function setup(tasks, agent) {
     path.join(fake, 'claude'),
     `#!/usr/bin/env bash
 FAKE="${toShellPath(fake)}"
+if [ "$1" = "auth" ]; then
+  [ -f "$FAKE/logged-out" ] && { echo '{"loggedIn": false}'; exit 1; }
+  echo '{"loggedIn": true}'
+  exit 0
+fi
 printf '%s\\n' "$@" >> "$FAKE/arguments"
 cat > "$FAKE/last-prompt"
 count=$(( $(cat "$FAKE/count" 2>/dev/null || echo 0) + 1 ))
@@ -101,18 +109,27 @@ function run(env, args = [], extraEnv = {}) {
     cwd: env.root,
     encoding: 'utf8',
     timeout: 120000,
-    env: {
-      ...process.env,
-      CLAUDECODE: '',
-      RALPH_ALLOW_NESTED: '',
-      RALPH_CLAUDE_BIN: path.join(env.fake, 'claude'),
-      RALPH_SANDBOX: path.join(env.fake, 'sandbox'),
-      RALPH_PAUSE_SECONDS: '0',
-      RALPH_LIMIT_WAIT_SECONDS: '0',
-      ...extraEnv,
-    },
+    env: { ...runnerEnvironment(env), ...extraEnv },
   });
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
+}
+
+/** The environment of a run here: stand-ins, no Docker, no waits, and only the docs area to check. */
+function runnerEnvironment(env) {
+  return {
+    ...process.env,
+    CLAUDECODE: '',
+    RALPH_ALLOW_NESTED: '',
+    RALPH_CLAUDE_BIN: path.join(env.fake, 'claude'),
+    RALPH_SANDBOX: path.join(env.fake, 'sandbox'),
+    RALPH_PAUSE_SECONDS: '0',
+    RALPH_LIMIT_WAIT_SECONDS: '0',
+    RALPH_SESSION_WAIT_SECONDS: '0',
+    RALPH_DOCKER: '0',
+    RALPH_BASE_AREAS: 'docs',
+    RALPH_STACK_EVERY: '0',
+    RALPH_MIN_FREE_DISK_GB: '0',
+  };
 }
 
 const readPrd = (env) => JSON.parse(fs.readFileSync(path.join(env.dir, 'prd.json'), 'utf8'));
@@ -290,10 +307,265 @@ test('repeated session failures stop the run without blaming the task', () => {
   const env = setup([task('T1', 1)], 'echo "Invalid API key"; exit 1');
   const { status, output } = run(env);
   assert.equal(status, 3, output);
-  assert.equal(agentRuns(env), 2);
+  assert.equal(agentRuns(env), 6);
   const state = stateOf(env, 'T1');
   assert.equal(state.attempts ?? 0, 0);
   assert.notEqual(state.blocked, true);
+});
+
+test('a passing failure such as a network outage costs no attempt and no iteration', () => {
+  const env = setup([task('T1', 1)], `
+    if [ "$1" -lt 4 ]; then echo "getaddrinfo ENOTFOUND api"; exit 1; fi
+    ${FINISH}
+  `);
+  // A limit of 2 is reached only if the failures count as iterations, and then T1 never finishes.
+  const { status, output } = run(env, ['2']);
+  assert.equal(status, 0, output);
+  assert.equal(agentRuns(env), 4);
+  assert.equal(stateOf(env, 'T1').attempts ?? 0, 0);
+  assert.equal(stateOf(env, 'T1').passes, true);
+});
+
+test('a login that has expired refuses the start with a clear message', () => {
+  const env = setup([task('T1', 1)], FINISH);
+  fs.writeFileSync(path.join(env.fake, 'logged-out'), '');
+  const { status, output } = run(env);
+  assert.equal(status, 2);
+  assert.match(output, /not logged in/);
+  assert.equal(fs.existsSync(path.join(env.fake, 'count')), false);
+});
+
+test('a verification that hangs counts as a failed attempt', () => {
+  const env = setup([task('T1', 1, { verify: ['sleep 20'] })], FINISH);
+  const { status, output } = run(env, ['1'], { RALPH_VERIFY_TIMEOUT_SECONDS: '2' });
+  assert.equal(status, 1, output);
+  assert.equal(stateOf(env, 'T1').passes, false);
+  assert.match(stateOf(env, 'T1').lastFailure, /did not finish in 2 s/);
+});
+
+test('a run killed in the middle of an iteration continues with --resume', async () => {
+  const env = setup([task('T1', 1)], `
+    if [ "$1" -eq 1 ]; then echo partial > partial.txt; sleep 3; exit 1; fi
+    ${FINISH}
+  `);
+  const active = spawn('bash', [path.join(env.dir, 'ralph.sh')], { cwd: env.root, stdio: 'ignore', env: runnerEnvironment(env) });
+  const ended = new Promise((resolve) => active.on('close', resolve));
+  const partial = path.join(env.root, 'partial.txt');
+  for (let waited = 0; waited < 40 && !fs.existsSync(partial); waited += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  assert.ok(fs.existsSync(partial), 'the agent started');
+  active.kill('SIGKILL');
+  await ended;
+  await new Promise((resolve) => setTimeout(resolve, 3500));
+
+  const resumed = run(env, ['--resume']);
+  assert.equal(resumed.status, 0, resumed.output);
+  assert.equal(stateOf(env, 'T1').passes, true);
+  assert.equal(stateOf(env, 'T1').attempts ?? 0, 0, 'being killed costs no attempt');
+  assert.match(git(env.root, 'show', '--stat', '--format=', 'HEAD'), /partial\.txt/);
+});
+
+test('the job of a task runs before its agent, once it passed, and its output reaches the brief', () => {
+  const env = setup(
+    [task('T1', 1, { verify: ['test -f proof.txt'], job: { command: 'echo run >> .fake/job-count; echo measured 42 seconds', timeoutSeconds: 30 } })],
+    `
+    grep -q "measured 42 seconds" "$FAKE/last-prompt" && touch "$FAKE/saw-output"
+    ${FINISH}
+    if [ "$1" -eq 2 ]; then touch proof.txt; fi
+  `,
+  );
+  const { status, output } = run(env);
+  assert.equal(status, 0, output);
+  assert.equal(agentRuns(env), 2);
+  assert.ok(fs.existsSync(path.join(env.fake, 'saw-output')));
+  assert.equal(fs.readFileSync(path.join(env.fake, 'job-count'), 'utf8').trim(), 'run', 'a job that passed is not repeated');
+});
+
+test('a job that failed runs again on the next attempt and its status reaches the agent', () => {
+  const env = setup(
+    [task('T1', 1, { job: { command: 'echo run >> .fake/job-count; exit 3', timeoutSeconds: 30 } })],
+    `
+    grep -q "exit status 3" "$FAKE/last-prompt" && touch "$FAKE/saw-status"
+    ${REPORT('failed', 'Not yet')}
+  `,
+  );
+  assert.equal(run(env).status, 5);
+  assert.ok(fs.existsSync(path.join(env.fake, 'saw-status')));
+  assert.equal(fs.readFileSync(path.join(env.fake, 'job-count'), 'utf8').trim().split('\n').length, 2);
+});
+
+/** Adds a bare `origin` with the current history, and returns its path. */
+function addOrigin(env) {
+  const remote = fs.mkdtempSync(path.join(os.tmpdir(), 'ralph-remote-'));
+  temporaryRoots.push(remote);
+  git(remote, 'init', '--quiet', '--bare', '--initial-branch=main');
+  git(env.root, 'remote', 'add', 'origin', remote);
+  git(env.root, 'push', '--quiet', 'origin', 'main');
+  return remote;
+}
+
+test('each verified commit reaches origin, and tags stay local', () => {
+  const env = setup([task('T1', 1), task('T2', 2)], FINISH);
+  const remote = addOrigin(env);
+  const { status, output } = run(env);
+  assert.equal(status, 0, output);
+  assert.equal(git(remote, 'rev-parse', 'main'), git(env.root, 'rev-parse', 'HEAD'));
+  assert.equal(git(remote, 'log', '--format=%s', '-2'), 'Add feature T2\nAdd feature T1');
+  assert.match(git(env.root, 'tag', '--list'), /^ralph-start-/, 'a local point to return to');
+  assert.equal(git(remote, 'tag', '--list'), '');
+  assert.match(output, /pushed 1 commit\(s\)/);
+});
+
+test('a blocked state is published too, without the work set aside', () => {
+  const env = setup([task('T1', 1)], `echo wip > wip.txt; ${REPORT('blocked', 'Needs a decision')}`);
+  const remote = addOrigin(env);
+  assert.equal(run(env).status, 5);
+  assert.equal(git(remote, 'log', '--format=%s', '-1', 'main'), 'Record task T1 as blocked');
+  assert.doesNotMatch(git(remote, 'ls-tree', '-r', '--name-only', 'main'), /wip\.txt/);
+});
+
+test('when origin moves during a run the push is refused without force and the run stops', () => {
+  const env = setup([task('T1', 1), task('T2', 2)], `
+    ${FINISH}
+    git clone --quiet "$RALPH_TEST_REMOTE" "$FAKE/other" 2>/dev/null
+    git -C "$FAKE/other" -c user.name=Other -c user.email=o@example.invalid commit --quiet --allow-empty -m "Work from elsewhere"
+    git -C "$FAKE/other" push --quiet origin main
+  `);
+  const remote = addOrigin(env);
+  const { status, output } = run(env, [], { RALPH_TEST_REMOTE: remote });
+  assert.equal(status, 7, output);
+  assert.match(output, /integrate/);
+  assert.equal(git(remote, 'log', '--format=%s', '-1', 'main'), 'Work from elsewhere', 'origin kept its commit');
+  assert.equal(stateOf(env, 'T1').passes, true, 'the verified work stays committed locally');
+  assert.equal(agentRuns(env), 1);
+});
+
+test('an unreachable origin does not stop the work, and a later run publishes it', () => {
+  const env = setup([task('T1', 1)], FINISH);
+  const remote = addOrigin(env);
+  git(env.root, 'remote', 'set-url', 'origin', path.join(env.root, 'no-such-remote'));
+  const first = run(env);
+  assert.equal(first.status, 0, first.output);
+  assert.match(first.output, /push failed, keeping 1 commit/);
+  assert.equal(stateOf(env, 'T1').passes, true);
+  assert.notEqual(git(remote, 'rev-parse', 'main'), git(env.root, 'rev-parse', 'HEAD'));
+
+  git(env.root, 'remote', 'set-url', 'origin', remote);
+  const second = run(env);
+  assert.equal(second.status, 0, second.output);
+  assert.equal(git(remote, 'rev-parse', 'main'), git(env.root, 'rev-parse', 'HEAD'));
+});
+
+test('nothing is published when a waiting commit holds a secret, even one removed later', () => {
+  const env = setup([task('T1', 1)], FINISH);
+  const remote = addOrigin(env);
+  const before = git(remote, 'rev-parse', 'main');
+  fs.writeFileSync(path.join(env.root, 'config.txt'), `token=${'ghp_'}${'a1'.repeat(20)}\n`);
+  git(env.root, 'add', '--all');
+  git(env.root, 'commit', '--quiet', '-m', 'Add configuration');
+  fs.rmSync(path.join(env.root, 'config.txt'));
+  git(env.root, 'add', '--all');
+  git(env.root, 'commit', '--quiet', '-m', 'Remove configuration');
+  const { status, output } = run(env);
+  assert.equal(status, 8, output);
+  assert.match(output, /looks like a secret/);
+  assert.equal(git(remote, 'rev-parse', 'main'), before);
+  assert.equal(fs.existsSync(path.join(env.fake, 'count')), false, 'no agent started');
+});
+
+test('nothing is published when a waiting commit message names an authoring tool', () => {
+  const env = setup([task('T1', 1)], FINISH);
+  const remote = addOrigin(env);
+  const before = git(remote, 'rev-parse', 'main');
+  git(env.root, 'commit', '--quiet', '--allow-empty', '-m', 'Add a thing', '-m', `Co-${'Authored'}-By: someone`);
+  assert.equal(run(env).status, 8);
+  assert.equal(git(remote, 'rev-parse', 'main'), before);
+});
+
+test('the owner session records numbers only, then commits and pushes', async () => {
+  const env = setup([task('T1', 1, { passes: true, closes: [] }), task('P05.6', 2, { owner: true, closes: ['P05.6'] }), task('P07-CHECK', 3, { owner: true, closes: [], roadmapItems: ['P05.6'] })], '');
+  fs.writeFileSync(path.join(env.root, 'docs', 'ROADMAP.md'), '- [ ] P05.6 Manual test.\n- [x] P01.1 Done.\n');
+  fs.writeFileSync(path.join(env.root, 'docs', 'STATUS.md'), '# Status\n\n## Last documentation check\n\nOlder.\n');
+  git(env.root, 'add', '--all');
+  git(env.root, 'commit', '--quiet', '-m', 'Prepare');
+  const remote = addOrigin(env);
+
+  const secretText = 'PRIVATE WORDS FROM THE CALL';
+  const server = http.createServer((request, response) => {
+    const answers = {
+      '/api/v1/health': { status: 'ok' },
+      '/api/v1/projects': { items: [{ id: 'p1', name: 'Owner check' }], total: 1 },
+      '/api/v1/projects/p1': { id: 'p1', name: 'Owner check', videoAsset: { durationSeconds: 121.4 } },
+      '/api/v1/projects/p1/segments': [
+        { speakerLabel: 'you', reviewedText: secretText },
+        { speakerLabel: 'you', reviewedText: secretText },
+        { speakerLabel: 'others', reviewedText: secretText },
+        { speakerLabel: null, reviewedText: secretText },
+      ],
+    };
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify(answers[request.url] ?? {}));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+
+  const child = spawn('node', [path.join(SOURCE, 'owner-check.cjs')], {
+    env: { ...process.env, RALPH_ROOT: env.root, NARRASTEP_WEB_PORT: String(server.address().port) },
+  });
+  let output = '';
+  let answered = 0;
+  child.stderr.on('data', (chunk) => { output += chunk; });
+  child.stdout.on('data', (chunk) => {
+    output += chunk;
+    const prompts = (output.match(/Press Enter|\(y\/n\)/g) ?? []).length;
+    while (answered < prompts) {
+      child.stdin.write('y\n');
+      answered += 1;
+    }
+  });
+  const status = await new Promise((resolve) => child.on('close', resolve));
+  await new Promise((resolve) => server.close(resolve));
+
+  assert.equal(status, 0, output);
+  assert.doesNotMatch(output, /PRIVATE WORDS/);
+  const roadmap = fs.readFileSync(path.join(env.root, 'docs', 'ROADMAP.md'), 'utf8');
+  assert.match(roadmap, /- \[x\] P05\.6 Manual test\.\n {2}Evidence \(\d{4}-\d{2}-\d{2}\): .*121 s, 4 segments \(2 You, 1 Others, 1 without a label\)/);
+  assert.doesNotMatch(git(env.root, 'log', '-1', '-p'), /PRIVATE WORDS/);
+  assert.equal(stateOf(env, 'P05.6').passes, true);
+  assert.equal(stateOf(env, 'P07-CHECK').passes, true);
+  assert.equal(git(remote, 'rev-parse', 'main'), git(env.root, 'rev-parse', 'HEAD'));
+});
+
+test('the owner session waits for the desktop tasks, and for the stack', async () => {
+  const env = setup([task('P07.4b', 1), task('P05.6', 2, { owner: true, closes: ['P05.6'] })], '');
+  const notReady = spawnSync('node', [path.join(SOURCE, 'owner-check.cjs')], { encoding: 'utf8', env: { ...process.env, RALPH_ROOT: env.root } });
+  assert.equal(notReady.status, 2);
+  assert.match(notReady.stdout, /P07\.4b must pass first/);
+
+  const prd = readPrd(env);
+  prd.userStories[0].passes = true;
+  fs.writeFileSync(path.join(env.dir, 'prd.json'), JSON.stringify(prd));
+  const noStack = spawnSync('node', [path.join(SOURCE, 'owner-check.cjs')], {
+    encoding: 'utf8',
+    env: { ...process.env, RALPH_ROOT: env.root, NARRASTEP_WEB_PORT: '1' },
+  });
+  assert.equal(noStack.status, 2);
+  assert.match(noStack.stdout, /Start Narrastep first/);
+  assert.match(fs.readFileSync(path.join(env.root, 'docs', 'ROADMAP.md'), 'utf8'), /- \[ \] P01\.1/, 'nothing was recorded');
+});
+
+test('the isolated stack refuses a Compose file that reaches the host', () => {
+  const env = setup([task('T1', 1)], '');
+  const check = (config) => spawnSync('node', [path.join(SOURCE, 'prd.cjs'), 'compose-check'], {
+    encoding: 'utf8',
+    input: JSON.stringify(config),
+    env: { ...process.env, RALPH_ROOT: env.root },
+  });
+  assert.equal(check({ services: { api: { volumes: [{ type: 'volume', source: 'data', target: '/data' }] } } }).status, 0);
+  const refused = check({ services: { api: { privileged: true, volumes: [{ type: 'bind', source: 'C:\\Users', target: '/host' }] } } });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /privileged is refused/);
+  assert.match(refused.stderr, /host folder/);
 });
 
 test('the iteration limit is honored and a later run goes on from the verified state', () => {
@@ -334,17 +606,7 @@ test('stop.sh --now ends an active run, and --resume continues the same task', a
     if [ "$1" -eq 1 ]; then echo partial > partial.txt; sleep 8; fi
     ${FINISH}
   `);
-  const active = spawn('bash', [path.join(env.dir, 'ralph.sh')], {
-    cwd: env.root,
-    stdio: 'ignore',
-    env: {
-      ...process.env,
-      CLAUDECODE: '',
-      RALPH_ALLOW_NESTED: '',
-      RALPH_CLAUDE_BIN: path.join(env.fake, 'claude'),
-      RALPH_SANDBOX: path.join(env.fake, 'sandbox'),
-    },
-  });
+  const active = spawn('bash', [path.join(env.dir, 'ralph.sh')], { cwd: env.root, stdio: 'ignore', env: runnerEnvironment(env) });
   const ended = new Promise((resolve) => active.on('close', resolve));
   const partial = path.join(env.root, 'partial.txt');
   for (let waited = 0; waited < 40 && !fs.existsSync(partial); waited += 1) {
@@ -449,6 +711,11 @@ test('unsafe content or an incomplete change fails the task before any check run
     ['no tick', `${FINISH} git checkout docs/ROADMAP.md; echo x >> docs/ROADMAP.md`, /must be checked by this task/],
     ['an authorship reference', `${FINISH} sed -i 's/Add feature/Add assistant feature/' scripts/ralph/.state/result.json`, /remove the reference/],
     ['a committed .env', `${FINISH} echo A=1 > .env`, /\.env: must not be committed/],
+    ['a skipped test', `${FINISH} echo "test.skip('later', () => {});" >> tests/existing.test.js`, /must not be skipped or narrowed/],
+    ['a focused test in a new file', `${FINISH} echo "it.only('x', () => {});" > tests/new.test.js`, /must not be skipped or narrowed/],
+    ['an expected failure', `${FINISH} mkdir -p pkg/tests; echo "@pytest.mark.xfail" > pkg/tests/test_a.py`, /must not be skipped or narrowed/],
+    ['a deleted test', `${FINISH} rm tests/existing.test.js`, /a test file must not be deleted/],
+    ['a new roadmap item', `${FINISH} echo "- [ ] P77.1 Something new" >> docs/ROADMAP.md`, /P77\.1 is new/],
   ];
   for (const [name, agent, expected] of cases) {
     await t.test(name, () => {
@@ -515,10 +782,53 @@ test('a dry run starts nothing', () => {
   assert.equal(fs.existsSync(path.join(env.fake, 'count')), false);
 });
 
+test('a check repeats after a lack of resources, but never after a real failure', () => {
+  const env = setup([task('T1', 1)], '');
+  const counter = toShellPath(path.join(env.fake, 'tries'));
+  const sandboxWith = (body) => {
+    const file = path.join(env.fake, 'sandbox-script');
+    fs.writeFileSync(file, `#!/usr/bin/env bash\necho x >> "${counter}"\n${body}\n`);
+    fs.chmodSync(file, 0o755);
+    fs.rmSync(path.join(env.fake, 'tries'), { force: true });
+    return spawnSync('bash', [path.join(env.dir, 'check.sh'), 'docs'], {
+      encoding: 'utf8',
+      env: { ...process.env, RALPH_SANDBOX: file, RALPH_RESOURCE_WAIT_SECONDS: '0' },
+    });
+  };
+  const tries = () => fs.readFileSync(path.join(env.fake, 'tries'), 'utf8').trim().split('\n').length;
+
+  const recovered = sandboxWith(`[ "$(wc -l < "${counter}")" -ge 2 ] && exit 0; echo "Error: ENOMEM: not enough memory, read"; exit 1`);
+  assert.equal(recovered.status, 0, recovered.stdout);
+  assert.equal(tries(), 2);
+  assert.match(recovered.stdout, /ran out of resources/);
+
+  const lasting = sandboxWith('echo "page.goto: net::ERR_CONNECTION_REFUSED"; exit 1');
+  assert.equal(lasting.status, 1);
+  assert.equal(tries(), 3, 'it gives up after two repeats');
+
+  const real = sandboxWith('echo "AssertionError: expected 1 to equal 2"; exit 3');
+  assert.equal(real.status, 3, 'the real status is kept');
+  assert.equal(tries(), 1, 'a failing test is never repeated');
+  assert.doesNotMatch(real.stdout, /ran out of resources/);
+});
+
+test('every file of the runner is protected from the agent, but its report folder is not', () => {
+  const { deny } = JSON.parse(fs.readFileSync(path.join(SOURCE, 'settings.json'), 'utf8')).permissions;
+  const files = fs.readdirSync(SOURCE, { withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => entry.name);
+  assert.ok(files.includes('ralph.sh'));
+  for (const file of files) {
+    assert.ok(deny.includes(`Edit(./scripts/ralph/${file})`), `${file} must be in the deny list of settings.json`);
+  }
+  // A folder-wide rule also matches .state/, where the agent must write its report: every task
+  // would then fail. Seen with the real binary on 2026-10-30.
+  assert.ok(!deny.some((rule) => /^Edit\(\.\/scripts\/ralph\/\*+\)$/.test(rule)));
+  assert.ok(!deny.some((rule) => rule.includes('.state')));
+});
+
 test('the agent permission file is valid and the shipped task list fits the roadmap', () => {
   JSON.parse(fs.readFileSync(path.join(SOURCE, 'settings.json'), 'utf8'));
   const repository = path.resolve(SOURCE, '..', '..');
-  const result = spawnSync('node', [path.join(SOURCE, 'prd.cjs'), 'validate'], {
+  const result = spawnSync('node', [path.join(SOURCE, 'prd.cjs'), 'validate', '--committed'], {
     encoding: 'utf8',
     env: { ...process.env, RALPH_ROOT: repository },
   });

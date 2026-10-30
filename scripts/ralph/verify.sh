@@ -22,6 +22,7 @@ cd "$ROOT" || exit 2
 
 "${PRD[@]}" preflight "$task" || exit 1
 
+# Most areas run for every task, because a change in one part can break another.
 read -r -a areas <<< "$("${PRD[@]}" areas "$task" | tr -d '\r')"
 "$SCRIPT_DIR/check.sh" "${areas[@]}" || exit $?
 

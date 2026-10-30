@@ -17,6 +17,11 @@ show() {
   fi
   [ -f "$STATE_DIR/current-task" ] && echo "Current task: $(cat "$STATE_DIR/current-task")"
   node "$SCRIPT_DIR/prd.cjs" status || return 2
+  if git remote get-url origin >/dev/null 2>&1; then
+    echo
+    echo "Commits waiting to be pushed: $(git rev-list --count "origin/main..HEAD" 2>/dev/null || echo unknown)"
+    node "$SCRIPT_DIR/prd.cjs" ci-status
+  fi
   if [ -f "$STATE_DIR/run.log" ]; then
     echo
     echo "Last run events:"
