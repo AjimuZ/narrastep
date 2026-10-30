@@ -387,6 +387,22 @@ got an unexpected keyword argument 'metadata_errors'`), or ONNX Runtime 1.18.1, 
 next to NumPy 2.4.6 (`Applying the VAD filter requires the onnxruntime package`).
 `tests/test_transcription_stack_check.py` covers the script with stand-ins in the default suite.
 
+## Full job check
+
+`backend/scripts/full_job_check.py` proves a running stack end to end (P08.3). Using only the
+standard library and FFmpeg, it requires health `ok`, generates a 10-second MP4 with speech, uploads
+it, processes it with the baked model, exports it, checks the layout of the downloaded ZIP against
+[Export layout](DATA_MODEL.md#export-layout) and deletes the project. It prints numbers, never
+transcript text, and returns 1 with one line on stderr at the first failure. Mock processing fails
+it, because the expected words are missing. To run it in the API container:
+
+```bash
+./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1
+```
+
+`--ffmpeg` and `--timeout` change the FFmpeg path and the seconds each background step may take
+(default 900). `tests/test_full_job_check.py` covers the script with a stand-in API.
+
 ## Backend package lock
 
 Every backend package, direct and transitive, is pinned with its SHA-256 hashes (P08.2,

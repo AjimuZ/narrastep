@@ -43,7 +43,10 @@ digest of its index, with `valkey-server --appendonly yes` and a `valkey-cli pin
 - `docker-compose.yml` and `docs/LICENSES.md` name Valkey 9.1.3 with its digest, and
   `backend/tests/test_container_images.py` keeps the broker on Valkey.
 - At the time of this decision, the image build and a healthy stack on a real container engine had
-  not been run. The worker that made P08.3 has no container engine, so P08.3 stays open until the
-  owner or CI runs them.
+  not been run. They ran on 2026-10-30 with Docker: `valkey-server --version` reported 9.1.3, health
+  reported `ok` for the database, broker and worker, and a generated video went through Celery on
+  Valkey from upload to export (`backend/scripts/full_job_check.py`; output in the
+  [roadmap](../ROADMAP.md), P08.3). That stack started on an empty volume, so reading the files of
+  Redis 7.2 from an existing `narrastep-redis` volume remains untested.
 - Kombu's Redis transport and redis-py treat Valkey as Redis 7.2. A Kombu or redis-py release that
   requires Redis 8-only commands would need a new decision.

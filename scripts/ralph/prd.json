@@ -66,12 +66,12 @@
       "verify": [],
       "verifyHost": [],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
       "blocked": false,
       "blockedReason": "",
       "lastFailure": "",
-      "verifiedAt": null,
+      "verifiedAt": "2026-10-30T16:13:54.932Z",
       "notes": "Setup baseline on 2026-10-30: the stack built and reported ok through `check.sh stack` in about 2.5 minutes, with the tiny model. The full job was not run. The sandbox cannot reach the ports published on the host, which is why the script runs inside the api container. Never use a real recording."
     },
     {

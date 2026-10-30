@@ -146,8 +146,8 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   under AGPL or RSAL, which the free-license rule avoids; Valkey keeps the Redis protocol, so Celery,
   Kombu and redis-py 6.4.0 stay as they are (P08.2). [ADR 0017](0017-valkey-broker.md) records the
   result: Valkey 9.1.3, keeping the `redis` service name, URLs and volume. The role of the server in
-  ADR 0003 (temporary coordination, never persistent truth) does not change, and P08.3 stays open
-  until a real engine runs the healthy stack and a full job.
+  ADR 0003 (temporary coordination, never persistent truth) does not change. P08.3 stayed open
+  until Docker ran the healthy stack and a full job on 2026-10-30.
 - The upgrade is verified by tests, a real image build and a real transcription, never by version
   numbers alone. A check that this worker cannot run (no container engine) is reported as not run
   and the task stays unchecked.

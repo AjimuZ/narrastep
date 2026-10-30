@@ -9,9 +9,16 @@ Each session sees the patterns below and the last entries. Older entries move to
 - The sandbox cannot reach ports published on the host; to talk to the isolated stack, use `./scripts/ralph/stack.sh exec -T api ...`.
 - Other projects share Docker's 8 GB. `ENOMEM` or a refused connection in a browser run means load, not a defect; the checks repeat by themselves.
 - The broker is Valkey 9.1.3 under the Compose service name `redis`, with the `narrastep-redis` volume: the name is kept on purpose (ADR 0017).
+- `./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1` proves a running stack end to end in seconds with the tiny model.
+- `check.sh stack` can reuse cached layers; use `stack.sh build --no-cache` when a check must really run in the image build.
 ---
 
 ## [2026-10-30T15:54:18.019Z] - P08.13 - passed
 ci.yml parses as YAML again with all seven jobs, and backend tests fail on invalid YAML and on the old lines (negative control recorded). A one-off actionlint run also found runner.temp in the contracts job env, which GitHub's context rules forbid and which dates from the first commit; it moved to the step that reads it and actionlint now exits 0. No run on GitHub was possible, because nothing is pushed at that point.
 Not run: A workflow run on GitHub: nothing is pushed at this point, so the first real run is the push of this commit.
+---
+
+## [2026-10-30T16:13:54.932Z] - P08.3 - passed
+Every pinned image built without cache on Docker, including the llama.cpp and transcription checks; the isolated stack reported health ok on Valkey 9.1.3. The new backend/scripts/full_job_check.py took a generated spoken MP4 from upload through processing with the baked tiny model and export to a checked ZIP, and failed as it should with the worker stopped. P08.3 is ticked with the real output, and the status, ADR 0017 and risk K9 say what was and was not verified.
+Not run: The image build with the default small model: the isolated stack bakes tiny.; An arm64 build: this computer builds amd64.; Podman: it belongs to P08.9 and P08.12.; Valkey reading an existing Redis 7.2 volume: the isolated stack starts on empty volumes.
 ---
