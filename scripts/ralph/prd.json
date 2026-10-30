@@ -598,7 +598,7 @@
       ],
       "priority": 35,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "notes": "BLOCKED: The shell denied the sandbox.sh call that runs `npm view electron version` (don't ask mode), so I cannot learn the newest stable Electron, regenerate the lock file, or run npm test in desktop. I did not try another route.",
       "dependsOn": [
         "P08.4a"
       ],
