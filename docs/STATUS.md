@@ -58,14 +58,19 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Real Teams call with a headset on Windows | Planned | P05.6 |
 | Desktop window smoke test on the Docker stack, run by the owner ([procedure](DEVELOPMENT.md#manual-smoke-test-on-docker-p072)) | Planned | P07.2 |
 | Optional local Gemma 4 generation | Planned | P06 |
-| Updated container images, npm packages, Node.js and tools; dependency update procedure | Planned | P08.3–P08.5 |
+| Updated container images, npm packages, Node.js and tools; dependency update procedure; automated license inventory | Planned | P08.3–P08.5 |
 | `.env` generated from the computer's hardware when missing | Planned | P08.6–P08.8 |
 | Podman support with `start-podman.sh` | Planned | P08.9–P08.12 |
 | Clickable `[mm:ss]` references in Review and Document | Planned | P06.6 |
+| Model import from a read-only folder when `huggingface.co` is blocked; E2B default unless the E4B benchmark passes the set thresholds | Planned (decided 2026-10-29) | P06.2, P06.5 |
+| Copy the result as Markdown, single-file Markdown with images | Planned | P06.4 |
 | Source picker, microphone and native "Save as" in the desktop window | Planned | P07.3–P07.4 |
 | Other improvements (launcher for PowerShell, masking, search and more) | Candidate | [Roadmap](ROADMAP.md#improvement-candidates) |
 
 ## Last documentation check
+
+2026-10-29 (open questions Q2, Q5, Q6, Q10 answered): documentation only, no code changed, so no
+test suite was run. `python scripts/check_docs.py` reported valid links.
 
 2026-10-29 (P07.1): `python scripts/check_docs.py` reported valid links after the desktop shell
 documentation; the backend, web and desktop suites passed in the same change (see the P07.1

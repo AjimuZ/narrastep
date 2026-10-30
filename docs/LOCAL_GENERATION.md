@@ -103,6 +103,42 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
 - A file with a wrong SHA-256 is deleted and the state becomes `failed` with a readable message.
 - `NARRASTEP_LOCAL_GENERATION=disabled` hides every control and the API refuses downloads.
 
+### Import from disk
+
+Decided on 2026-10-29 (risk register Q5); planned in P06.2, not implemented. It exists for
+computers where `huggingface.co` is blocked (assumption A3).
+
+- The user copies the model files into a folder of the project, `data/models-import/` by default
+  (setting `NARRASTEP_MODEL_IMPORT_DIR`), which the API container sees read-only. The files come
+  from the same `ggml-org` repository as the download and are checked like a download.
+- Narrastep accepts a file only when its name, size and SHA-256 equal the values pinned for the
+  repository revision. Anything else is ignored and reported as "not a pinned model file"; the
+  folder is never scanned for other types and no path is taken from the user, so every path stays
+  below the configured root.
+- Accepted files are copied into `/data/models` and go through the same states as a download
+  (`verifying`, then `installed`), with the license shown before the import and kept beside the
+  files. The import folder is left untouched and the user may empty it afterwards.
+- Uploading the files from the browser is not offered: they are 3 to 5 GB and the folder covers
+  the rare case with far less code.
+- This is the first bind mount of the stack. It is an exception to the engine-neutral rule in
+  [ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md): both start
+  scripts create the folder before Compose runs, so a missing folder never stops the stack, and the
+  Compose entry carries the relabel option that Podman needs on SELinux systems (P08.9 checks it).
+  The mount is only on the `api` service.
+
+## Default model rule
+
+Decided on 2026-10-29 (risk register Q6). The default is **Light, E2B**. It changes to Quality,
+E4B, only if the P06.5 benchmark on the owner's computer passes **all** of these, fixed before the
+benchmark so the result is not read after the fact:
+
+| Check | Threshold |
+| --- | --- |
+| Time to generate the document for a 60-minute meeting with E4B | At most 30 minutes |
+| Peak memory of the generation job with E4B | Under 6 GB, inside Docker's 8 GB limit (assumption A2) |
+
+Otherwise E2B stays the default. E4B remains a manual choice in Settings in every case.
+
 ## Generation
 
 1. The user opens Document and selects Generate. The API queues a Celery job.
@@ -147,7 +183,8 @@ When a generation exists, the user can include it in the next export as
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `NARRASTEP_LOCAL_GENERATION` | `available` | `available` or `disabled` |
-| `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | `gemma-4-e2b` or `gemma-4-e4b` |
+| `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | `gemma-4-e2b` or `gemma-4-e4b`; the default changes only by the [default model rule](#default-model-rule) |
+| `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Folder for [import from disk](#import-from-disk); planned with P06.2 |
 | `NARRASTEP_GENERATION_THREADS` | `0` | CPU threads; `0` lets `llama.cpp` decide |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Screenshots are downscaled before inference |
 
@@ -157,4 +194,7 @@ When a generation exists, the user can include it in the next export as
 - Integration test (opt-in, like the real Whisper test): a short synthetic project produces a
   document with the expected sections and only cited times that exist.
 - P06.5 benchmark on the owner's computer: generation time and peak memory for a 10-minute and a
-  60-minute recording with E2B, recorded in [Status](STATUS.md).
+  60-minute recording with E2B and with E4B, recorded in [Status](STATUS.md); the E4B figures
+  apply the [default model rule](#default-model-rule).
+- Import from disk: a pinned file is accepted, a file with another name, size or hash is refused,
+  the import folder is not modified, and the stack starts with the folder missing.

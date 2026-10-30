@@ -57,7 +57,10 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   Compose rather than only in a Dockerfile `HEALTHCHECK` (Podman's default OCI image format drops
   that instruction), no Docker-only options and no bind mounts (so no SELinux relabeling).
   Containers keep loopback-only published ports, the internal `processing` network and named
-  volumes.
+  volumes. *One planned exception (2026-10-29, Q5):* P06.2 adds a read-only bind mount of the
+  model import folder on the `api` service ([Local generation](../LOCAL_GENERATION.md#import-from-disk)).
+  The start scripts create the folder first and the Compose entry adds the SELinux relabel option,
+  which P08.9 must verify on Podman.
 - Shared logic (option parsing, the watcher that opens the window, the `.env` step) moves into one
   sourced file under `scripts/`, so `start.sh` and `start-podman.sh` cannot drift apart. The
   behavior of `./start.sh` and its tests (`desktop/test/start-script.test.cjs`) must not change.
@@ -138,6 +141,13 @@ What exists today (Version 0.2, checked in the repository on 2026-10-29):
   development tools (ruff, mypy, pytest, Playwright, Prettier).
 - Redis is not upgraded blindly: version 7.4 and later left the BSD license (risk K9). The owner's
   rule is free licenses only, so the task compares the options and records the choice.
+  *Decided on 2026-10-29 (Q10):* the queue server moves from Redis 7.2.14 to **Valkey** under
+  BSD-3-Clause. Redis 7.2 is the last BSD release and receives no further releases, and Redis 8 is
+  under AGPL or RSAL, which the free-license rule avoids; Valkey keeps the Redis protocol, so Celery,
+  Kombu and redis-py 6.4.0 stay as they are (P08.2). [ADR 0017](0017-valkey-broker.md) records the
+  result: Valkey 9.1.3, keeping the `redis` service name, URLs and volume. The role of the server in
+  ADR 0003 (temporary coordination, never persistent truth) does not change, and P08.3 stays open
+  until a real engine runs the healthy stack and a full job.
 - The upgrade is verified by tests, a real image build and a real transcription, never by version
   numbers alone. A check that this worker cannot run (no container engine) is reported as not run
   and the task stays unchecked.

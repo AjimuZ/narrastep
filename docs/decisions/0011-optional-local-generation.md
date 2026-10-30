@@ -58,6 +58,10 @@ document. The owner wants an optional local alternative with these constraints:
   [Local generation](../LOCAL_GENERATION.md#server-in-the-backend-image).
 - CPU generation speed and memory are unknown on the owner's hardware; P06.5 measures them before
   the feature is marked implemented.
-- Corporate proxies can block `huggingface.co`; manual import of the same verified files is an open
-  question in [Risks](../RISKS.md).
+- Corporate proxies can block `huggingface.co`. The owner decided on 2026-10-29 (Q5) that the same
+  verified files can be imported from a read-only folder, accepted only when name, size and SHA-256
+  match the pinned revision; see [Import from disk](../LOCAL_GENERATION.md#import-from-disk).
+  This adds no network request and no new source of model files.
+- The default model stays E2B. E4B becomes the default only if the P06.5 benchmark passes the
+  thresholds of the [default model rule](../LOCAL_GENERATION.md#default-model-rule) (Q6).
 - Full behavior: [Local generation](../LOCAL_GENERATION.md).

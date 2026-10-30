@@ -135,11 +135,18 @@ Decision: [ADR 0011](decisions/0011-optional-local-generation.md). Specification
 
 - [ ] P06.1 Pinned `llama.cpp` CPU server in the backend image; measure the image growth.
   Progress (2026-10-29, not yet checked): `backend/Dockerfile` copies `llama-server` and the libraries it loads from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0@sha256:a94b642b3e2620749bf2ff5672df922c23a6202710e54a8f7667e58df70aba5a` (build b11146, commit 7fe450e19, amd64 and arm64) into `/opt/llama.cpp` with the MIT `LICENSE` (`backend/third_party/llama.cpp/LICENSE`), lists `libgomp1`, and runs `python scripts/check_llama_server.py` at build (new `backend/app/services/llama_server.py`: `LD_LIBRARY_PATH` for the server process only, `llama-server --version`, pinned build and commit). Growth measured from the files extracted from the pinned layers: 31 files, 40,120,320 bytes uncompressed (16,548,532 gzip) on amd64; 25 files, 27,996,160 bytes (12,305,424 gzip) on arm64; `libgomp1` adds nothing (FFmpeg and Tesseract already install it, resolved against the Debian 13 package index). A static check of the amd64 files against the `python:3.12.13-slim` layers plus `libgomp1` resolved every library, symbol version (glibc 2.38, `GLIBCXX_3.4.32`, OpenSSL 3, OpenMP 4.5) and strong symbol; without `libgomp1` it reported the missing library. New `backend/tests/test_llama_server.py` (17 tests; negative controls without the library path and without the pin comparison failed); backend `python -B -m pytest` 210 passed, 11 skipped (with FFmpeg 7.1: 220 passed, 1 skipped); `ruff format --check`, `ruff check`, `mypy app`, `scripts/export_openapi.py --check`, `scripts/check_docs.py`, `git diff --check HEAD`; `apps/web` `npm run build`, `npm run test` (161), `npm run lint` passed. Open: `docker compose build` with the in-image `llama-server --version` check and `docker history` (no Docker on this worker; running the downloaded binary outside Docker was not permitted).
-- [ ] P06.2 Model manager: download, resume, verify, enable, delete, kill switch.
+- [ ] P06.2 Model manager: download, resume, verify, enable, delete, kill switch, and import of
+  the pinned files from a read-only folder when `huggingface.co` is blocked (owner decision Q5,
+  2026-10-29: [Import from disk](LOCAL_GENERATION.md#import-from-disk)).
+  Exit adds: a pinned file in the import folder is installed, a file with another name, size or
+  hash is refused, the folder is never modified and the stack starts without it.
 - [ ] P06.3 Generation job with type-specific prompts and chronological parts.
-- [ ] P06.4 Settings and Document screens; optional inclusion in the package; copy the result as Markdown
-  and a single-file Markdown with images (I-05).
-- [ ] P06.5 Benchmark time and peak memory on the owner's computer (10 and 60 minutes, E2B).
+- [ ] P06.4 Settings and Document screens; optional inclusion in the package; copy the result as
+  Markdown and a single-file Markdown with the images (I-05, scheduled 2026-10-29).
+- [ ] P06.5 Benchmark time and peak memory on the owner's computer (10 and 60 minutes, E2B and
+  E4B). E2B stays the default unless E4B generates the 60-minute meeting in at most 30 minutes
+  with a peak under 6 GB (owner decision Q6, 2026-10-29:
+  [Default model rule](LOCAL_GENERATION.md#default-model-rule)).
 - [ ] P06.6 Clickable `[mm:ss]` references in Review and Document that move the video to that
   time (I-04).
 
@@ -186,7 +193,7 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
 - [ ] P08.5 Document the dependency policy and the update procedure, and record the refresh; add the automated
   license inventory inside the containers (I-15).
   **Requires tasks:** P08.2, P08.3, P08.4.
-  Exit: `docs/DEVELOPMENT.md` has an "Updating dependencies" procedure (what to run, where licenses are recorded, what stays pinned and why); `docs/LICENSES.md` matches the installed versions; K9 and K15 are updated; `python scripts/check_docs.py` passes.
+  Exit: `docs/DEVELOPMENT.md` has an "Updating dependencies" procedure (what to run, where licenses are recorded, what stays pinned and why); `docs/LICENSES.md` matches the installed versions; K9 and K15 are updated; an automated license inventory of the packages inside the containers (I-15, scheduled 2026-10-29) fails when `docs/LICENSES.md` lacks an installed package or lists a license outside the free ones, with a test that shows it failing on a wrong entry; `python scripts/check_docs.py` passes.
 - [ ] P08.6 Hardware probe and a pure profile function that turns CPU, memory, free disk and free ports into `.env` values.
   Exit: `scripts/` generator prints a complete `.env` on standard output without writing anything; tests with fixed hardware cover each row of the ADR 0016 table, an unknown value, a busy port and a low-memory warning; the table in the ADR matches the code; the script makes no network request.
 - [ ] P08.7 Backend setting and Compose entries for the generated keys.
@@ -197,7 +204,7 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
   Exit: shell tests with a stubbed engine show that a missing `.env` is created before Compose starts, an existing or empty `.env` is left byte-identical, a failed generation stops the start with a readable message, the generated web port reaches the desktop launcher, and the existing start-script tests still pass; `docs/DEVELOPMENT.md` and `README.md` describe the step.
 - [ ] P08.9 Make `docker-compose.yml` and the Dockerfiles engine-neutral.
   **Requires tasks:** P08.3.
-  Exit: `docker compose config` and `podman compose config` both render the file; every image name is fully qualified; each service that others wait for has a Compose health check; the stack becomes healthy on Docker with the output recorded; the same on Podman is recorded or reported as not run.
+  Exit: `docker compose config` and `podman compose config` both render the file; every image name is fully qualified; each service that others wait for has a Compose health check; the stack becomes healthy on Docker with the output recorded; the same on Podman is recorded or reported as not run. If P06.2 has already added the model import bind mount, its SELinux relabel option and the folder created by the start scripts are checked here too.
 - [ ] P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`.
   **Requires tasks:** P08.8, P08.9.
   Exit: `./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests; it prefers `podman compose`, falls back to `podman-compose` and explains a missing provider; it never uses `sudo` or `--privileged`; the Podman script is executable in Git; the `.env` step reads `podman info`; a failure leaves the stack usable in a browser as in P07.2.

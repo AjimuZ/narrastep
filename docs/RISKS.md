@@ -35,10 +35,8 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 
 ## Open questions
 
-| ID | Question | Needed by |
-| --- | --- | --- |
-| Q5 | When `huggingface.co` is blocked, allow importing the same verified model files from disk? | P06.2 |
-| Q6 | Default model: E2B (lighter) or E4B (better)? Decide after the P06.5 benchmark | P06.5 |
+None. Q5 and Q6 were answered by the owner on 2026-10-29 and are listed below; what they decide is
+still to be built or measured in the packages named there.
 
 ## Resolved
 
@@ -53,6 +51,8 @@ Owner: the repository owner unless stated. Review this file when a roadmap packa
 | Q9 | Does the newest Python release that `ctranslate2` and `onnxruntime` publish wheels for pass the suite? | Python 3.14.10: the backend suite, the transcription stack check and a full job pass on it. Python 3.15 cannot be used yet because ONNX Runtime 1.31.1 publishes no 3.15 wheels; move when it does (2026-10-29, P08.2, [Licenses](LICENSES.md#kept-behind-their-newest-release)) |
 | Q10 | Keep Redis 7.2 (the last BSD release) or move to Valkey (BSD-3-Clause) when the dependency refresh reaches it (K9)? | Valkey 9.1.3, keeping the `redis` service name, URLs and volume (2026-10-29, P08.3, [ADR 0017](decisions/0017-valkey-broker.md)); the image build and stack health on a real engine are not yet run |
 | Q11 | Run Narrastep with Podman, and generate a missing `.env` from the computer? | Yes, with a dedicated `start-podman.sh` and a generator that never overwrites an existing `.env` (2026-10-29, [ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)) |
+| Q5 | When `huggingface.co` is blocked, allow importing the same verified model files from disk? | Yes, from a mounted read-only folder, accepting only files whose name, size and SHA-256 match the pinned revision; no arbitrary paths and no browser upload (2026-10-29, P06.2, [Local generation](LOCAL_GENERATION.md#import-from-disk)) |
+| Q6 | Default model: E2B (lighter) or E4B (better)? | E2B stays the default. E4B becomes the default only if the P06.5 benchmark on the owner's computer shows a 60-minute meeting generated in at most 30 minutes with a memory peak under 6 GB, inside Docker's 8 GB limit (A2); E4B is always a manual choice in Settings. The thresholds are fixed before the benchmark (2026-10-29, [Local generation](LOCAL_GENERATION.md#default-model-rule)) |
 
 ## Blockers
 
