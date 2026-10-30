@@ -146,6 +146,7 @@ Decision: [ADR 0011](decisions/0011-optional-local-generation.md). Specification
   2026-10-29: [Import from disk](LOCAL_GENERATION.md#import-from-disk)).
   Exit adds: a pinned file in the import folder is installed, a file with another name, size or
   hash is refused, the folder is never modified and the stack starts without it.
+  Progress (2026-10-30, P06.2a): `backend/app/services/model_catalog.py` pins both options (revisions `6938c58e…` and `a69f018d…`, names, sizes, SHA-256 read from the Hugging Face listing, table in [Local generation](LOCAL_GENERATION.md#pinned-files)); `NARRASTEP_LOCAL_GENERATION`, `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` are validated in `config.py` and set in `docker-compose.yml`, the README and (by the owner) `.env.example`; migration `20261030_0010` adds `generation_models`; `services/model_manager.py` allows only the documented transitions and applies the kill switch. New tests: `test_model_catalog.py`, `test_model_manager.py` and a migration test on the previous head. Not done yet (P06.2b): download with resume, hash verification, file deletion, license text beside the files, the API endpoints and the import from disk.
 - [ ] P06.3 Generation job with type-specific prompts and chronological parts.
 - [ ] P06.4 Settings and Document screens; optional inclusion in the package; copy the result as
   Markdown and a single-file Markdown with the images (I-05, scheduled 2026-10-29).

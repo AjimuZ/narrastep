@@ -1,0 +1,125 @@
+"""Persisted install state of the local generation models and the transitions between them."""
+
+from __future__ import annotations
+
+from typing import Final
+
+from sqlalchemy.orm import Session
+
+from app.config import Settings
+from app.errors import ApiError
+from app.models import GenerationModel, ModelInstallState, utc_now
+from app.services.model_catalog import MODEL_CATALOG, ModelOption, get_model_option
+
+State = ModelInstallState
+
+# The diagram of docs/LOCAL_GENERATION.md ("States"). Deleting is one step from `installed` or
+# `enabled` to `not_installed`; a `failed` model returns to `not_installed` once its leftovers are
+# removed. `downloading` to `downloading` is not listed: a restart resumes without a transition.
+ALLOWED_TRANSITIONS: Final[dict[ModelInstallState, frozenset[ModelInstallState]]] = {
+    State.NOT_INSTALLED: frozenset({State.DOWNLOADING}),
+    State.DOWNLOADING: frozenset({State.VERIFYING, State.FAILED}),
+    State.VERIFYING: frozenset({State.INSTALLED, State.FAILED}),
+    State.INSTALLED: frozenset({State.ENABLED, State.NOT_INSTALLED}),
+    State.ENABLED: frozenset({State.INSTALLED, State.NOT_INSTALLED}),
+    State.FAILED: frozenset({State.NOT_INSTALLED}),
+}
+
+# Moving into one of these states needs `NARRASTEP_LOCAL_GENERATION=available`. Leaving the feature
+# (delete, disable, fail) stays possible so the kill switch never traps disk space.
+KILL_SWITCH_BLOCKED_TARGETS: Final = frozenset({State.DOWNLOADING, State.ENABLED})
+
+
+class InvalidModelTransition(ValueError):
+    """Signal a requested state change that the state diagram does not contain."""
+
+    def __init__(self, current: ModelInstallState, target: ModelInstallState) -> None:
+        """Name both states; the message carries no path and no transcript text."""
+        super().__init__(f"A model cannot change from {current.value} to {target.value}.")
+        self.current = current
+        self.target = target
+
+
+def require_known_model(model_id: str) -> ModelOption:
+    """Return the pinned option for `model_id` or raise a 404 `ApiError` for an unknown one."""
+    if model_id not in MODEL_CATALOG:
+        raise ApiError("MODEL_NOT_FOUND", "This generation model is not available.", 404)
+    return get_model_option(model_id)
+
+
+def require_generation_available(settings: Settings) -> None:
+    """Raise a 403 `ApiError` when the kill switch `NARRASTEP_LOCAL_GENERATION` is `disabled`."""
+    if not settings.local_generation_available:
+        raise ApiError("LOCAL_GENERATION_DISABLED", "Local generation is disabled.", 403)
+
+
+def read_model_state(session: Session, model_id: str) -> ModelInstallState:
+    """Return the stored state of `model_id`; a model without a row is `not_installed`."""
+    row = session.get(GenerationModel, model_id)
+    return row.state if row is not None else State.NOT_INSTALLED
+
+
+def transition_model(
+    session: Session,
+    settings: Settings,
+    model_id: str,
+    target: ModelInstallState,
+    *,
+    downloaded_bytes: int | None = None,
+    error_message: str | None = None,
+) -> GenerationModel:
+    """Move `model_id` to `target`, persist it and return the row.
+
+    Requires a catalog model and a transition of `ALLOWED_TRANSITIONS`. Raises `ApiError` (404) for
+    an unknown model, `ApiError` (403) when the kill switch blocks the target, and
+    `InvalidModelTransition` for a change outside the diagram; nothing is written in those cases.
+    `failed` needs a readable `error_message`; every other target clears it. Entering `downloading`
+    pins the repository revision and total size and starts at `downloaded_bytes` (0 by default);
+    `verifying` and `installed` or `enabled` report everything as downloaded; `not_installed`
+    clears the progress. The caller's session is committed.
+    """
+    option = require_known_model(model_id)
+    row = session.get(GenerationModel, model_id)
+    current = row.state if row is not None else State.NOT_INSTALLED
+    if target not in ALLOWED_TRANSITIONS[current]:
+        raise InvalidModelTransition(current, target)
+    if target in KILL_SWITCH_BLOCKED_TARGETS:
+        require_generation_available(settings)
+    if target is State.FAILED and not (error_message and error_message.strip()):
+        raise ValueError("A failed model needs a readable error message.")
+
+    if row is None:
+        row = GenerationModel(model_id=model_id, state=current)
+        session.add(row)
+    row.state = target
+    row.error_message = error_message if target is State.FAILED else None
+    if target is State.DOWNLOADING:
+        row.revision = option.revision
+        row.total_bytes = option.total_bytes
+        row.downloaded_bytes = downloaded_bytes or 0
+    elif target is State.NOT_INSTALLED:
+        row.revision = None
+        row.total_bytes = 0
+        row.downloaded_bytes = 0
+    elif target in {State.VERIFYING, State.INSTALLED, State.ENABLED}:
+        row.downloaded_bytes = row.total_bytes
+    row.updated_at = utc_now()
+    session.commit()
+    return row
+
+
+def record_download_progress(session: Session, model_id: str, downloaded_bytes: int) -> None:
+    """Persist the bytes on disk for a `downloading` model so a restart can resume.
+
+    Raises `InvalidModelTransition` when the model is not `downloading`, and
+    `ValueError` for a negative number or one above the pinned total. The session is committed.
+    """
+    row = session.get(GenerationModel, model_id)
+    current = row.state if row is not None else State.NOT_INSTALLED
+    if row is None or current is not State.DOWNLOADING:
+        raise InvalidModelTransition(current, State.DOWNLOADING)
+    if downloaded_bytes < 0 or downloaded_bytes > row.total_bytes:
+        raise ValueError("Download progress must stay between zero and the pinned total.")
+    row.downloaded_bytes = downloaded_bytes
+    row.updated_at = utc_now()
+    session.commit()

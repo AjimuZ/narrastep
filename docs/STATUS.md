@@ -62,7 +62,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Real Teams call with a headset on Windows, in one guided session with the single-window check (`node scripts/ralph/owner-check.cjs`) | Planned, needs the owner | P05.6 |
 | Final verification of the finished roadmap | Planned | P10.2 |
 | Desktop window smoke test on the Docker stack, run by `scripts/ralph/desktop-smoke.sh` ([procedure](DEVELOPMENT.md#manual-smoke-test-on-docker-p072)) | Planned | P07.2 |
-| Optional local Gemma 4 generation | Planned | P06 |
+| Optional local Gemma 4 generation | Partly done | P06. Since P06.2a (2026-10-30): the pinned file catalog for E2B and E4B (revision, names, sizes, SHA-256 read from the Hugging Face listing; no file downloaded or hashed on this computer), the four `NARRASTEP_*` generation settings with validation, Compose entries and README rows, the `generation_models` table (migration `20261030_0010`) and the state transitions with the kill switch. Nothing downloads, verifies, deletes or generates yet (P06.2b, P06.3) |
 | `.env` generated from the computer's hardware when missing. `scripts/generate-env.sh` prints the file (P08.6); the backend setting `NARRASTEP_WHISPER_CPU_THREADS` and its Compose entry exist (P08.7, listed empty in `.env.example`); the start scripts that call the generator are still to come | Partly done | P08.7–P08.8 |
 | Podman support with `start-podman.sh`. The Compose file and Dockerfiles are engine-neutral (P08.9), and the stack is healthy on Docker; nothing has run on Podman yet | Planned | P08.10–P08.12 |
 | Clickable `[mm:ss]` references in Review and Document | Planned | P06.6 |

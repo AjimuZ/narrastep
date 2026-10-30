@@ -240,6 +240,11 @@ flowchart LR
 - **Model manager ([Local generation](LOCAL_GENERATION.md)).** The API downloads model files only
   after an explicit user action, through the `local` network, which has an Internet route. It
   verifies SHA-256 hashes and writes to `/data/models`. No project data leaves the computer.
+  Since P06.2a `services/model_catalog.py` pins the repository revision and the name, size and
+  SHA-256 of each file, `services/model_manager.py` keeps the install state in the
+  `generation_models` table and allows only the transitions of the state diagram, and the kill
+  switch `NARRASTEP_LOCAL_GENERATION=disabled` refuses new downloads. Downloading, verifying and
+  deleting files are still to come (P06.2b).
 - **Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)).** A host Electron shell,
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It

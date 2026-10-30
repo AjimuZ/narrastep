@@ -1,7 +1,8 @@
 # Local generation
 
 Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binaries, which the
-backend image contains since P06.1 and which nothing starts yet. Version 0.2 exports evidence and
+backend image contains since P06.1 and which nothing starts yet, and the pinned file catalog, the
+four settings and the stored model state, which exist since P06.2a. Version 0.2 exports evidence and
 prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
@@ -20,8 +21,28 @@ installs and enables it from Settings.
 
 - Both models accept text and images and produce text, with a 128K-token context.
 - Memory figures cover weights only; the context cache comes on top. P06.5 measures real use.
-- Sizes were read from the repository file listing on 2026-10-28. The implementation pins a
-  repository revision and the SHA-256 of each file.
+- Sizes were read from the repository file listing on 2026-10-28. Since P06.2a
+  (`backend/app/services/model_catalog.py`) the catalog pins, for each option, the repository
+  revision and the name, size and SHA-256 of each file.
+
+### Pinned files
+
+Read on 2026-10-30 from the Hugging Face API (`/api/models/ggml-org/<repository>` for the revision,
+`/tree/main` for each file's size and LFS object id, which is the SHA-256). Each option has its own
+repository, so each has its own revision. The catalog builds download addresses as
+`https://huggingface.co/<repository>/resolve/<revision>/<file>`, never from a branch name.
+
+| Option | Repository and revision | File | Size (bytes) | SHA-256 |
+| --- | --- | --- | ---: | --- |
+| Light | `ggml-org/gemma-4-E2B-it-GGUF` at `6938c58e698502037401a5f19f6905f2fb2f7dee` | `gemma-4-E2B-it-Q4_0.gguf` | 2,841,481,184 | `8e30dff3ac4c8434c49a7036fa15564bdbb6044e42bf04550bf1a096ad7e6a52` |
+| Light | same | `mmproj-gemma-4-E2B-it-Q8_0.gguf` | 557,368,064 | `9406f99c16d68cda4f1f0552192dcc99021ea1fc6d2fd50b1dc3ccf30d04b292` |
+| Quality | `ggml-org/gemma-4-E4B-it-GGUF` at `a69f018d7678a2b9f5e705f8903d6fb29b9b25dc` | `gemma-4-E4B-it-Q4_0.gguf` | 4,590,807,392 | `a555b900214b477d8880e7832e0b8925e139b0159640036b09fe472b6f2097f2` |
+| Quality | same | `mmproj-gemma-4-E4B-it-Q8_0.gguf` | 559,874,816 | `197f49a93027f9843772bd24a6a9e0be2a32a788de5a3def330e9c585d86edd1` |
+
+The totals are 3,398,849,248 bytes (3.4 GB) and 5,150,682,208 bytes (5.2 GB). The values come from
+the listing; no file was downloaded or hashed on this computer in P06.2a, so a mismatch between a
+real download and these values is first detected by the verification of P06.2b. To pin a newer
+revision, read the listing again and change the catalog, this table and the test together.
 
 ### License
 
@@ -103,10 +124,19 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
       +--- failed <--+--------------+                  +-> deleted -> not installed
 ```
 
+- Implemented in P06.2a: the state is stored in the `generation_models` table (migration
+  `20261030_0010`; one row per model with the state, downloaded and total bytes, the pinned
+  revision and the failure message) and `services/model_manager.py` allows only the transitions of
+  the diagram. A model with no row is `not installed`, so a fresh stack has nothing installed.
+  Deleting goes straight from `installed` or `enabled` to `not installed`, and a `failed` model
+  returns to `not installed` before a new download. Nothing downloads, verifies or deletes files
+  yet (P06.2b).
 - Download progress is persisted in SQLite and survives an API restart; a restart resumes with
   HTTP range requests.
 - A file with a wrong SHA-256 is deleted and the state becomes `failed` with a readable message.
-- `NARRASTEP_LOCAL_GENERATION=disabled` hides every control and the API refuses downloads.
+- `NARRASTEP_LOCAL_GENERATION=disabled` hides every control and the API refuses downloads. In
+  the model manager the switch refuses a move into `downloading` or `enabled` with
+  `403 LOCAL_GENERATION_DISABLED`; deleting a model stays possible so the disk space can be freed.
 
 ### Import from disk
 
@@ -192,6 +222,19 @@ When a generation exists, the user can include it in the next export as
 | `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Folder for [import from disk](#import-from-disk); planned with P06.2 |
 | `NARRASTEP_GENERATION_THREADS` | `0` | CPU threads; `0` lets `llama.cpp` decide |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Screenshots are downscaled before inference |
+
+Implemented in P06.2a (`Settings` in `backend/app/config.py`, passed by `docker-compose.yml`, listed
+in `.env.example` and the README). Startup fails on a value outside these ranges:
+
+| Setting | Accepted values |
+| --- | --- |
+| `NARRASTEP_LOCAL_GENERATION` | exactly `available` or `disabled` |
+| `NARRASTEP_GENERATION_MODEL` | exactly `gemma-4-e2b` or `gemma-4-e4b` |
+| `NARRASTEP_GENERATION_THREADS` | whole number from 0 to 256 |
+| `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | whole number of pixels from 256 to 4096 |
+
+Nothing reads the model, thread and image settings until the generation job (P06.3);
+`NARRASTEP_MODEL_IMPORT_DIR` arrives with the import (P06.2b).
 
 ## Verification
 

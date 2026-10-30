@@ -7,6 +7,10 @@ All notable changes to Narrastep are documented in this file.
 ### Added
 
 - Initial Narrastep 0.2 local-first web application implementation.
+- Settings for the optional local generation: `NARRASTEP_LOCAL_GENERATION` (set to `disabled` to
+  turn the feature off), `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and
+  `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`. Nothing is installed or downloaded by default, and the
+  model manager screens and downloads follow in later changes.
 - Project, upload, processing, review, split/merge, screenshot association, and export workflows.
 - Docker Compose development stack, automated tests, CI, and project documentation.
 - Opt-in full-stack Playwright coverage using generated legal media, the real local stack, and ZIP content verification.

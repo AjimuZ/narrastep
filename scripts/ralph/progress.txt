@@ -23,6 +23,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Keep a container-inventory script as a pure compare function plus a thin engine call. Test the compare function with fixed listings and edited copies of the document, and test the stdin path with a subprocess.
 - Write host-probing shell scripts as pure profile functions plus probes. Let a NARRASTEP_PROBE_* variable (set but empty means unknown) replace each probe, so tests fix the hardware without root or fake /proc files.
 - Prove that a script calls no network tool by putting failing stubs for curl, wget, nc and similar commands on PATH while it probes the real machine. Add a scan of the script text with comments removed.
+- Pin external model files in a frozen-dataclass catalog with revision, name, size and 64-hex SHA-256, and test the shape (40-hex revision, 64-hex hashes, bare file names, totals against the docs) so a pin can only change together with its documentation.
+- Keep a persisted lifecycle as a StrEnum, a dict of allowed transitions and one `transition_*` function that validates, writes and commits; a missing row means the initial state. Test the edge set against the documented diagram and add a parametrized table of refused transitions.
+- Test that every setting key appears in docker-compose.yml with the same default as the Settings class and in the README and spec, so documentation and Compose cannot drift.
 
 ---
 
@@ -156,4 +159,32 @@ Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfil
 
 ## [2026-10-30T22:11:39.436Z] - P08.7 - published by hand
 Backend setting NARRASTEP_WHISPER_CPU_THREADS and its Compose entry; the owner's session listed it in .env.example, which sessions may not touch.
+---
+
+## 2026-10-30T22:33:18Z - P06.2a
+- Pinned catalog, validated settings, `generation_models` migration and state transitions with the kill switch are in place. `check.sh backend`, `docs`, `compose` and `stack` all pass. The stack starts with the new migration and nothing installed.
+
+- **Catalog:** I read the real repositories from Hugging Face (reachable from the sandbox). `backend/app/services/model_catalog.py` pins, for E2B and E4B:
+  - the repository revision (`6938c58e…` and `a69f018d…`), one per repository, since each model has its own;
+  - the name, size and SHA-256 of the weights and mmproj files, taken from the LFS object ids.
+  - Totals come to 3.4 GB and 5.2 GB, as in docs/LOCAL_GENERATION.md. The values are in a table there under "Pinned files".
+- **Settings:** the four `NARRASTEP_*` keys are validated in `config.py`. `LOCAL_GENERATION` accepts `available` or `disabled`. `GENERATION_MODEL` accepts the two catalog ids. `GENERATION_THREADS` takes 0–256. `GENERATION_IMAGE_MAX_EDGE` takes 256–4096. They are also in `docker-compose.yml`, the README table and docs/LOCAL_GENERATION.md. Nothing reads them yet.
+- **Migration:** `20261030_0010` creates `generation_models` (one row per model, with state, byte counts, revision and failure message). No row means "not installed". I read criterion 3 as the states in docs/LOCAL_GENERATION.md, as the preflight said.
+- **Transitions:** `services/model_manager.py` allows only the documented transitions. The kill switch refuses a move to `downloading` or `enabled` with 403 `LOCAL_GENERATION_DISABLED`; deleting stays allowed. A `failed` state needs a message. Unknown models return 404.
+- **Tests:** new `test_model_catalog.py` and `test_model_manager.py`, plus a migration test on 0009 with data preserved, a clean `alembic check`, constraint checks and a downgrade. The backend suite passed.
+- **Stack:** a one-off container from the built image ran `alembic upgrade head`. It reported head `20261030_0010`, 0 rows in `generation_models`, and settings `available gemma-4-e2b 0 1024`.
+
+**Not done or not verified:**
+- No file was downloaded or hashed here, so the hashes are exactly what Hugging Face lists. A real mismatch would show up in the P06.2b verification.
+- I did not read or test `.env.example`, as the task notes say; I treated that part as done. No other key is needed.
+- The P06.2 checkbox is untouched, and the roadmap has only a dated Progress note. Download, resume, hash verification, file deletion, license text, API endpoints and the import folder remain for P06.2b.
+- Files changed: backend/app/services/model_catalog.py, backend/app/services/model_manager.py, backend/app/config.py, backend/app/models.py, backend/alembic/versions/20261030_0010_generation_models.py, docker-compose.yml, README.md, CHANGELOG.md, docs/LOCAL_GENERATION.md, docs/ARCHITECTURE.md, docs/STATUS.md, docs/ROADMAP.md, backend/tests/test_model_catalog.py, backend/tests/test_model_manager.py, backend/tests/test_migrations.py
+- **Learnings for future iterations:**
+  - Hugging Face is reachable from the sandbox: `./scripts/ralph/sandbox.sh 'curl -sS https://huggingface.co/api/models/ggml-org/gemma-4-E2B-it-GGUF/tree/main'` lists size and lfs.oid (the SHA-256) per file, and `/api/models/<repo>` gives the revision `sha`. Each option is its own repository (`ggml-org/gemma-4-E2B-it-GGUF`, `ggml-org/gemma-4-E4B-it-GGUF`) with its own revision.
+  - P06.2b should build on `services/model_manager.py`: `transition_model(session, settings, model_id, target, ...)` commits, `record_download_progress` persists bytes, and `ModelOption.file_url(file)` gives the revision-pinned address. Deleting is one step from installed/enabled to not_installed; a failed model must go to not_installed before a new download.
+  - `NARRASTEP_MODEL_IMPORT_DIR` is still not a setting in config.py or docker-compose.yml. It belongs to P06.2b together with the bind mount and the start-script folder creation.
+  - The kill switch refuses moves into `downloading` and `enabled` (403 `LOCAL_GENERATION_DISABLED`) but allows deleting. The API endpoints for P06.2b must also call `require_generation_available` before any network work.
+  - The `generation_model` Literal in config.py must list the same keys as `MODEL_CATALOG`; `test_configured_model_names_are_exactly_the_catalog_keys` fails if they drift.
+  - `.env.example` was not read or tested in this task, as the task notes instruct; only Compose, README and docs are tested for the four keys.
+  - Standalone `./scripts/ralph/stack.sh exec -T api ...` fails after `check.sh stack` because that check tears the stack down. Use `stack.sh run --rm --no-deps -T --entrypoint sh api -c '...'` for one-off checks in the built image.
 ---

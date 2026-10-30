@@ -100,6 +100,10 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate of the recorder (about 1.1 GB per hour) |
 | `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Highest frame rate the recorder asks for |
 | `NARRASTEP_WHISPER_MODEL` | `small` | Whisper model baked into the image at build |
+| `NARRASTEP_LOCAL_GENERATION` | `available` | `disabled` turns the optional local generation off; nothing is installed by default |
+| `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | Model the user installs from Settings: `gemma-4-e2b` or `gemma-4-e4b` |
+| `NARRASTEP_GENERATION_THREADS` | `0` | CPU threads for generation; `0` lets `llama.cpp` decide |
+| `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Longest screenshot edge in pixels sent to the model (256 to 4096) |
 | `NARRASTEP_SCREENSHOT_SELECTION_STRATEGY` | `legacy` | `legacy` or experimental `adaptive_v1` |
 | `NARRASTEP_IMAGE_BUDGET_PROFILE` | `balanced` | `compact`, `balanced` or `detailed` |
 | `NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH` | `20` | Files per ChatGPT upload batch |

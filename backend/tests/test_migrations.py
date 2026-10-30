@@ -518,6 +518,86 @@ def test_speaker_label_revision_constrains_labels_and_keeps_child_rows(
         get_settings.cache_clear()
 
 
+def test_generation_model_revision_upgrades_the_previous_head_with_nothing_installed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Add `generation_models` on the previous head, keep project data and install nothing.
+
+    The table starts empty (every model is then `not_installed`), its CHECK constraint accepts
+    only the documented states, `alembic check` finds no drift and the downgrade drops the table.
+    """
+    data_root = tmp_path / "migration-generation-models"
+    database_url = f"sqlite:///{(data_root / 'narrastep.db').as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    insert_model = text(
+        "INSERT INTO generation_models (model_id, state, downloaded_bytes, total_bytes,"
+        " created_at, updated_at) VALUES ('gemma-4-e2b', :state, 0, 0, '2026-10-30',"
+        " '2026-10-30')"
+    )
+
+    try:
+        command.upgrade(alembic_config, "20261029_0009")
+        engine = create_engine(database_url)
+        assert "generation_models" not in inspect(engine).get_table_names()
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projects (id, name, source_language, output_mode, state,"
+                    " created_at, updated_at) VALUES ('project', 'P', 'auto', 'meeting',"
+                    " 'review', '2026-10-30', '2026-10-30')"
+                )
+            )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        command.check(alembic_config)
+        engine = create_engine(database_url)
+        schema = inspect(engine)
+        columns = {item["name"]: item for item in schema.get_columns("generation_models")}
+        assert list(columns) == [
+            "model_id",
+            "state",
+            "downloaded_bytes",
+            "total_bytes",
+            "revision",
+            "error_message",
+            "created_at",
+            "updated_at",
+        ]
+        assert columns["revision"]["nullable"] and columns["error_message"]["nullable"]
+        assert {item["name"] for item in schema.get_check_constraints("generation_models")} == {
+            "model_install_state"
+        }
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM generation_models")).scalar() == 0
+            assert connection.execute(text("SELECT id FROM projects")).scalars().all() == [
+                "project"
+            ]
+        with engine.begin() as connection:
+            for state in ("not_installed", "downloading", "verifying", "installed", "enabled"):
+                connection.execute(text("DELETE FROM generation_models"))
+                connection.execute(insert_model, {"state": state})
+            connection.execute(text("DELETE FROM generation_models"))
+            connection.execute(insert_model, {"state": "failed"})
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(insert_model.bindparams(state="deleted"))
+        engine.dispose()
+
+        command.downgrade(alembic_config, "20261029_0009")
+        engine = create_engine(database_url)
+        schema = inspect(engine)
+        assert "generation_models" not in schema.get_table_names()
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM projects")).scalar() == 1
+        engine.dispose()
+    finally:
+        get_settings.cache_clear()
+
+
 def test_legacy_mode_values_map_to_project_types() -> None:
     """Normalize the retired value found in old snapshots and keep every other value."""
     assert canonical_output_mode("technical_walkthrough") == OutputMode.TASK_BRIEFING.value

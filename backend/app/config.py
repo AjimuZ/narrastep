@@ -114,6 +114,15 @@ class Settings(BaseSettings):
     whisper_local_files_only: bool = True
     # None keeps the faster-whisper default; an empty variable also means unset (Compose passes "").
     whisper_cpu_threads: int | None = Field(default=None, ge=1, le=64)
+    # Optional local generation (ADR 0011). `disabled` is the kill switch: the model manager
+    # refuses downloads and the interface hides every control. Nothing is installed by default.
+    local_generation: Literal["available", "disabled"] = "available"
+    # Must name an entry of `services.model_catalog.MODEL_CATALOG`; a test keeps both in step.
+    generation_model: Literal["gemma-4-e2b", "gemma-4-e4b"] = "gemma-4-e2b"
+    # 0 lets llama.cpp choose the thread count.
+    generation_threads: int = Field(default=0, ge=0, le=256)
+    # Longest screenshot edge in pixels sent to the model; larger images are downscaled first.
+    generation_image_max_edge: int = Field(default=1024, ge=256, le=4096)
     frame_interval_seconds: float = Field(default=3.0, gt=0)
     frame_neighbor_seconds: float = Field(
         default=0.2,
@@ -256,6 +265,11 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         """Return the configured upload limit in bytes."""
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def local_generation_available(self) -> bool:
+        """Return False when the kill switch `NARRASTEP_LOCAL_GENERATION=disabled` is set."""
+        return self.local_generation == "available"
 
     @property
     def recording_max_chunk_bytes(self) -> int:

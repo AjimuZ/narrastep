@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     DateTime,
     Enum,
@@ -86,6 +87,22 @@ class RecordingTrack(StrEnum):
 
     SCREEN = "screen"
     MICROPHONE = "microphone"
+
+
+class ModelInstallState(StrEnum):
+    """Represent where a local generation model is in its install lifecycle (ADR 0011).
+
+    A model with no stored row is `not_installed`. `installed` means the verified files are present
+    but generation is off; `enabled` means generation may use them. The transitions allowed between
+    these values are defined in `services/model_manager.py`.
+    """
+
+    NOT_INSTALLED = "not_installed"
+    DOWNLOADING = "downloading"
+    VERIFYING = "verifying"
+    INSTALLED = "installed"
+    ENABLED = "enabled"
+    FAILED = "failed"
 
 
 class SpeakerLabel(StrEnum):
@@ -573,3 +590,39 @@ class RecordingChunk(Base):
     )
 
     recording: Mapped[RecordingSession] = relationship(back_populates="chunks")
+
+
+class GenerationModel(Base):
+    """Persist the install state and download progress of one local generation model (P06.2a).
+
+    `model_id` is a key of the pinned catalog in `services/model_catalog.py`. A model with no row
+    is `not_installed`; SQLite is the authority, so the files under `/data/models` are only trusted
+    while the row says `installed` or `enabled`. `revision` records the repository commit the
+    files were verified against and `error_message` the readable reason of a `failed` state.
+    """
+
+    __tablename__ = "generation_models"
+
+    model_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    state: Mapped[ModelInstallState] = mapped_column(
+        Enum(
+            ModelInstallState,
+            name="model_install_state",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        ),
+        default=ModelInstallState.NOT_INSTALLED,
+        nullable=False,
+    )
+    # Bytes of all files already on disk, so a restart resumes instead of starting over.
+    downloaded_bytes: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    total_bytes: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    revision: Mapped[str | None] = mapped_column(String(40))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
