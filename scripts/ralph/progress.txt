@@ -118,3 +118,11 @@ Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfil
   - The recorder spec fakes the desktop window with `vi.spyOn(navigator, 'userAgent', 'get')` through the new `desktop` option of `setup()`. It is restored in afterEach; a test that calls setup() twice must restore it and the fake media between the calls.
   - The orchestrator still has to tick the P07.3 checkbox. The manual Windows check stays open in the P07 exit: record one window with system audio on a real Windows system. The real-Electron harness was not run, but it should be unaffected: the request from the app origin still opens the picker, and the harness closes the picker.
 ---
+
+## 2026-10-30T21:32:42Z - P08.5a
+- Added an "Updating dependencies" section to docs/DEVELOPMENT.md. It covers what to run, where licenses are recorded, and what stays pinned and why. Added notes to risks K9 and K15 in docs/RISKS.md. `check.sh docs` passed. I did not compare every LICENSES.md row against the lockfiles. I only read the kept-behind entries, which were consistent with the 3.14.10 and 26.13.0 pins.
+- Files changed: docs/DEVELOPMENT.md, docs/RISKS.md
+- **Learnings for future iterations:**
+  - The LICENSES.md versus lockfile comparison was not redone. Existing tests (test_dependencies.py, test_container_images.py) already enforce the Python and image parts.
+  - P08.5b, the automated inventory, is still open. The new section does not mention an automated inventory command, so it needs a line once that exists.
+---

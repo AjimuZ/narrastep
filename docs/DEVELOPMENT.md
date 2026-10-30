@@ -437,6 +437,35 @@ the development environment, run the backend checks and `scripts/check_transcrip
 record new packages and licenses in [Licenses](LICENSES.md). Packages kept behind their newest
 release, and why, are listed there too.
 
+## Updating dependencies
+
+Policy: every dependency has an exact version (no ranges, no pre-releases); every package has a
+free, open-source-compatible license ([ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)).
+To repeat a refresh (the last one ran from P08.2 to P08.4, 2026-10-29 and 2026-10-30):
+
+1. **Check the newest releases.** Python: `uv pip compile` with `--upgrade` (above) and PyPI.
+   Web: `npm outdated` in `apps/web` and `desktop`. Images and Node.js: the registries and the
+   Node.js release schedule (newest LTS).
+2. **Change the pins.** Python in `backend/pyproject.toml`, then regenerate both locks (previous
+   section). Web in `apps/web/package.json` and `desktop/package.json`, then `npm install` to
+   update the lockfiles. Images in the Dockerfiles and Compose files, by exact tag and digest.
+   Node.js in `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfile`, `engines` and the CI jobs.
+3. **Check licenses.** Read the license of every new or changed package and record version,
+   license and reason in [Licenses](LICENSES.md); the table must match the installed versions.
+   `backend/tests/test_dependencies.py` and `backend/tests/test_container_images.py` fail when
+   a locked package or image is missing from it.
+4. **Run the checks:** `check.sh backend`, `web`, `desktop`, `docs`, then `stack` or
+   `fullstack` and `scripts/check_transcription_stack.py` for images and the audio path.
+5. **Record the result:** the roadmap evidence, `docs/STATUS.md`, `CHANGELOG.md` and risks
+   [K9 and K15](RISKS.md).
+
+What stays pinned behind its newest release, and why, is in the "kept behind" tables of
+[Licenses](LICENSES.md): a package stays back when its newest stable release conflicts with a
+dependent (redis-py with Kombu, TypeScript with Angular and `typescript-eslint`), when a
+platform lacks wheels (Python 3.15 and ONNX Runtime), or when it is a pre-release or an
+unversioned build (`llama.cpp` `server-b*` tags). Revisit each reason on every refresh and move
+the pin when it no longer holds.
+
 ## Bundled llama.cpp server
 
 The backend image copies the CPU `llama.cpp` server into `/opt/llama.cpp` from the official image
