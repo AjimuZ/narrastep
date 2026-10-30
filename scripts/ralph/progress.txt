@@ -10,3 +10,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Other projects share Docker's 8 GB. `ENOMEM` or a refused connection in a browser run means load, not a defect; the checks repeat by themselves.
 - The broker is Valkey 9.1.3 under the Compose service name `redis`, with the `narrastep-redis` volume: the name is kept on purpose (ADR 0017).
 ---
+
+## [2026-10-30T15:54:18.019Z] - P08.13 - passed
+ci.yml parses as YAML again with all seven jobs, and backend tests fail on invalid YAML and on the old lines (negative control recorded). A one-off actionlint run also found runner.temp in the contracts job env, which GitHub's context rules forbid and which dates from the first commit; it moved to the step that reads it and actionlint now exits 0. No run on GitHub was possible, because nothing is pushed at that point.
+Not run: A workflow run on GitHub: nothing is pushed at this point, so the first real run is the push of this commit.
+---

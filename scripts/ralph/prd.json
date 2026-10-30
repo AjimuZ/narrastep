@@ -29,12 +29,12 @@
       "verify": [],
       "verifyHost": [],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
       "blocked": false,
       "blockedReason": "",
       "lastFailure": "",
-      "verifiedAt": null,
+      "verifiedAt": "2026-10-30T15:54:18.019Z",
       "notes": "Confirmed on 2026-10-30 with PyYAML: \"mapping values are not allowed here\", line 69, column 81. Quote the two commands. PyYAML is in the development lock; check that it is a direct or stable part of it before relying on it in a test."
     },
     {

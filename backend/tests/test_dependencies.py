@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 from packaging.markers import Marker
 from packaging.requirements import Requirement
@@ -23,6 +24,8 @@ BACKEND = Path(__file__).resolve().parents[1]
 REPOSITORY = BACKEND.parent
 RUNTIME_LOCK = BACKEND / "requirements.lock"
 DEV_LOCK = BACKEND / "requirements-dev.lock"
+CI_WORKFLOW = REPOSITORY / ".github" / "workflows" / "ci.yml"
+CI_JOBS = {"frontend", "desktop", "runner", "backend", "contracts", "containers", "fullstack"}
 REQUIREMENT_LINE = re.compile(r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==(?P<version>[^\s;\\]+)")
 HASH = re.compile(r"--hash=sha256:[0-9a-f]{64}")
 
@@ -81,6 +84,16 @@ def _pyproject() -> dict[str, object]:
         return tomllib.load(source)
 
 
+def _ci_jobs() -> dict[str, Any]:
+    """Return the jobs of the parsed CI workflow; raises `yaml.YAMLError` on invalid YAML.
+
+    PyYAML is locked as a runtime dependency of faster-whisper and Uvicorn, so it cannot be a
+    development pin as well; `test_installed_packages_are_the_locked_versions` covers its version.
+    """
+    jobs: dict[str, Any] = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    return jobs
+
+
 def test_every_locked_package_is_pinned_with_hashes() -> None:
     """Pin every runtime and development package exactly, each with at least one SHA-256 hash."""
     for lock in (RUNTIME_LOCK, DEV_LOCK):
@@ -136,7 +149,7 @@ def test_python_version_agrees_across_project_image_ci_and_locks() -> None:
         re.M,
     )
     assert image and image[1] == "3.14", "the runtime image must use Python 3.14"
-    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
     assert set(re.findall(r"python-version: (\S+)", workflow)) == {f"3.14.{image[2]}"}
     for lock in (RUNTIME_LOCK, DEV_LOCK):
         assert "--python-version 3.14 " in lock.read_text(encoding="utf-8"), lock.name
@@ -152,12 +165,33 @@ def test_image_and_ci_install_only_from_the_locks() -> None:
     ]
     assert "COPY pyproject.toml requirements.lock ./" in dockerfile
     assert "python -m pip check" in dockerfile
-    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    ci_installs = re.findall(r"pip install (.+)", workflow)
+    ci_commands = [
+        step["run"] for job in _ci_jobs().values() for step in job["steps"] if "run" in step
+    ]
+    ci_installs = [
+        install for command in ci_commands for install in re.findall(r"pip install (.+)", command)
+    ]
     assert set(ci_installs) == {
         "--require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock",
         "--no-deps --no-build-isolation --no-index -e ./backend",
     }
+
+
+def test_ci_workflow_parses_and_keeps_every_job() -> None:
+    """Keep the CI file valid YAML, because GitHub runs no job at all of an invalid workflow."""
+    assert set(_ci_jobs()) == CI_JOBS
+
+
+def test_ci_job_environments_do_not_use_the_runner_context() -> None:
+    """Keep `runner.*` out of a job's `env`: GitHub refuses the whole workflow file for it."""
+    misplaced = [name for name, job in _ci_jobs().items() if "runner." in str(job.get("env", {}))]
+    assert misplaced == []
+
+
+def test_yaml_parser_rejects_an_unquoted_colon_in_a_command() -> None:
+    """Refuse the mistake that disabled CI: `:all: ` in a plain scalar starts a nested mapping."""
+    with pytest.raises(yaml.YAMLError, match="mapping values are not allowed here"):
+        yaml.safe_load("- run: python -m pip install --only-binary=:all: -r requirements.lock\n")
 
 
 def test_installed_packages_are_the_locked_versions() -> None:

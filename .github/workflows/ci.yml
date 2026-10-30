@@ -66,7 +66,8 @@ jobs:
           cache-dependency-path: backend/requirements-dev.lock
       - run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       # The locked packages only, each checked against its hash; then the project itself (P08.2).
-      - run: python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock
+      # Quoted because ": " in a plain YAML value starts a mapping and invalidates the whole file.
+      - run: "python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock"
       - run: python -m pip install --no-deps --no-build-isolation --no-index -e ./backend
       - run: python -m ruff format --check backend
       - run: python -m ruff check backend
@@ -77,8 +78,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NARRASTEP_ENV: test
-      NARRASTEP_DATA_DIR: ${{ runner.temp }}/narrastep-data
-      NARRASTEP_DATABASE_URL: sqlite:///${{ runner.temp }}/narrastep-contracts.db
       NARRASTEP_ENABLE_MOCK_PROCESSING: "true"
     steps:
       - uses: actions/checkout@v4
@@ -87,10 +86,14 @@ jobs:
           python-version: 3.14.10
           cache: pip
           cache-dependency-path: backend/requirements-dev.lock
-      - run: python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock
+      - run: "python -m pip install --require-hashes --no-deps --only-binary=:all: -r backend/requirements-dev.lock"
       - run: python -m pip install --no-deps --no-build-isolation --no-index -e ./backend
       - run: python scripts/check_docs.py
+      # At step level because GitHub refuses the `runner` context in a job's `env`.
       - run: python scripts/export_openapi.py --check
+        env:
+          NARRASTEP_DATA_DIR: ${{ runner.temp }}/narrastep-data
+          NARRASTEP_DATABASE_URL: sqlite:///${{ runner.temp }}/narrastep-contracts.db
 
   containers:
     runs-on: ubuntu-latest
