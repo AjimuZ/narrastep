@@ -14,6 +14,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Run one Playwright command at a time in the sandbox: parallel runs share the dev server on port 4200, and when one ends the other fails with ERR_CONNECTION_REFUSED.
 - Declare health checks in `docker-compose.yml`, not in a Dockerfile `HEALTHCHECK`, because Podman's default OCI image format drops it; `backend/tests/test_container_images.py` enforces this.
 - Name images built from this repository `localhost/<name>:<version>` and pulled images with their full registry path, keeping tag and digest; `backend/tests/test_container_images.py` enforces this.
+- When a version appears in tests as both the pin and an 'older installed' value, bump only the pin and keep the older value older.
 
 ---
 
@@ -75,4 +76,15 @@ The model import bind mount of P06.2 is not in the Compose file yet, so its SELi
   - A direct `docker compose config --images` is denied by the allowlist in implementation sessions. `./scripts/ralph/sandbox.sh '...'` and the listed `check.sh` forms were allowed in this session.
   - `./start.sh -r` runs `docker compose up --no-build`, so after this rename it does not find images built under the old names until `./start.sh` has rebuilt them once. This follows from the script and the rename; it was not run.
   - The `docker image inspect localhost/narrastep-backend:0.2.0` result in the P08.9 evidence comes from an earlier attempt and was not repeated in this session.
+---
+
+## 2026-10-30T19:19:22Z - P08.4b
+- Moved Electron, the only package in desktop/package.json, from 45.1.0 to 45.2.0. `npm view electron version` reported 45.2.0 as the newest. I updated package.json, the Electron entry of the lock, the launcher tests, ADR 0014, DEVELOPMENT.md, LICENSES.md, STATUS.md and CHANGELOG.md, and added dated progress to the P08.4 roadmap item. In `desktop`, `npm test` passed 127 tests (format check and tests via `check.sh desktop` before the test fix; the re-run after the fix used the dot reporter and showed no failures). `check.sh docs` passed. Not verified: the window tests in a real Electron 45.2.0 (skipped without the env flag), an Electron download, and whether the transitive lock packages are the newest; a registry query for them was denied.
+- Files changed: desktop/package.json, desktop/package-lock.json, desktop/test/launcher.test.cjs, CHANGELOG.md, docs/ROADMAP.md, docs/STATUS.md, docs/LICENSES.md, docs/DEVELOPMENT.md, docs/decisions/0014-desktop-app-shell.md
+- **Learnings for future iterations:**
+  - Electron 45.2.0 was the newest on 2026-10-30. The lock edit (version, resolved URL, integrity from `npm view electron@45.2.0 dist.integrity`) was made by hand, not by npm; the sandbox's `npm ci` accepted it (13 packages).
+  - In launcher.test.cjs, the 'reinstalls when the installed version differs' test needs an installed version that differs from VERSION, so bump the pin and keep the installed one one step behind. The 'newer version is not installed' assertion at line 348 uses a version above the pin.
+  - A pipe inside a single-quoted sandbox.sh argument works: `sandbox.sh 'cd desktop && node --test --test-reporter=dot test/*.test.cjs 2>&1 | tail -60'` shows only the failures, because check.sh output gets truncated in the middle.
+  - A direct `for` loop over npm view in sandbox.sh was denied; only single simple npm view calls were allowed, so the transitive packages were not compared with the registry.
+  - ROADMAP lines 168, 172 and 357 still say Electron 45.1.0 as dated historical evidence, and I left them unchanged.
 ---

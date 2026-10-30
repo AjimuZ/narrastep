@@ -57,7 +57,7 @@ be provided by a Linux container.
 
 The shell in `desktop/` applies this decision with these details:
 
-- Electron is pinned to 45.1.0 (MIT, released 2026-10-27, `engines` Node.js 22.12 or newer) in
+- Electron is pinned to 45.2.0 (MIT, the newest stable release on 2026-10-30, `engines` Node.js 22.12 or newer) in
   `desktop/package.json` and `desktop/package-lock.json`.
 - The origin is `http://127.0.0.1:{NARRASTEP_WEB_PORT}`, 4200 when the variable is unset or
   empty. `localhost` is never used. A port that is not a number from 1 to 65535 stops the shell

@@ -252,7 +252,7 @@ not redistributed.
 
 | Component | Version | License | Note |
 | --- | --- | --- | --- |
-| Electron | 45.1.0 | MIT | [ADR 0014](decisions/0014-desktop-app-shell.md); its binary download contains Chromium, Node.js and their third-party licenses (`LICENSES.chromium.html`); unsigned |
+| Electron | 45.2.0 | MIT | [ADR 0014](decisions/0014-desktop-app-shell.md); its binary download contains Chromium, Node.js and their third-party licenses (`LICENSES.chromium.html`); unsigned |
 | `@electron/get`, `@electron-internal/extract-zip` | 5.1.0, 1.0.8 | MIT | Download and unpack the Electron binary |
 | `sumchecker` | 3.0.1 | Apache-2.0 | Checks the binary's SHA-256 sum |
 | `undici`, `undici-types`, `debug`, `ms`, `env-paths`, `progress` | 7.30.1, 7.24.6, 4.4.3, 2.1.3, 3.0.0, 2.0.3 | MIT | Dependencies of `@electron/get` |

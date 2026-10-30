@@ -132,7 +132,7 @@ npm start
 ```
 
 `npm ci --ignore-scripts` installs the pinned `electron` package without running any package
-script; `install.js` then downloads the Electron 45.1.0 binary for this system from the Electron
+script; `install.js` then downloads the Electron 45.2.0 binary for this system from the Electron
 releases on GitHub and checks it against the SHA-256 sums in the package's `checksums.json`. `npm start` opens one window on
 `http://127.0.0.1:${NARRASTEP_WEB_PORT:-4200}`; a second `npm start` brings that window to the
 front and exits. A port that is not a number from 1 to 65535 exits with code 2. Electron's own
@@ -225,7 +225,7 @@ Record each step as passed or failed with the date and the output of `docker ver
    stops, the terminal prints `Narrastep: The stack is stopping, so the Narrastep window was
    closed.` and the window closes.
 4. Delete the `desktop/node_modules` folder and run `./start.sh -r`. After the waiting line the
-   terminal prints `Narrastep: First launch: installing Electron 45.1.0 into
+   terminal prints `Narrastep: First launch: installing Electron 45.2.0 into
    desktop/node_modules. ...`, then npm's output and the binary download, and the window opens on
    **Projects**. Stop with `Ctrl+C` and run `./start.sh -r` once more: the window opens without the
    install message.

@@ -597,8 +597,8 @@
         "The Electron pin in ADR 0014, docs/DEVELOPMENT.md and docs/LICENSES.md is current"
       ],
       "priority": 35,
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Moved Electron, the only package in desktop/package.json, from 45.1.0 to 45.2.0. `npm view electron version` reported 45.2.0 as the newest. I updated package.json, the Electron entry of the lock, the launcher tests, ADR 0014, DEVELOPMENT.md, LICENSES.md, STATUS.md and CHANGELOG.md, and added dated progress to the P08.4 roadmap item. In `desktop`, `npm test` passed 127 tests (format check and tests via `check.sh desktop` before the test fix; the re-run after the fix used the dot reporter and showed no failures). `check.sh docs` passed. Not verified: the window tests in a real Electron 45.2.0 (skipped without the env flag), an Electron download, and whether the transitive lock packages are the newest; a registry query for them was denied.",
       "dependsOn": [
         "P08.4a"
       ],

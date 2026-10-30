@@ -29,7 +29,7 @@ const {
   waitForHealth,
 } = require('../src/launcher.cjs');
 
-const VERSION = '45.1.0';
+const VERSION = '45.2.0';
 
 let root;
 
@@ -334,7 +334,7 @@ describe('pinnedElectronVersion and findInstalledElectron', () => {
   it('reads the exact pin and rejects ranges and unreadable manifests', () => {
     const desktop = makeDesktop();
     assert.equal(pinnedElectronVersion(desktop), VERSION);
-    makeDesktop('^45.1.0');
+    makeDesktop('^45.2.0');
     assert.throws(() => pinnedElectronVersion(desktop), /exact Electron version/);
     fs.rmSync(path.join(desktop, 'package.json'));
     assert.throws(() => pinnedElectronVersion(desktop), /cannot be read/);
@@ -345,7 +345,7 @@ describe('pinnedElectronVersion and findInstalledElectron', () => {
     assert.equal(findInstalledElectron(desktop, VERSION), null);
     const executable = installElectron(desktop);
     assert.equal(findInstalledElectron(desktop, VERSION), executable);
-    assert.equal(findInstalledElectron(desktop, '45.2.0'), null);
+    assert.equal(findInstalledElectron(desktop, '45.3.0'), null);
   });
 
   it('treats a missing binary, missing path.txt and an escaping path as not installed', () => {
@@ -474,7 +474,7 @@ describe('ensureElectron', () => {
       assert.equal(call.configSize, 0);
     }
     assert.equal(messages.length, 1);
-    assert.match(messages[0], /First launch: installing Electron 45\.1\.0/);
+    assert.match(messages[0], /First launch: installing Electron 45\.2\.0/);
     assert.match(messages[0], /registry\.npmjs\.org/);
     assert.match(messages[0], /GitHub/);
     // The temporary empty config file is removed afterwards.
