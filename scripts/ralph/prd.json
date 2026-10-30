@@ -622,7 +622,7 @@
       ],
       "priority": 36,
       "passes": false,
-      "notes": "The check container reads the Node.js version from `.nvmrc` and rebuilds itself. The host keeps its own Node.js; it needs at least 22.12 only for the desktop window. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "BLOCKED: still failing after 3 attempts: the implementation session did not confirm the conventions it was given",
       "dependsOn": [
         "P08.4a",
         "P08.4b"
