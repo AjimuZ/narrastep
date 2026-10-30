@@ -453,7 +453,8 @@ To repeat a refresh (the last one ran from P08.2 to P08.4, 2026-10-29 and 2026-1
 3. **Check licenses.** Read the license of every new or changed package and record version,
    license and reason in [Licenses](LICENSES.md); the table must match the installed versions.
    `backend/tests/test_dependencies.py` and `backend/tests/test_container_images.py` fail when
-   a locked package or image is missing from it.
+   a locked package or image is missing from it. With the images built, run the
+   [license inventory](#license-inventory-of-the-backend-image) too.
 4. **Run the checks:** `check.sh backend`, `web`, `desktop`, `docs`, then `stack` or
    `fullstack` and `scripts/check_transcription_stack.py` for images and the audio path.
 5. **Record the result:** the roadmap evidence, `docs/STATUS.md`, `CHANGELOG.md` and risks
@@ -465,6 +466,36 @@ dependent (redis-py with Kombu, TypeScript with Angular and `typescript-eslint`)
 platform lacks wheels (Python 3.15 and ONNX Runtime), or when it is a pre-release or an
 unversioned build (`llama.cpp` `server-b*` tags). Revisit each reason on every refresh and move
 the pin when it no longer holds.
+
+### License inventory of the backend image
+
+`backend/scripts/license_inventory.py` (standard library only, no network request) starts the
+built backend image, lists the Python distributions installed in it and the Debian packages that
+`backend/Dockerfile` names in `apt-get install`, and compares them with
+[Licenses](LICENSES.md). It exits 1 and names each difference when an installed Python package is
+missing from the document or listed at another version, when a Dockerfile package is not installed
+or not in the Debian table, or when a license is outside the free ones (rules in
+[Licenses](LICENSES.md#rules-for-new-dependencies); copyleft only in the Debian table). It does
+not list every transitive Debian package or the Alpine packages of the web and broker images:
+those are covered by the pinned image entries.
+
+```bash
+./scripts/ralph/stack.sh build api
+python backend/scripts/license_inventory.py --image narrastep-ralph-backend:dev
+# or, for the owner's images: --image localhost/narrastep-backend:0.2.0 [--engine podman]
+```
+
+The host needs Python 3.14 or newer to run the script (it uses unparenthesised `except` lists).
+`--image` pipes the script into `python -I - --list` inside the image, so it needs no copy of the
+script there and no repository path. `--list` prints the listing as JSON from inside any image,
+and `--installed FILE` compares a saved listing, which is what
+`backend/tests/test_license_inventory.py` does with fixed listings and edited copies of the
+document; one test runs `python -I - --list` on standard input. The tests do not start a
+container; `--image` is not part of `check.sh`, because it needs a built image and a container
+engine on the host. The Debian check confirms that each package named in the Dockerfile is
+installed and documented with a free license; it does not recheck each license text. The host-side
+`--image` run against a real image is recorded in the roadmap evidence of P08.5 only as far as it
+was executed.
 
 ## Bundled llama.cpp server
 

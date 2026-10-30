@@ -10,7 +10,8 @@ Python packages and their licenses were checked again on 2026-10-29 against the 
 metadata of the lock (P08.2), and the container images, their digests and the Debian package
 versions on 2026-10-29 against the registries and the Debian 13 package index (P08.3), and the
 Angular application's npm packages on 2026-10-30 against the npm registry (P08.4). An automated
-inventory inside the containers is roadmap item I-15.
+inventory of the backend image (I-15, P08.5) compares the Python packages and the Debian packages
+named below with the image ([how to run it](DEVELOPMENT.md#license-inventory-of-the-backend-image)).
 
 ## Runtime components (built locally, not redistributed as images)
 
@@ -74,6 +75,29 @@ Kept behind or unchanged, with the reason:
 | Python | 3.14.10 | 3.15.2 | No ONNX Runtime wheels for 3.15 ([below](#kept-behind-their-newest-release)) |
 | FFmpeg, Tesseract, `libgomp1` | Debian 13 versions above | FFmpeg 9.0.2, Tesseract 5.5.0-1.1, `libgomp1` 16.2.0-3 in Debian testing (`forky`) | The base stays on the Debian stable release; no Python image is published for Debian testing and `trixie-backports` carries none of them |
 | Redis server | — | 8.x | Not used: Redis 7.4 and later are under RSALv2 or SSPLv1 (and, since 8.0, AGPLv3); the [rules](#rules-for-new-dependencies) forbid the first two and allow the GPL family only for programs called as subprocesses, while the broker is a network service. Valkey replaces it ([ADR 0017](decisions/0017-valkey-broker.md)) |
+
+## Debian packages in the backend image
+
+`backend/Dockerfile` installs these packages by name from Debian 13 with `apt-get install`
+(versions as resolved on 2026-10-29, P08.3; they are not compared, because Debian security
+updates change them between builds). `scripts/license_inventory.py` fails when a package named in
+the Dockerfile is not installed in the image or is missing here, and when a license here is not
+free. Packages these pull in, and the Alpine packages of the web and broker images, are covered by
+the licenses of their images above and are not listed one by one. Copyleft licenses are accepted
+only in this table, for programs the application starts as subprocesses and for a runtime library
+with the GCC Runtime Library Exception.
+
+| Package | Checked version | License | Note |
+| --- | --- | --- | --- |
+| `ffmpeg` | 7:7.1.5-0+deb13u1 | GPL-2.0-or-later | See the GPL note in [Runtime components](#runtime-components-built-locally-not-redistributed-as-images) |
+| `ca-certificates` | 20250419+deb13u1 | MPL-2.0 AND GPL-2.0-or-later | Mozilla's certificate bundle is MPL-2.0; the update script is GPL-2+ |
+| `libgomp1` | 14.2.0-19 | GPL-3.0-or-later WITH GCC-exception-3.1 | Needed by `llama.cpp` |
+| `tesseract-ocr` | 5.5.0-1+b1 | Apache-2.0 | |
+| `tesseract-ocr-deu` | 1:4.1.0-2 | Apache-2.0 | German language data |
+| `tesseract-ocr-eng` | 1:4.1.0-2 | Apache-2.0 | English language data |
+| `tesseract-ocr-fra` | 1:4.1.0-2 | Apache-2.0 | French language data |
+| `tesseract-ocr-ita` | 1:4.1.0-2 | Apache-2.0 | Italian language data |
+| `tesseract-ocr-spa` | 1:4.1.0-2 | Apache-2.0 | Spanish language data |
 
 ## Backend Python packages
 

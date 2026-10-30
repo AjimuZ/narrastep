@@ -19,6 +19,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - When a stub-tested handler changes behavior, grep the opt-in real-runtime harness for the same call, because a prompt that now waits for input can hang it.
 - Inject platform-dependent behaviour (such as process.platform) into the pure function and cover every platform with stand-ins. Keep a real run on the target system as a named owner check, never as a claim.
 - Where the page has no bridge to the shell, derive the host from the user agent rather than adding a preload or IPC channel; this leaves the isolation rules untouched.
+- Scripts that run from stdin inside a container must not touch `__file__` at import. Resolve repository paths lazily, in the code path that needs them.
+- Keep a container-inventory script as a pure compare function plus a thin engine call. Test the compare function with fixed listings and edited copies of the document, and test the stdin path with a subprocess.
 
 ---
 
@@ -125,4 +127,15 @@ Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfil
 - **Learnings for future iterations:**
   - The LICENSES.md versus lockfile comparison was not redone. Existing tests (test_dependencies.py, test_container_images.py) already enforce the Python and image parts.
   - P08.5b, the automated inventory, is still open. The new section does not mention an automated inventory command, so it needs a line once that exists.
+---
+
+## 2026-10-30T21:56:08Z - P08.5b
+- The inventory script no longer resolves a repository path at import, so it runs when fed through stdin. I confirmed that in the real backend image: `python -I - --list` with the script on stdin printed the listing. I could not run the host-side `python backend/scripts/license_inventory.py --image narrastep-ralph-backend:dev` because that call was denied. The comparison of the real image listing with docs/LICENSES.md was therefore not executed, and the docs say so. `check.sh backend` and `check.sh docs` passed.
+- Files changed: backend/scripts/license_inventory.py, backend/tests/test_license_inventory.py, docs/LICENSES.md, docs/DEVELOPMENT.md, docs/STATUS.md, docs/ROADMAP.md
+- **Learnings for future iterations:**
+  - `python -I - --list` with the script on stdin works in the backend image (WORKDIR /app). The call is `./scripts/ralph/stack.sh run --rm --no-deps -T --entrypoint python api -I - --list < backend/scripts/license_inventory.py`. A plain input redirect is allowed, but a pipe, `;` or `&&` around it is denied.
+  - A direct host `python backend/scripts/license_inventory.py --image ...` call was denied in this session. The host-side comparison of the real image listing has therefore never run. Run it by hand, or record it as not run.
+  - The script uses `except A, B:` without parentheses, which needs Python 3.14 or newer. The sandbox and the image have it. The host had 3.15.1.
+  - The previous attempt had ticked the P08.5 checkbox in docs/ROADMAP.md. This attempt reverted it to `[ ]`, so the orchestrator ticks it.
+  - Inside the image, the Debian listing has about 300 packages and 69 Python distributions. Only the packages named in the Dockerfile's apt-get install are compared, 9 of them.
 ---
