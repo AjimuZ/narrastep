@@ -537,6 +537,10 @@ its scripts are useful on their own, because they need nothing on the computer e
 When a roadmap item is added, add its task to `scripts/ralph/prd.json`;
 `node scripts/ralph/prd.cjs validate` fails otherwise, and so do the runner's tests.
 
+The owner now runs development with Ajimu Autopilot, a local tool outside this repository. Its plan is
+`scripts/ralph/prd.json`, and its configuration and task records in `.ajimu-autopilot/` stay on the
+owner's computer and out of Git.
+
 ## Local agent skills
 
 The owner keeps agent skills in `.claude/skills/`, recorded in `skills-lock.json`. Both paths are

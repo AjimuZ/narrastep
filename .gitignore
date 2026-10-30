@@ -43,6 +43,10 @@ desktop.ini
 # State and logs of the development runner; its task list and progress log are tracked
 scripts/ralph/.state/
 
+# Files of Ajimu Autopilot, kept on this computer. Written with /* because the runner stages this
+# folder by name, and Git refuses that for a folder ignored as a whole.
+.ajimu-autopilot/*
+
 # Local agent tooling (personal development only, never published)
 .claude/
 skills-lock.json
