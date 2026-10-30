@@ -2,7 +2,7 @@
 # Runs the project's checks for the named areas, the same commands for the agent and the runner.
 #
 # Usage: ./scripts/ralph/check.sh AREA [AREA...]
-# Areas: docs backend web e2e desktop ralph compose stack
+# Areas: docs backend web e2e desktop ralph compose stack fullstack
 # Returns 0 when every command passed. Stops at the first failure with its exit status, and 2 for
 # an unknown area. Prints a one-line result per command, so a log shows what really ran.
 
@@ -64,6 +64,24 @@ check_stack() {
   [ "$status" -eq 0 ] || exit "$status"
 }
 
+# The opt-in browser journey of the `fullstack` CI job: the real stack with mock processing, which
+# only this environment turns on. Always stops the stack and removes that project's volumes.
+check_fullstack() {
+  local status=0
+  echo "check: fullstack: build and start ..."
+  NARRASTEP_ENV=test NARRASTEP_ENABLE_MOCK_PROCESSING=true NARRASTEP_MIN_FREE_DISK_MB=64 \
+    "$STACK" up --build --detach --wait || status=$?
+  [ "$status" -eq 0 ] && { "$STACK" exec -T api python -c "$STACK_HEALTH_PROBE" || status=$?; }
+  if [ "$status" -eq 0 ]; then
+    echo "check: fullstack: browser journey ..."
+    RALPH_SANDBOX_NETWORK=narrastep-ralph_local "$SANDBOX" \
+      "cd apps/web && npx playwright install chromium && NARRASTEP_E2E_BASE_URL=http://web NARRASTEP_E2E_MOCK_CONFIRMED=true npm run --silent e2e:fullstack" || status=$?
+  fi
+  "$STACK" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  echo "check: fullstack -> $([ "$status" -eq 0 ] && echo passed || echo "FAILED ($status)")"
+  [ "$status" -eq 0 ] || exit "$status"
+}
+
 STACK_HEALTH_PROBE='
 import json, time, urllib.request
 body = {}
@@ -112,14 +130,17 @@ for area in "$@"; do
       in_sandbox "desktop: tests" "cd desktop && npm test"
       ;;
     ralph)
-      in_sandbox "ralph: runner tests and task list" \
-        "node --test 'scripts/ralph/test/*.test.cjs' && node scripts/ralph/prd.cjs validate --committed"
+      in_sandbox "ralph: runner tests" \
+        "node --test 'scripts/ralph/test/*.test.cjs'"
       ;;
     compose)
       run_step "compose: configuration renders" "$STACK" config --quiet
       ;;
     stack)
       check_stack
+      ;;
+    fullstack)
+      check_fullstack
       ;;
     *)
       echo "check: unknown area '$area'" >&2

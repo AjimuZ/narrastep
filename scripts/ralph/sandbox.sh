@@ -77,6 +77,9 @@ if [ -d "$ROOT/.claude" ]; then
   [ -d "$ROOT/.claude/skills" ] && mounts+=(--volume "$HOST_ROOT/.claude/skills:/work/.claude/skills:ro")
 fi
 
+# The full-stack journey reaches the isolated stack through its Compose network.
+[ -n "${RALPH_SANDBOX_NETWORK:-}" ] && mounts+=(--network "$RALPH_SANDBOX_NETWORK")
+
 # --init reaps orphaned processes: tests that wait for a stopped process would otherwise see a zombie.
 exec docker run --rm --interactive --init \
   --label narrastep.ralph=sandbox \

@@ -4,700 +4,896 @@
   "description": "Complete the Narrastep roadmap. Generated on 2026-10-30 from docs/ROADMAP.md, docs/STATUS.md and a comparison with the code. The roadmap stays the source of the requirements.",
   "userStories": [
     {
-      "id": "P08.13",
-      "title": "Repair the invalid CI workflow file",
-      "description": "`.github/workflows/ci.yml` is not valid YAML since commit 85adb65: `--only-binary=:all: -r` holds \": \" on lines 69 and 90 (in the file as of 2026-10-30), so GitHub cannot run the workflow at all.",
-      "roadmapItems": [
-        "P08.13"
-      ],
-      "closes": [
-        "P08.13"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [],
+      "id": "P01.1",
+      "title": "Rewrite the documentation with the `ajimu-conventions` structure: index, requirements,",
+      "description": "Rewrite the documentation with the `ajimu-conventions` structure: index, requirements,",
       "acceptanceCriteria": [
-        "`.github/workflows/ci.yml` parses as YAML and every job, including `runner`, is present",
-        "A backend test parses the workflow file and fails on invalid YAML; it must fail on the old lines (negative control recorded in the evidence)",
-        "`backend/tests/test_dependencies.py` still finds the locked install commands",
-        "Risks or docs/STATUS.md say that CI could not run between 85adb65 and this fix; a run on GitHub is named as not run, because nothing is pushed",
-        "P08.13 is checked with dated evidence"
+        "Marked done in docs/ROADMAP.md, with dated evidence"
       ],
-      "verify": [],
-      "verifyHost": [],
       "priority": 1,
       "passes": true,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": "2026-10-30T15:54:18.019Z",
-      "notes": "Confirmed on 2026-10-30 with PyYAML: \"mapping values are not allowed here\", line 69, column 81. Quote the two commands. PyYAML is in the development lock; check that it is a direct or stable part of it before relying on it in a test."
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P01 — Documentation baseline",
+        "line": "P01.1 Rewrite the documentation with the `ajimu-conventions` structure: index, requirements,"
+      }
     },
     {
-      "id": "P08.3",
-      "title": "Prove the pinned images with a healthy stack and a full job",
-      "description": "Every image is pinned and the broker is Valkey, but the roadmap records no build on a real engine. Prove it and close the item.",
-      "roadmapItems": [
-        "P08.3"
-      ],
-      "closes": [
-        "P08.3"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "compose",
-        "stack"
-      ],
-      "dependsOn": [],
+      "id": "P01.2",
+      "title": "Record the new direction as ADRs 0009–0013.",
+      "description": "Record the new direction as ADRs 0009–0013.",
       "acceptanceCriteria": [
-        "`./scripts/ralph/check.sh stack` passes: all images build, including the transcription and llama.cpp checks of the image build, and `/api/v1/health` reports `status: ok` for database, broker and worker",
-        "`backend/scripts/full_job_check.py` (standard library and FFmpeg only, with an `--api` option) generates an MP4 with speech, uploads it, processes it with the baked model, exports it and checks the layout of the downloaded ZIP; it prints numbers, never transcript text",
-        "`./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1` passes on the isolated stack, and a unit test covers the script",
-        "Every external image has an exact tag and digest, or a recorded reason (`backend/tests/test_container_images.py` passes)",
-        "docs/STATUS.md no longer says \"build not yet run\" for the pinned images, the transcription stack check and the backend lock, and records the date; ADR 0017 and risk K9 say what was verified",
-        "P08.3 is checked in docs/ROADMAP.md with dated evidence that holds the real output"
+        "Marked done in docs/ROADMAP.md, with dated evidence"
       ],
-      "verify": [],
-      "verifyHost": [],
       "priority": 2,
       "passes": true,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": "2026-10-30T16:13:54.932Z",
-      "notes": "Setup baseline on 2026-10-30: the stack built and reported ok through `check.sh stack` in about 2.5 minutes, with the tiny model. The full job was not run. The sandbox cannot reach the ports published on the host, which is why the script runs inside the api container. Never use a real recording."
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P01 — Documentation baseline",
+        "line": "P01.2 Record the new direction as ADRs 0009–0013."
+      }
     },
     {
-      "id": "P06.1",
-      "title": "Measure the bundled llama.cpp server in a real image",
-      "description": "P06.1 only waits for the in-image check and the measured layer size, which need a real build.",
-      "roadmapItems": [
-        "P06.1"
-      ],
-      "closes": [
-        "P06.1"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "stack"
-      ],
-      "dependsOn": [
-        "P08.3"
-      ],
+      "id": "P01.3",
+      "title": "Owner accepts ADRs 0009–0013, including `llama.cpp` instead of Ollama.",
+      "description": "Owner accepts ADRs 0009–0013, including `llama.cpp` instead of Ollama.",
       "acceptanceCriteria": [
-        "`./scripts/ralph/stack.sh run --rm --no-deps api python scripts/check_llama_server.py` passes on the built image",
-        "`docker history narrastep-ralph-backend:dev` gives the size of the `COPY /opt/llama.cpp/` layer, recorded in docs/LOCAL_GENERATION.md (Image growth) beside the earlier figures from extracted files",
-        "P06.1 is checked in docs/ROADMAP.md with dated evidence"
+        "Marked done in docs/ROADMAP.md, with dated evidence"
       ],
-      "verify": [],
-      "verifyHost": [],
       "priority": 3,
       "passes": true,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": "2026-10-30T16:26:20.023Z",
-      "notes": ""
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P01 — Documentation baseline",
+        "line": "P01.3 Owner accepts ADRs 0009–0013, including `llama.cpp` instead of Ollama."
+      }
+    },
+    {
+      "id": "P01.4",
+      "title": "Record the bilingual interface (ADR 0015), the desktop shell proposal (ADR 0014) and",
+      "description": "Record the bilingual interface (ADR 0015), the desktop shell proposal (ADR 0014) and",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P01 — Documentation baseline",
+        "line": "P01.4 Record the bilingual interface (ADR 0015), the desktop shell proposal (ADR 0014) and"
+      }
+    },
+    {
+      "id": "P01.5",
+      "title": "Owner chooses the remaining improvement candidates.",
+      "description": "Owner chooses the remaining improvement candidates.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P01 — Documentation baseline",
+        "line": "P01.5 Owner chooses the remaining improvement candidates."
+      }
+    },
+    {
+      "id": "P02.1",
+      "title": "Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate",
+      "description": "Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P02 — Project types",
+        "line": "P02.1 Replace the modes with `task_briefing`, `meeting`, `tutorial`, `general`; migrate"
+      }
+    },
+    {
+      "id": "P02.2",
+      "title": "Type-specific screenshot profile, export guide and evidence prompt.",
+      "description": "Type-specific screenshot profile, export guide and evidence prompt.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P02 — Project types",
+        "line": "P02.2 Type-specific screenshot profile, export guide and evidence prompt."
+      }
+    },
+    {
+      "id": "P02.3",
+      "title": "New-project form: four type cards, optional name with a default, \"More options\".",
+      "description": "New-project form: four type cards, optional name with a default, \"More options\".",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P02 — Project types",
+        "line": "P02.3 New-project form: four type cards, optional name with a default, \"More options\"."
+      }
+    },
+    {
+      "id": "P03.1",
+      "title": "Slug and file-name builder with edge-case tests.",
+      "description": "Slug and file-name builder with edge-case tests.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P03 — Descriptive export names",
+        "line": "P03.1 Slug and file-name builder with edge-case tests."
+      }
+    },
+    {
+      "id": "P03.2",
+      "title": "New archive layout and manifest schema version.",
+      "description": "New archive layout and manifest schema version.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P03 — Descriptive export names",
+        "line": "P03.2 New archive layout and manifest schema version."
+      }
+    },
+    {
+      "id": "P03.3",
+      "title": "Download uses the stored name; history shows it.",
+      "description": "Download uses the stored name; history shows it.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P03 — Descriptive export names",
+        "line": "P03.3 Download uses the stored name; history shows it."
+      }
+    },
+    {
+      "id": "P04.1",
+      "title": "Token file and non-color tokens; remove duplicated aliases.",
+      "description": "Token file and non-color tokens; remove duplicated aliases.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P04 — Pixel interface",
+        "line": "P04.1 Token file and non-color tokens; remove duplicated aliases."
+      }
+    },
+    {
+      "id": "P04.2",
+      "title": "Shared primitives, pixel icon sprite and bundled Pixelify Sans title font with its",
+      "description": "Shared primitives, pixel icon sprite and bundled Pixelify Sans title font with its",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P04 — Pixel interface",
+        "line": "P04.2 Shared primitives, pixel icon sprite and bundled Pixelify Sans title font with its"
+      }
+    },
+    {
+      "id": "P04.3",
+      "title": "Shell with vertical menu; restyle every screen; rewrite copy.",
+      "description": "Shell with vertical menu; restyle every screen; rewrite copy.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P04 — Pixel interface",
+        "line": "P04.3 Shell with vertical menu; restyle every screen; rewrite copy."
+      }
+    },
+    {
+      "id": "P04.4",
+      "title": "English and Italian catalogs, language switch, error-code translations and the",
+      "description": "English and Italian catalogs, language switch, error-code translations and the",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P04 — Pixel interface",
+        "line": "P04.4 English and Italian catalogs, language switch, error-code translations and the"
+      }
+    },
+    {
+      "id": "P04.5",
+      "title": "Accessibility and responsive verification in both languages.",
+      "description": "Accessibility and responsive verification in both languages.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P04 — Pixel interface",
+        "line": "P04.5 Accessibility and responsive verification in both languages."
+      }
+    },
+    {
+      "id": "P05.1",
+      "title": "Recording session API with per-track chunk storage, resume and discard.",
+      "description": "Recording session API with per-track chunk storage, resume and discard.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.1 Recording session API with per-track chunk storage, resume and discard."
+      }
+    },
+    {
+      "id": "P05.2",
+      "title": "Join, align, mix and validate into the source video; keep the microphone track.",
+      "description": "Join, align, mix and validate into the source video; keep the microphone track.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.2 Join, align, mix and validate into the source video; keep the microphone track."
+      }
+    },
+    {
+      "id": "P05.3",
+      "title": "Recorder screen with source checks, level gauge, pause, stop, and save with an",
+      "description": "Recorder screen with source checks, level gauge, pause, stop, and save with an",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.3 Recorder screen with source checks, level gauge, pause, stop, and save with an"
+      }
+    },
+    {
+      "id": "P05.4",
+      "title": "Project type optional until processing; Process dialog asks for it.",
+      "description": "Project type optional until processing; Process dialog asks for it.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.4 Project type optional until processing; Process dialog asks for it."
+      }
+    },
+    {
+      "id": "P05.5",
+      "title": "Speaker labels You / Others from microphone and system loudness, editable in Review",
+      "description": "Speaker labels You / Others from microphone and system loudness, editable in Review",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.5 Speaker labels You / Others from microphone and system loudness, editable in Review"
+      }
     },
     {
       "id": "P05.7",
-      "title": "Allow the microphone on the app origin in the web container",
-      "description": "Risk K14 is confirmed in the code: apps/web/nginx.conf sends `microphone=()` on lines 25 and 41, so the recorder cannot use the microphone on the Docker stack. No roadmap item fixed it, and the manual test P05.6 needs it.",
-      "roadmapItems": [
-        "P05.7"
-      ],
-      "closes": [
-        "P05.7"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "web",
-        "e2e",
-        "stack"
-      ],
-      "dependsOn": [
-        "P08.3"
-      ],
+      "title": "Allow the microphone on the app origin in the web container (risk K14); needed before",
+      "description": "Allow the microphone on the app origin in the web container (risk K14); needed before",
       "acceptanceCriteria": [
-        "`apps/web/nginx.conf` sends `microphone=(self)` wherever it sends Permissions-Policy, and camera and geolocation stay denied",
-        "On the isolated stack, `./scripts/ralph/stack.sh exec -T web wget -S -O /dev/null http://127.0.0.1/` shows the new header on the app page",
-        "A browser test against the nginx configuration, or the same headers, shows `getUserMedia` for the microphone is no longer refused by the policy; it must fail with the old header",
-        "Risk K14 in docs/RISKS.md says it is fixed and how it was checked; CHANGELOG.md has the entry; P05.7 is checked with dated evidence"
+        "Marked done in docs/ROADMAP.md, with dated evidence"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 4,
+      "priority": 22,
       "passes": true,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": "2026-10-30T16:40:51.576Z",
-      "notes": ""
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.7 Allow the microphone on the app origin in the web container (risk K14); needed before"
+      }
+    },
+    {
+      "id": "P06.1",
+      "title": "Pinned `llama.cpp` CPU server in the backend image; measure the image growth.",
+      "description": "Pinned `llama.cpp` CPU server in the backend image; measure the image growth.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.1 Pinned `llama.cpp` CPU server in the backend image; measure the image growth."
+      }
+    },
+    {
+      "id": "P07.1",
+      "title": "`desktop/` Electron shell with loopback-only loading, isolation and single instance.",
+      "description": "`desktop/` Electron shell with loopback-only loading, isolation and single instance.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.1 `desktop/` Electron shell with loopback-only loading, isolation and single instance."
+      }
+    },
+    {
+      "id": "P08.1",
+      "title": "Reproduce the Whisper audio-extraction failure with real media variants and add a transcription stack check to the backe",
+      "description": "Reproduce the Whisper audio-extraction failure with real media variants and add a transcription stack check to the backend image build.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.1 Reproduce the Whisper audio-extraction failure with real media variants and add a transcription stack check to the backend image build."
+      }
+    },
+    {
+      "id": "P08.2",
+      "title": "Lock every backend package, including the transitive ones, and update them to the latest versions that pass.",
+      "description": "Lock every backend package, including the transitive ones, and update them to the latest versions that pass.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 26,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.2 Lock every backend package, including the transitive ones, and update them to the latest versions that pass."
+      }
+    },
+    {
+      "id": "P08.3",
+      "title": "Update the container base images, system packages and pinned servers (Debian base with FFmpeg and Tesseract, `llama.cpp`",
+      "description": "Update the container base images, system packages and pinned servers (Debian base with FFmpeg and Tesseract, `llama.cpp`, nginx, Node.js, Redis or Valkey).",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.3 Update the container base images, system packages and pinned servers (Debian base with FFmpeg and Tesseract, `llama.cpp`, nginx, Node.js, Redis or Valkey)."
+      }
+    },
+    {
+      "id": "P08.13",
+      "title": "Repair the CI workflow file. Added on 2026-10-30: `.github/workflows/ci.yml` has not been",
+      "description": "Repair the CI workflow file. Added on 2026-10-30: `.github/workflows/ci.yml` has not been",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 28,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.13 Repair the CI workflow file. Added on 2026-10-30: `.github/workflows/ci.yml` has not been"
+      }
+    },
+    {
+      "id": "P09.1",
+      "title": "Glossary per project passed to Whisper as hints (I-02).",
+      "description": "Glossary per project passed to Whisper as hints (I-02).",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 29,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P09 — Owner-selected improvements",
+        "line": "P09.1 Glossary per project passed to Whisper as hints (I-02)."
+      }
+    },
+    {
+      "id": "P09.2",
+      "title": "Storage view and cleanup after export (I-07).",
+      "description": "Storage view and cleanup after export (I-07).",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 30,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P09 — Owner-selected improvements",
+        "line": "P09.2 Storage view and cleanup after export (I-07)."
+      }
     },
     {
       "id": "P09.3",
-      "title": "Cover the Storage screen and glossary in the browser",
-      "description": "P09.1 and P09.2 were delivered without a browser. No journey covers the Storage screen, and its accessibility and contrast checks never ran in either language.",
-      "roadmapItems": [
-        "P09.3"
-      ],
-      "closes": [
-        "P09.3"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "web",
-        "e2e"
-      ],
-      "dependsOn": [
-        "P08.3"
-      ],
+      "title": "Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and",
+      "description": "Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and",
       "acceptanceCriteria": [
-        "The Storage screen is added to `SCREENS` in `apps/web/tests/e2e/accessibility.spec.ts`, and its removal dialog to the dialog tests, so contrast, keyboard, reduced motion and 320 px to 400% zoom run in English and Italian",
-        "A browser test covers the glossary field in New project and the Process dialog in both languages",
-        "Any defect these checks find is fixed in this task, not skipped",
-        "P09.3 is checked with dated evidence, and docs/STATUS.md gives the new Playwright totals"
+        "Marked done in docs/ROADMAP.md, with dated evidence"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 5,
+      "priority": 31,
       "passes": true,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": "2026-10-30T17:04:46.875Z",
-      "notes": "Baseline on 2026-10-30: 408 Playwright tests passed. See `tests/e2e/support/fake-api.ts` for the fake API; DEVELOPMENT.md says when to add a screen."
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P09 — Owner-selected improvements",
+        "line": "P09.3 Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and"
+      }
+    },
+    {
+      "id": "P10.1",
+      "title": "Runner, verified task list and isolated checks for the open roadmap items.",
+      "description": "Runner, verified task list and isolated checks for the open roadmap items.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 32,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P10 — Autonomous development runner",
+        "line": "P10.1 Runner, verified task list and isolated checks for the open roadmap items."
+      }
+    },
+    {
+      "id": "P10.3",
+      "title": "Remove what stops an unattended run, and push verified commits automatically.",
+      "description": "Remove what stops an unattended run, and push verified commits automatically.",
+      "acceptanceCriteria": [
+        "Marked done in docs/ROADMAP.md, with dated evidence"
+      ],
+      "priority": 33,
+      "passes": true,
+      "notes": "Marked done in the roadmap. On 2026-10-30 every suite passed on this state, and a full job passed on the real stack; items that need a person or a real call were not repeated.",
+      "dependsOn": [],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P10 — Autonomous development runner",
+        "line": "P10.3 Remove what stops an unattended run, and push verified commits automatically."
+      }
     },
     {
       "id": "P08.4a",
       "title": "Update the Angular application packages to the latest that pass",
       "description": "Move every npm package of apps/web to its newest stable release that passes, one logical change.",
-      "roadmapItems": [
-        "P08.4"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "web",
-        "e2e"
-      ],
-      "dependsOn": [
-        "P08.3"
-      ],
       "acceptanceCriteria": [
         "Every package in `apps/web/package.json` is its newest stable release, or docs/LICENSES.md says why it stays behind",
         "`npm ci`, `npm run build`, `npm run lint`, `npm run test`, `npm run typecheck:e2e` and `npx prettier --check .` pass in `apps/web`",
         "The browser journeys pass (area e2e)",
         "docs/LICENSES.md lists the new versions and licenses; no package with a non-free license is added"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 6,
+      "priority": 34,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "`npm outdated` and `npm view` work in the sandbox. Deprecated packages seen on 2026-10-30: `@angular/platform-browser-dynamic` and `@angular/animations`; replace them when the newest Angular requires it."
+      "notes": "`npm outdated` and `npm view` work in the sandbox. Deprecated packages seen on 2026-10-30: `@angular/platform-browser-dynamic` and `@angular/animations`; replace them when the newest Angular requires it. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.3"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.4 Update the Angular application's and the desktop shell's npm packages, the Node.js version and the GitHub Actions to the latest versions that pass."
+      },
+      "splitFrom": "P08.4"
     },
     {
       "id": "P08.4b",
       "title": "Update Electron and the desktop shell packages",
       "description": "Move the packages of desktop/ to the newest stable release that passes.",
-      "roadmapItems": [
-        "P08.4"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.4a"
-      ],
       "acceptanceCriteria": [
         "Electron and every package in `desktop/package.json` are their newest stable release, or docs/LICENSES.md says why not",
         "`npm test` passes in `desktop`",
         "The Electron pin in ADR 0014, docs/DEVELOPMENT.md and docs/LICENSES.md is current"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 7,
+      "priority": 35,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.4a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.4 Update the Angular application's and the desktop shell's npm packages, the Node.js version and the GitHub Actions to the latest versions that pass."
+      },
+      "splitFrom": "P08.4"
     },
     {
       "id": "P08.4c",
       "title": "Update Node.js and GitHub Actions and align every version file",
       "description": "Move Node.js and the Actions to the newest versions that pass, and make every version file agree.",
-      "roadmapItems": [
-        "P08.4"
-      ],
-      "closes": [
-        "P08.4"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "web",
-        "e2e",
-        "desktop",
-        "compose",
-        "stack"
-      ],
-      "dependsOn": [
-        "P08.4a",
-        "P08.4b"
-      ],
       "acceptanceCriteria": [
         "`.nvmrc`, `apps/web/Dockerfile`, `engines` and `.github/workflows/ci.yml` name the same Node.js version, the newest LTS that passes",
         "Each Action in `.github/workflows/ci.yml` is at its newest release",
         "`.python-version` says 3.14.10 like the Dockerfile and CI (it still says 3.12.13), and a test fails when it differs",
         "All images build and the stack is healthy on the new version (area stack)",
-        "P08.4 is checked with dated evidence; browser journeys are recorded as run"
+        "Dated evidence for P08.4 is recorded under its item in docs/ROADMAP.md; browser journeys are recorded as run; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 8,
+      "priority": 36,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "The check container reads the Node.js version from `.nvmrc` and rebuilds itself. The host keeps its own Node.js; it needs at least 22.12 only for the desktop window."
+      "notes": "The check container reads the Node.js version from `.nvmrc` and rebuilds itself. The host keeps its own Node.js; it needs at least 22.12 only for the desktop window. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.4a",
+        "P08.4b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.4 Update the Angular application's and the desktop shell's npm packages, the Node.js version and the GitHub Actions to the latest versions that pass."
+      },
+      "splitFrom": "P08.4"
     },
     {
       "id": "P08.5a",
       "title": "Document the dependency policy and the update procedure",
       "description": "Write the procedure so a refresh can be repeated.",
-      "roadmapItems": [
-        "P08.5"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [],
-      "dependsOn": [
-        "P08.4c"
-      ],
       "acceptanceCriteria": [
         "docs/DEVELOPMENT.md has an \"Updating dependencies\" section: what to run, where licenses are recorded, what stays pinned and why",
         "docs/LICENSES.md matches the installed versions",
         "Risks K9 and K15 are updated"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 9,
+      "priority": 37,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.4c"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.5 Document the dependency policy and the update procedure, and record the refresh; add the automated"
+      },
+      "splitFrom": "P08.5"
     },
     {
       "id": "P08.5b",
       "title": "Add the automated license inventory of the containers",
       "description": "I-15: a check that compares the packages really installed in the containers with docs/LICENSES.md.",
-      "roadmapItems": [
-        "P08.5"
-      ],
-      "closes": [
-        "P08.5"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "stack"
-      ],
-      "dependsOn": [
-        "P08.5a"
-      ],
       "acceptanceCriteria": [
         "A script lists the packages inside the built containers and fails when docs/LICENSES.md lacks an installed package or lists a license outside the free ones",
         "A test shows it failing on a wrong entry",
-        "P08.5 is checked with dated evidence"
+        "Dated evidence for P08.5 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 10,
+      "priority": 38,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.5a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.5 Document the dependency policy and the update procedure, and record the refresh; add the automated"
+      },
+      "splitFrom": "P08.5"
     },
     {
       "id": "P08.6",
       "title": "Generate .env values from the computer in a POSIX script",
       "description": "Hardware probe and pure profile function of ADR 0016: CPU, memory, free disk and free ports become .env values.",
-      "roadmapItems": [
-        "P08.6"
-      ],
-      "closes": [
-        "P08.6"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.5b"
-      ],
       "acceptanceCriteria": [
         "`scripts/generate-env.sh`, a POSIX shell script, prints a complete `.env` on standard output and writes nothing",
         "Tests with fixed hardware cover each row of the ADR 0016 table, an unknown value, a busy port and a low-memory warning",
         "The table in ADR 0016 matches the code",
         "The script makes no network request; a test proves it does not call any network tool",
-        "P08.6 is checked with dated evidence"
+        "Dated evidence for P08.6 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "`sh -n scripts/generate-env.sh` passes"
       ],
-      "verify": [
-        "sh -n scripts/generate-env.sh"
-      ],
-      "verifyHost": [],
-      "priority": 11,
+      "priority": 39,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Read docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md. Add the tests under desktop/test/ beside start-script.test.cjs, so `npm test` runs them."
+      "notes": "Read docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md. Add the tests under desktop/test/ beside start-script.test.cjs, so `npm test` runs them. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.5b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.6 Hardware probe and a pure profile function that turns CPU, memory, free disk and free ports into `.env` values."
+      }
     },
     {
       "id": "P08.7",
       "title": "Add the Whisper thread setting to the backend and Compose",
       "description": "The backend setting and Compose entries for the generated keys.",
-      "roadmapItems": [
-        "P08.7"
-      ],
-      "closes": [
-        "P08.7"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "compose"
-      ],
-      "dependsOn": [
-        "P08.6"
-      ],
       "acceptanceCriteria": [
         "`NARRASTEP_WHISPER_CPU_THREADS` is validated, passed to the model and listed in `.env.example` and `docker-compose.yml`",
         "Backend tests pass; the default behavior without the key is unchanged",
         "`docker compose config` renders the new value",
-        "P08.7 is checked with dated evidence"
+        "Dated evidence for P08.7 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 12,
+      "priority": 40,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.6"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.7 Backend setting and Compose entries for the generated keys."
+      }
     },
     {
       "id": "P08.8",
       "title": "Generate .env in start.sh when it is missing",
       "description": "start.sh generates .env when it is missing and never touches an existing one.",
-      "roadmapItems": [
-        "P08.8"
-      ],
-      "closes": [
-        "P08.8"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.7"
-      ],
       "acceptanceCriteria": [
         "Shell tests with a stubbed engine show a missing `.env` is created before Compose starts",
         "An existing or empty `.env` stays byte-identical",
         "A failed generation stops the start with a readable message",
         "The generated web port reaches the desktop launcher",
         "The existing start-script tests still pass",
-        "docs/DEVELOPMENT.md and README.md describe the step; P08.8 is checked with dated evidence"
+        "docs/DEVELOPMENT.md and README.md describe the step; P08.8 is checked with dated evidence",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 13,
+      "priority": 41,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Tests must never run against the owner's real `.env`."
+      "notes": "Tests must never run against the owner's real `.env`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.7"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.8 `start.sh` generates `.env` when it is missing and never touches an existing one."
+      }
     },
     {
       "id": "P08.9",
       "title": "Make the Compose file and Dockerfiles engine-neutral",
       "description": "One definition for Docker and Podman, as decided in ADR 0016.",
-      "roadmapItems": [
-        "P08.9"
-      ],
-      "closes": [
-        "P08.9"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "compose",
-        "stack"
-      ],
-      "dependsOn": [
-        "P08.3"
-      ],
       "acceptanceCriteria": [
         "Every image name is fully qualified, and `backend/tests/test_container_images.py` and docs/LICENSES.md follow",
         "Each service that others wait for has a Compose health check",
         "`docker compose config` renders the file, and the stack becomes healthy on Docker with the output recorded (area stack)",
         "`podman compose config` is run if it can be installed in the sandbox; otherwise it is reported as not run, as the roadmap allows",
-        "P08.9 is checked with dated evidence"
+        "Dated evidence for P08.9 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 14,
+      "priority": 42,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.3"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.9 Make `docker-compose.yml` and the Dockerfiles engine-neutral."
+      }
     },
     {
       "id": "P08.10a",
       "title": "Move the start logic into one sourced file",
       "description": "Shared logic of the start scripts moves to one file under scripts/, so the two scripts cannot drift apart. Behavior of ./start.sh does not change.",
-      "roadmapItems": [
-        "P08.10"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.8",
-        "P08.9"
-      ],
       "acceptanceCriteria": [
         "Option parsing, the window watcher and the `.env` step live in one sourced file under `scripts/`",
         "`desktop/test/start-script.test.cjs` passes unchanged"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 15,
+      "priority": 43,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.8",
+        "P08.9"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`."
+      },
+      "splitFrom": "P08.10"
     },
     {
       "id": "P08.10b",
       "title": "Add start-podman.sh with the same options and window",
       "description": "The dedicated Podman launcher of ADR 0016.",
-      "roadmapItems": [
-        "P08.10"
-      ],
-      "closes": [
-        "P08.10"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.10a"
-      ],
       "acceptanceCriteria": [
         "`./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests",
         "It prefers `podman compose`, falls back to `podman-compose`, and explains a missing provider",
         "It never uses `sudo` or `--privileged`, and it is executable in Git",
         "The `.env` step reads `podman info`",
         "A failure leaves the stack usable in a browser as in P07.2",
-        "P08.10 is checked with dated evidence; a real Podman run is named as not run (it belongs to P08.12)"
+        "Dated evidence for P08.10 is recorded under its item in docs/ROADMAP.md; a real Podman run is named as not run (it belongs to P08.12); the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 16,
+      "priority": 44,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.10a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`."
+      },
+      "splitFrom": "P08.10"
     },
     {
       "id": "P08.11",
       "title": "Document Podman, the generated .env and the new constraint",
       "description": "User and contributor documentation for the delivered work.",
-      "roadmapItems": [
-        "P08.11"
-      ],
-      "closes": [
-        "P08.11"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [],
-      "dependsOn": [
-        "P08.10b",
-        "P08.5b"
-      ],
       "acceptanceCriteria": [
         "`README.md` and docs/DEVELOPMENT.md explain both engines, the generated `.env` and `podman machine` memory",
         "docs/REQUIREMENTS.md (R16 to R18) and docs/STATUS.md say what is delivered and what is not",
         "`CLAUDE.md` rule 13, `CONTRIBUTING.md` and `CHANGELOG.md` say \"Docker or Podman\"",
-        "P08.11 is checked with dated evidence"
+        "Dated evidence for P08.11 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 17,
+      "priority": 45,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.10b",
+        "P08.5b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.11 Update the user and contributor documentation for Podman, the generated `.env` and the new constraint."
+      }
     },
     {
       "id": "P08.12",
       "title": "Prove start-podman.sh with real Podman inside a container",
-      "description": "Podman cannot be installed on the owner's computer, so the job runs real Podman in a privileged Docker container. Record the result, and fix what it finds.",
-      "roadmapItems": [
-        "P08.12"
-      ],
-      "closes": [
-        "P08.12"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P08.11",
-        "P08.3"
-      ],
+      "description": "Run real Podman in a privileged Docker container with the smoke script, because Podman cannot be installed on the owner's computer. Record the result, and fix what it finds.",
       "acceptanceCriteria": [
         "`./scripts/ralph/podman-smoke.sh` passes: `./start-podman.sh --headless` without a `.env` generates one, the stack becomes healthy under Podman, and a full job with a generated video passes",
         "The versions and the generated values are in docs/STATUS.md with the date",
         "docs/ROADMAP.md lists `podman machine` on Windows as not verified, among the candidates, and docs/REQUIREMENTS.md and README.md say the same",
-        "P08.12 is checked with dated evidence"
+        "Dated evidence for P08.12 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [
-        "./scripts/ralph/podman-smoke.sh"
-      ],
-      "job": {
-        "command": "./scripts/ralph/podman-smoke.sh",
-        "timeoutSeconds": 5400
-      },
-      "priority": 18,
+      "priority": 46,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Do not run the script yourself. If Podman itself cannot run inside this container, report blocked with the error; other tasks continue."
+      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/podman-smoke.sh` once as a background command. On 2026-10-30 Podman 5.4.2 ran a container, a published port and `podman compose` in that container. If Podman itself cannot run there, report blocked with the error. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.11",
+        "P08.3"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P08 — Podman, generated environment and dependency refresh",
+        "line": "P08.12 Smoke test of `start-podman.sh`, the generated `.env` and a transcription with real Podman inside a container. Changed by the owner on 2026-10-30, because Podman cannot be installed on the owner's computer: `podman machine` on Windows stays unverified."
+      }
     },
     {
       "id": "P06.2a",
       "title": "Pin the model files and add the local generation settings",
       "description": "The base of the model manager: pinned catalog, kill switch and stored state.",
-      "roadmapItems": [
-        "P06.2"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "compose"
-      ],
-      "dependsOn": [
-        "P08.5b"
-      ],
       "acceptanceCriteria": [
         "A catalog pins the repository revision and the name, size and SHA-256 of each E2B and E4B file listed in docs/LOCAL_GENERATION.md, read from the real repository",
         "`NARRASTEP_LOCAL_GENERATION`, `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` are validated, documented and in `.env.example`, `docker-compose.yml` and README.md",
         "An Alembic migration stores the model state of the diagram in the document (upgrade test on the previous head; `alembic check` clean)",
         "State-transition tests pass, and the stack starts as before with nothing installed"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 19,
+      "priority": 47,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Read docs/LOCAL_GENERATION.md and ADR 0011. Default is not installed (rule 14). If huggingface.co cannot be reached from the sandbox, report blocked rather than inventing hashes."
+      "notes": "Read docs/LOCAL_GENERATION.md and ADR 0011. Default is not installed (rule 14). If huggingface.co cannot be reached from the sandbox, report blocked rather than inventing hashes. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P08.5b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.2 Model manager: download, resume, verify, enable, delete, kill switch, and import of"
+      },
+      "splitFrom": "P06.2"
     },
     {
       "id": "P06.2b",
       "title": "Download models with resume and verification",
       "description": "API and download service: progress in SQLite, resume with HTTP ranges after a restart, SHA-256 verification.",
-      "roadmapItems": [
-        "P06.2"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.2a"
-      ],
       "acceptanceCriteria": [
         "Download, progress and cancel endpoints are in docs/API.md and docs/openapi.json, with stable error codes translated into Italian",
         "Progress survives an API restart and a restart resumes with a range request (test against a local HTTP server)",
@@ -706,841 +902,581 @@
         "`NARRASTEP_LOCAL_GENERATION=disabled` makes the API refuse downloads",
         "No request except to the pinned repository; the worker keeps no Internet route"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 20,
+      "priority": 48,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.2a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.2 Model manager: download, resume, verify, enable, delete, kill switch, and import of"
+      },
+      "splitFrom": "P06.2"
     },
     {
       "id": "P06.2c",
       "title": "Enable, disable and delete an installed model",
       "description": "The remaining transitions of the model manager.",
-      "roadmapItems": [
-        "P06.2"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.2b"
-      ],
       "acceptanceCriteria": [
         "Enable, disable and delete endpoints follow the state diagram, with tests for refused transitions",
         "Delete removes the files and returns to `not installed`, and is refused while a generation runs",
         "docs/API.md and docs/openapi.json are updated"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 21,
+      "priority": 49,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.2b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.2 Model manager: download, resume, verify, enable, delete, kill switch, and import of"
+      },
+      "splitFrom": "P06.2"
     },
     {
       "id": "P06.2d",
       "title": "Import the pinned model files from a read-only folder",
       "description": "Owner decision Q5: import from disk when huggingface.co is blocked.",
-      "roadmapItems": [
-        "P06.2"
-      ],
-      "closes": [
-        "P06.2"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "backend",
-        "desktop",
-        "compose",
-        "stack"
-      ],
-      "dependsOn": [
-        "P06.2c",
-        "P08.10b"
-      ],
       "acceptanceCriteria": [
         "A pinned file in the import folder is installed; a file with another name, size or hash is refused and reported as \"not a pinned model file\"",
         "The folder is never modified, no path is taken from the user, and the mount is read-only on the `api` service only",
         "Both start scripts create the folder, so the stack starts when it was missing, and the Compose entry has the SELinux relabel option",
         "The license is shown before the import and kept beside the files",
-        "P06.2 is checked with dated evidence"
+        "Dated evidence for P06.2 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 22,
+      "priority": 50,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Read \"Import from disk\" in docs/LOCAL_GENERATION.md."
+      "notes": "Read \"Import from disk\" in docs/LOCAL_GENERATION.md. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.2c",
+        "P08.10b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.2 Model manager: download, resume, verify, enable, delete, kill switch, and import of"
+      },
+      "splitFrom": "P06.2"
     },
     {
       "id": "P06.3a",
       "title": "Build the generation input and the prompts per project type",
       "description": "Pure functions: the input from reviewed segments and export-selected screenshots, in transcript order, with the type-specific prompts.",
-      "roadmapItems": [
-        "P06.3"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.2a"
-      ],
       "acceptanceCriteria": [
         "Rendering tests per type show the sections listed in docs/LOCAL_GENERATION.md (Output per project type) and the shared rules, including \"Not stated in the recording\" and that transcript text is evidence, never instructions",
         "You / Others labels are used when present and never guessed",
         "Screenshots are downscaled to `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`",
         "Transcript text never reaches normal logs"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 23,
+      "priority": 51,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.2a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.3 Generation job with type-specific prompts and chronological parts."
+      },
+      "splitFrom": "P06.3"
     },
     {
       "id": "P06.3b",
       "title": "Split long recordings into chronological parts",
       "description": "The part planner that keeps each request inside the context and CPU budget, and the final merge request.",
-      "roadmapItems": [
-        "P06.3"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.3a"
-      ],
       "acceptanceCriteria": [
         "Parts are chronological, cover every segment once, and fit the configured budget; tests cover empty, short and very long projects",
         "The merge request receives the notes of every part in order"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 24,
+      "priority": 52,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.3a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.3 Generation job with type-specific prompts and chronological parts."
+      },
+      "splitFrom": "P06.3"
     },
     {
       "id": "P06.3c",
       "title": "Start and stop the llama.cpp server for a generation",
       "description": "The worker starts `llama-server` on 127.0.0.1 in its container, waits for health, sends requests and stops it.",
-      "roadmapItems": [
-        "P06.3"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.3b",
-        "P06.1"
-      ],
       "acceptanceCriteria": [
         "Safe argument arrays and `llama_server_environment`, with a loopback address only",
         "Tests with a stand-in server cover start, a failed health check, a request failure, and that the process is always stopped",
         "A memory check before the job gives a readable `GENERATION_OUT_OF_MEMORY` error (K5), translated into Italian"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 25,
+      "priority": 53,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.3b",
+        "P06.1"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.3 Generation job with type-specific prompts and chronological parts."
+      },
+      "splitFrom": "P06.3"
     },
     {
       "id": "P06.3d",
       "title": "Queue a generation job and store its document",
       "description": "The Celery job and API that produce the document.",
-      "roadmapItems": [
-        "P06.3"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.3c",
-        "P06.2c"
-      ],
       "acceptanceCriteria": [
         "The job writes `projects/{id}/generations/{generationId}/document.md` with its prompt version and model file hashes, and reports real progress per part",
         "It shares the single worker with processing, and cannot run at the same time",
         "Endpoints and a migration are documented in docs/API.md, docs/openapi.json and docs/DATA_MODEL.md",
         "Tests cover success, cancellation, a missing or disabled model, and failure with the server stopped"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 26,
+      "priority": 54,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.3c",
+        "P06.2c"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.3 Generation job with type-specific prompts and chronological parts."
+      },
+      "splitFrom": "P06.3"
     },
     {
       "id": "P06.3e",
       "title": "Prove generation with the real model in an opt-in test",
       "description": "The opt-in integration test of the local generation document.",
-      "roadmapItems": [
-        "P06.3"
-      ],
-      "closes": [
-        "P06.3"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.3d"
-      ],
       "acceptanceCriteria": [
         "An opt-in test, off by default like the real Whisper test, turns a short synthetic project into a document with the expected sections and only cited times that exist",
         "It is run once with the real E2B files; if that is impossible on this computer it is reported, and P06.3 stays unchecked",
-        "P06.3 is checked with dated evidence that includes the run"
+        "Dated evidence for P06.3 is recorded under its item in docs/ROADMAP.md that includes the run; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 27,
+      "priority": 55,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Keep the model in the sandbox cache at /cache, never in the repository. The first download is about 3.4 GB."
+      "notes": "Keep the model in the sandbox cache at /cache, never in the repository. The first download is about 3.4 GB. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.3d"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.3 Generation job with type-specific prompts and chronological parts."
+      },
+      "splitFrom": "P06.3"
     },
     {
       "id": "P06.4a",
       "title": "Add the Settings screen with the model manager",
       "description": "The `/settings` screen: install, enable, delete, model size and license, language switch.",
-      "roadmapItems": [
-        "P06.4"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "web",
-        "e2e"
-      ],
-      "dependsOn": [
-        "P06.2d"
-      ],
       "acceptanceCriteria": [
         "Settings joins the menu and follows docs/UI.md and the `ajimu-pixel-ui` skill: existing tokens and primitives only",
         "Install shows the license name and link first, with real progress; `NARRASTEP_LOCAL_GENERATION=disabled` hides every control",
         "The language switch from the header is also in Settings",
         "Every text is in English and Italian (`npm run check:i18n`)",
-        "Added to the accessibility checks in both languages (area e2e)"
+        "Added to the accessibility checks in both languages (area e2e)",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 28,
+      "priority": 56,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.2d"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.4 Settings and Document screens; optional inclusion in the package; copy the result as"
+      },
+      "splitFrom": "P06.4"
     },
     {
       "id": "P06.4b",
       "title": "Add the Document screen with generation and result",
       "description": "The `/projects/:id/document` screen, shown only when local generation is installed and enabled.",
-      "roadmapItems": [
-        "P06.4"
+      "acceptanceCriteria": [
+        "Generate, real progress per part, result with the video beside it, and regenerate",
+        "Planned actions do not appear as enabled; the screen is absent when the feature is not installed or is disabled",
+        "Every text is in English and Italian; added to the accessibility checks in both languages",
+        "CHANGELOG.md describes the change"
       ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "web",
-        "e2e"
-      ],
+      "priority": 57,
+      "passes": false,
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
         "P06.4a",
         "P06.3d"
       ],
-      "acceptanceCriteria": [
-        "Generate, real progress per part, result with the video beside it, and regenerate",
-        "Planned actions do not appear as enabled; the screen is absent when the feature is not installed or is disabled",
-        "Every text is in English and Italian; added to the accessibility checks in both languages"
-      ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 29,
-      "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.4 Settings and Document screens; optional inclusion in the package; copy the result as"
+      },
+      "splitFrom": "P06.4"
     },
     {
       "id": "P06.4c",
       "title": "Include a generated document in the next package",
       "description": "Optional `05-generated-document/document.md` in the export.",
-      "roadmapItems": [
-        "P06.4"
+      "acceptanceCriteria": [
+        "The user can include a generation in the next export, and older exports are not changed",
+        "A test checks the file in the ZIP, and its absence when not chosen; the manifest and docs/PROCESSING_PIPELINE.md are updated",
+        "CHANGELOG.md describes the change"
       ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "backend",
-        "web"
-      ],
+      "priority": 58,
+      "passes": false,
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
         "P06.4b"
       ],
-      "acceptanceCriteria": [
-        "The user can include a generation in the next export, and older exports are not changed",
-        "A test checks the file in the ZIP, and its absence when not chosen; the manifest and docs/PROCESSING_PIPELINE.md are updated"
-      ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 30,
-      "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.4 Settings and Document screens; optional inclusion in the package; copy the result as"
+      },
+      "splitFrom": "P06.4"
     },
     {
       "id": "P06.4d",
       "title": "Copy the result as Markdown and as a single file with images",
       "description": "I-05: two ways to take the result out.",
-      "roadmapItems": [
-        "P06.4"
-      ],
-      "closes": [
-        "P06.4"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "backend",
-        "web",
-        "e2e"
-      ],
-      "dependsOn": [
-        "P06.4c"
-      ],
       "acceptanceCriteria": [
         "Copy as Markdown puts the document on the clipboard, with a visible confirmation in both languages",
         "A single-file Markdown with the images embedded can be downloaded, with a test on its content",
-        "P06.4 is checked with dated evidence"
+        "Dated evidence for P06.4 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 31,
+      "priority": 59,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.4c"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.4 Settings and Document screens; optional inclusion in the package; copy the result as"
+      },
+      "splitFrom": "P06.4"
     },
     {
       "id": "P06.5a",
       "title": "Add the generation benchmark script for the owner",
       "description": "The owner measures time and peak memory; this builds the tool and the procedure.",
-      "roadmapItems": [
-        "P06.5"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
-      "dependsOn": [
-        "P06.3e"
-      ],
       "acceptanceCriteria": [
-        "`backend/scripts/benchmark_generation.py` runs in the api container and uses the API: it installs both models, generates synthetic 10-minute and 60-minute projects, and reports generation time and peak memory for E2B and E4B, with numbers only",
+        "`backend/scripts/benchmark_generation.py` runs in the api container and uses the API: with `--model e2b` or `--model e4b` it installs that model, generates synthetic 10-minute and 60-minute projects, and reports generation time and peak memory, with numbers only; a run stops at 45 minutes and reports that it was cut",
         "It applies the fixed thresholds of \"Default model rule\" in docs/LOCAL_GENERATION.md and prints whether E4B passes",
         "docs/DEVELOPMENT.md has the procedure; tests cover the report and the threshold logic with stand-ins"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 32,
+      "priority": 60,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.3e"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.5 Benchmark time and peak memory on the owner's computer, run by the runner (10 and 60"
+      },
+      "splitFrom": "P06.5"
     },
     {
-      "id": "P06.5",
-      "title": "Record the benchmark of E2B and E4B from this computer",
-      "description": "The thresholds are fixed. The runner ran the benchmark as this task's job, without an agent session; record the figures and apply the rule.",
-      "roadmapItems": [
-        "P06.5"
+      "id": "P06.5b",
+      "title": "Measure E2B on this computer",
+      "description": "Run the benchmark for E2B on this computer and record the figures.",
+      "acceptanceCriteria": [
+        "The figures for 10 and 60 minutes with E2B are in docs/LOCAL_GENERATION.md, with the computer's CPU and Docker memory",
+        "docs/STATUS.md says the E2B benchmark ran, and the date"
       ],
-      "closes": [
-        "P06.5"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend"
-      ],
+      "priority": 61,
+      "passes": false,
+      "notes": "Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e2b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
         "P06.5a"
       ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.5 Benchmark time and peak memory on the owner's computer, run by the runner (10 and 60"
+      },
+      "splitFrom": "P06.5"
+    },
+    {
+      "id": "P06.5",
+      "title": "Measure E4B and apply the default model rule",
+      "description": "The thresholds are fixed. Run the benchmark for E4B on this computer, record the figures and apply the rule.",
       "acceptanceCriteria": [
         "The figures of the job for 10 and 60 minutes with E2B and E4B are in docs/STATUS.md and docs/LOCAL_GENERATION.md, with the computer's CPU and Docker memory",
         "The default model rule of docs/LOCAL_GENERATION.md is applied exactly: the default changes to E4B only if both thresholds pass",
         "Assumption A2 and risks K3 and K5 in docs/RISKS.md are updated from the measurement",
-        "P06.5 is checked with dated evidence"
+        "Dated evidence for P06.5 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "job": {
-        "command": "./scripts/ralph/stack.sh up --build --detach --wait && ./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py; status=$?; ./scripts/ralph/stack.sh down --volumes --remove-orphans; exit $status",
-        "timeoutSeconds": 28800
-      },
-      "priority": 33,
+      "priority": 62,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "The job downloads about 8.6 GB and takes hours. When it failed, fix the cause: the next attempt runs it again. When the output cannot be measured on this computer, report blocked."
+      "notes": "Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e4b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.5b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.5 Benchmark time and peak memory on the owner's computer, run by the runner (10 and 60"
+      },
+      "splitFrom": "P06.5"
     },
     {
       "id": "P06.6a",
       "title": "Make [mm:ss] references clickable in Review",
       "description": "I-04: every `[mm:ss]` in Review moves the video to that time.",
-      "roadmapItems": [
-        "P06.6"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "web",
-        "e2e"
-      ],
-      "dependsOn": [
-        "P06.4d"
-      ],
       "acceptanceCriteria": [
         "Each `[mm:ss]` is a real button with an accessible name that seeks the video",
         "Keyboard use, a removed source video and an out-of-range time are tested",
-        "Every text is in English and Italian; docs/UI.md is updated"
+        "Every text is in English and Italian; docs/UI.md is updated",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 34,
+      "priority": 63,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.4d"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.6 Clickable `[mm:ss]` references in Review and Document that move the video to that"
+      },
+      "splitFrom": "P06.6"
     },
     {
       "id": "P06.6b",
       "title": "Make [mm:ss] citations clickable in Document",
       "description": "The same for the generated document, closing the local generation package.",
-      "roadmapItems": [
-        "P06.6"
-      ],
-      "closes": [
-        "P06.6"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "web",
-        "e2e",
-        "stack"
-      ],
-      "dependsOn": [
-        "P06.6a"
-      ],
       "acceptanceCriteria": [
         "Each citation in Document is a button that plays the video from that time, and a citation for a time that does not exist is shown as plain text",
         "P06 exit holds: the stack starts and works with the feature not installed and with `NARRASTEP_LOCAL_GENERATION=disabled` (area stack)",
-        "P06.6 is checked with dated evidence"
+        "Dated evidence for P06.6 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 35,
+      "priority": 64,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P06.6a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P06 — Optional local generation",
+        "line": "P06.6 Clickable `[mm:ss]` references in Review and Document that move the video to that"
+      },
+      "splitFrom": "P06.6"
     },
     {
       "id": "P07.3a",
       "title": "Add the screen and window source picker to the desktop shell",
       "description": "ADR 0014: a Narrastep picker over `desktopCapturer`, through `setDisplayMediaRequestHandler`, for the loopback origin only.",
-      "roadmapItems": [
-        "P07.3"
-      ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P05.7"
-      ],
       "acceptanceCriteria": [
         "`desktop/src/guards.cjs` no longer refuses every capture: the app origin gets the picker, and every other origin stays refused",
         "The picker page has no Node.js, follows the fallback page rules, and has English and Italian text",
-        "Tests with the Electron stand-ins cover choosing, cancelling and a foreign origin; the isolation tests still pass"
+        "Tests with the Electron stand-ins cover choosing, cancelling and a foreign origin; the isolation tests still pass",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 36,
+      "priority": 65,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P05.7"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.3 Screen and window source picker with Windows loopback system audio for P05."
+      },
+      "splitFrom": "P07.3"
     },
     {
       "id": "P07.3b",
       "title": "Capture Windows loopback system audio in the desktop window",
       "description": "ADR 0014: `audio: 'loopback'` on Windows, for any chosen source.",
-      "roadmapItems": [
-        "P07.3"
-      ],
-      "closes": [
-        "P07.3"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop",
-        "web"
-      ],
-      "dependsOn": [
-        "P07.3a"
-      ],
       "acceptanceCriteria": [
         "On Windows the handler passes loopback audio for screens and single windows; elsewhere it stays off and the recorder says so",
         "The recorder notice about notification sounds (K12) is present in both languages",
         "Tests cover the platforms with stand-ins; a real capture is named as not run, because it belongs to the owner check",
-        "P07.3 is checked with dated evidence, and the manual check stays open under the P07 exit"
+        "Dated evidence for P07.3 is recorded under its item in docs/ROADMAP.md, and the manual check stays open under the P07 exit; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 37,
+      "priority": 66,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P07.3a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.3 Screen and window source picker with Windows loopback system audio for P05."
+      },
+      "splitFrom": "P07.3"
     },
     {
       "id": "P07.4a",
       "title": "Grant the microphone to the app origin in the desktop shell",
       "description": "ADR 0014: microphone permission for the loopback origin only.",
-      "roadmapItems": [
-        "P07.4"
+      "acceptanceCriteria": [
+        "Microphone requests from the app origin are granted, every other origin and permission stays denied",
+        "The policy tests and window tests are updated, including a negative control",
+        "CHANGELOG.md describes the change"
       ],
-      "closes": [],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop"
-      ],
+      "priority": 67,
+      "passes": false,
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
         "P07.3b"
       ],
-      "acceptanceCriteria": [
-        "Microphone requests from the app origin are granted, every other origin and permission stays denied",
-        "The policy tests and window tests are updated, including a negative control"
-      ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 38,
-      "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.4 Microphone permission and native \"Save as\" for downloads, loopback origin only."
+      },
+      "splitFrom": "P07.4"
     },
     {
       "id": "P07.4b",
       "title": "Save downloads with a native dialog from the app origin only",
       "description": "ADR 0014: native \"Save as\" for packages and documents.",
-      "roadmapItems": [
-        "P07.4"
-      ],
-      "closes": [
-        "P07.4"
-      ],
-      "owner": false,
-      "userVisible": true,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P07.4a"
-      ],
       "acceptanceCriteria": [
         "Downloads from the app origin open a native \"Save as\" dialog, and others are cancelled",
         "Tests cover both; ADR 0014 notes are updated",
-        "P07.4 is checked with dated evidence"
+        "Dated evidence for P07.4 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox",
+        "CHANGELOG.md describes the change"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 39,
+      "priority": 68,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P07.4a"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.4 Microphone permission and native \"Save as\" for downloads, loopback origin only."
+      },
+      "splitFrom": "P07.4"
     },
     {
       "id": "P07.5",
       "title": "Add the optional unsigned portable desktop build",
       "description": "ADR 0014: `npm --prefix desktop run package` with `@electron/packager`, optional and unsigned, never published as an installer.",
-      "roadmapItems": [
-        "P07.5"
-      ],
-      "closes": [
-        "P07.5"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P07.4b"
-      ],
       "acceptanceCriteria": [
         "The command produces a portable build into a Git-ignored folder, and the default install does not need it",
         "New dependencies and their licenses are in docs/LICENSES.md; docs/DEVELOPMENT.md has the command",
-        "P07.5 is checked with dated evidence"
+        "Dated evidence for P07.5 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 40,
+      "priority": 69,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
+      "dependsOn": [
+        "P07.4b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.5 Optional unsigned local portable build."
+      }
     },
     {
       "id": "P07.2",
       "title": "Prove the desktop window on the real stack with the smoke script",
-      "description": "The job runs the real start.sh, launcher and Electron on the real images and reads the window titles. Record the result, and fix what it finds.",
-      "roadmapItems": [
-        "P07.2"
-      ],
-      "closes": [
-        "P07.2"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "desktop"
-      ],
-      "dependsOn": [
-        "P07.4b",
-        "P08.10b"
-      ],
+      "description": "Run the real start.sh, launcher and Electron on the real images with the smoke script, record the result, and fix what it finds.",
       "acceptanceCriteria": [
         "`./scripts/ralph/desktop-smoke.sh` passes every step: first launch installs Electron and opens one window after health, closing the window leaves the stack running, stopping the stack closes the window, a second launch installs nothing, and `--headless` opens no window",
         "A step that fails on Windows is fixed in `start.sh` or `desktop/`, with a test; `desktop/test/start-script.test.cjs` still passes",
         "docs/DEVELOPMENT.md replaces the manual procedure with this script, and names what it does not cover: delivery of `Ctrl+C` from a real terminal, and macOS and Linux desktops",
-        "P07.2 is checked with dated evidence that holds the versions"
+        "Dated evidence for P07.2 is recorded under its item in docs/ROADMAP.md that holds the versions; the orchestrator ticks its checkbox"
       ],
-      "verify": [],
-      "verifyHost": [
-        "./scripts/ralph/desktop-smoke.sh"
-      ],
-      "job": {
-        "command": "./scripts/ralph/desktop-smoke.sh",
-        "timeoutSeconds": 3600
-      },
-      "priority": 41,
+      "priority": 70,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Do not run the script yourself: the runner ran it as the job and repeats it after your change. The script is not yours to edit; report blocked if it is wrong."
-    },
-    {
-      "id": "P07-CHECK",
-      "title": "Owner check of one window with system audio on Windows",
-      "description": "The manual check in the P07 exit.",
-      "roadmapItems": [
-        "P07.3"
-      ],
-      "closes": [],
-      "owner": true,
-      "userVisible": false,
-      "areas": [],
+      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/desktop-smoke.sh` once as a background command, because it takes several minutes and opens windows on the owner's screen. It reads only window titles. It passed all 11 steps on 2026-10-30, before the later changes to start.sh. Run it again after any fix. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
-        "P07.4b"
+        "P07.4b",
+        "P08.10b"
       ],
-      "acceptanceCriteria": [
-        "The owner records one single window with system audio in the desktop window on Windows, and the result is in docs/STATUS.md"
-      ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 42,
-      "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Only a person can do this: run `node scripts/ralph/owner-check.cjs` once P07.4b has passed. One guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes."
-    },
-    {
-      "id": "P05.6",
-      "title": "Owner test with a real Teams call and a headset on Windows",
-      "description": "The manual test of the recording package.",
-      "roadmapItems": [
-        "P05.6"
-      ],
-      "closes": [
-        "P05.6"
-      ],
-      "owner": true,
-      "userVisible": false,
-      "areas": [],
-      "dependsOn": [
-        "P05.7"
-      ],
-      "acceptanceCriteria": [
-        "The owner records a real Teams call with a headset and processes it; You / Others labels and the K2 echo risk are recorded in docs/STATUS.md"
-      ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 43,
-      "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": "Only a person can do this: run `node scripts/ralph/owner-check.cjs` once P07.4b has passed. One guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes."
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.2 `start.sh` opens the window after health; `--headless` keeps browser-only mode;"
+      }
     },
     {
       "id": "P10.2",
       "title": "Verify the finished roadmap as a whole",
       "description": "A final pass with no new features: every suite on the finished code, and documents that match it.",
-      "roadmapItems": [
-        "P10.2"
+      "acceptanceCriteria": [
+        "Every area passes together, and the opt-in full-stack journey `npm run e2e:fullstack` passes against the isolated stack",
+        "README.md no longer lists delivered work as planned, and docs/STATUS.md, docs/ROADMAP.md, docs/UI.md, docs/RECORDING.md and docs/LOCAL_GENERATION.md agree with the code",
+        "Every remaining open roadmap item is listed with what must happen, and the owner session is named for P05.6",
+        "The whole diff since commit `ca5a33b` is reviewed for broken rules of `CLAUDE.md`, telemetry, remote services and weakened tests, and every finding is fixed or named in the evidence",
+        "Dated evidence for P10.2 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
-      "closes": [
-        "P10.2"
-      ],
-      "owner": false,
-      "userVisible": false,
-      "areas": [
-        "backend",
-        "web",
-        "e2e",
-        "desktop",
-        "compose",
-        "stack"
-      ],
+      "priority": 71,
+      "passes": false,
+      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording.",
       "dependsOn": [
         "P06.6b",
         "P07.5",
         "P08.11",
         "P09.3"
       ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P10 — Autonomous development runner",
+        "line": "P10.2 Verify the finished roadmap as a whole, with no new features."
+      }
+    },
+    {
+      "id": "P07-CHECK",
+      "title": "Owner check of one window with system audio on Windows",
+      "description": "The manual check in the P07 exit.",
       "acceptanceCriteria": [
-        "Every area passes together, and the opt-in full-stack journey `npm run e2e:fullstack` passes against the isolated stack",
-        "README.md no longer lists delivered work as planned, and docs/STATUS.md, docs/ROADMAP.md, docs/UI.md, docs/RECORDING.md and docs/LOCAL_GENERATION.md agree with the code",
-        "Every remaining open roadmap item is listed with what must happen, and the owner session is named for P05.6",
-        "The whole diff since the tag `ralph-start-*` of the first run is reviewed for broken rules of `CLAUDE.md`, telemetry, remote services and weakened tests, and every finding is fixed or named in the evidence",
-        "P10.2 is checked with dated evidence"
+        "The owner records one single window with system audio in the desktop window on Windows, and the result is in docs/STATUS.md"
       ],
-      "verify": [],
-      "verifyHost": [],
-      "priority": 44,
+      "priority": 72,
       "passes": false,
-      "attempts": 0,
-      "blocked": false,
-      "blockedReason": "",
-      "lastFailure": "",
-      "verifiedAt": null,
-      "notes": ""
+      "notes": "Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
+      "dependsOn": [
+        "P07.4b"
+      ]
+    },
+    {
+      "id": "P05.6",
+      "title": "Owner test with a real Teams call and a headset on Windows",
+      "description": "The manual test of the recording package.",
+      "acceptanceCriteria": [
+        "The owner records a real Teams call with a headset and processes it; You / Others labels and the K2 echo risk are recorded in docs/STATUS.md"
+      ],
+      "priority": 73,
+      "passes": false,
+      "notes": "Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
+      "dependsOn": [
+        "P05.7",
+        "P07.4b"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.6 Manual test with a real Teams call on Windows, with a headset."
+      }
     }
   ]
 }

@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "claude": {
+    "command": null,
+    "setting_sources": "project,local"
+  },
+  "limits": {
+    "max_iterations": 60,
+    "max_fix_attempts": 2,
+    "preflight_max_rounds": 3,
+    "session_timeout_minutes": 120,
+    "check_timeout_minutes": 20,
+    "global_timeout_minutes": 720,
+    "max_budget_usd_per_session": 25,
+    "max_budget_usd_total": 1000,
+    "keep_session_logs": 40
+  },
+  "preflight": {
+    "model": "sonnet",
+    "effort": "medium"
+  },
+  "review": {
+    "enabled": true
+  },
+  "routing": {
+    "overrides": {}
+  },
+  "git": {
+    "remote": "origin",
+    "branch": "main",
+    "protected_branches": []
+  },
+  "checks": [
+    {
+      "name": "docs",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh docs"
+    },
+    {
+      "name": "backend",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh backend"
+    },
+    {
+      "name": "web",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh web"
+    },
+    {
+      "name": "e2e",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh e2e"
+    },
+    {
+      "name": "desktop",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh desktop"
+    },
+    {
+      "name": "ralph",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh ralph"
+    },
+    {
+      "name": "compose",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh compose"
+    },
+    {
+      "name": "stack",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh stack"
+    },
+    {
+      "name": "fullstack",
+      "command": "\"C:/Program Files/Git/bin/bash.exe\" scripts/ralph/check.sh fullstack"
+    }
+  ],
+  "docs": {
+    "roadmap": "docs/ROADMAP.md",
+    "changelog": "CHANGELOG.md"
+  },
+  "permissions": {
+    "bash_allow": [
+      "./scripts/ralph/sandbox.sh *",
+      "./scripts/ralph/check.sh *",
+      "./scripts/ralph/stack.sh *",
+      "./scripts/ralph/desktop-smoke.sh",
+      "./scripts/ralph/podman-smoke.sh",
+      "docker image inspect *",
+      "docker history *",
+      "docker buildx imagetools inspect *",
+      "docker version*",
+      "docker info*",
+      "C:/Program Files/Git/bin/bash.exe scripts/ralph/check.sh *"
+    ],
+    "extra_allow": [],
+    "extra_deny": [
+      "Bash(docker compose *)",
+      "Bash(docker run *)",
+      "Bash(docker exec *)",
+      "Bash(docker volume *)",
+      "Bash(docker system *)",
+      "Bash(docker rm *)",
+      "Bash(docker stop *)",
+      "Bash(rm *)",
+      "Read(/data/**)",
+      "Edit(/data/**)",
+      "Write(/data/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.git-credentials)",
+      "Read(~/.claude/.credentials.json)"
+    ]
+  }
+}
