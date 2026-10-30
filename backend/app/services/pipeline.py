@@ -352,6 +352,8 @@ def transcribe_audio(
     selected_device = device or str(_setting(config, "whisper_device", "cpu"))
     selected_compute_type = compute_type or str(_setting(config, "whisper_compute_type", "int8"))
     factory = model_factory or _load_whisper_model_factory()
+    # Unset (None) leaves faster-whisper's own default, so behavior without the key is unchanged.
+    cpu_threads = _setting(config, "whisper_cpu_threads", None)
 
     try:
         model = factory(
@@ -359,6 +361,7 @@ def transcribe_audio(
             device=selected_device,
             compute_type=selected_compute_type,
             local_files_only=True,
+            **({"cpu_threads": cpu_threads} if cpu_threads else {}),
         )
         hint = build_transcription_hint(glossary)
         raw_segments, info = model.transcribe(

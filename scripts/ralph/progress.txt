@@ -153,3 +153,7 @@ Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfil
   - The tests skip on win32 and write fake tools inside desktop/test/.generate-env-test-*, as start-script.test.cjs does. The Prettier check in check.sh desktop applies to the new test file. Format with `./scripts/ralph/sandbox.sh 'cd apps/web && npx prettier --write ../../desktop/test/<file>'`.
   - The ADR 0016 test checks the key names and four threshold sentences of the table against the generator output. If the table wording changes, update the regular expressions in the last test of generate-env.test.cjs.
 ---
+
+## [2026-10-30T22:11:39.436Z] - P08.7 - published by hand
+Backend setting NARRASTEP_WHISPER_CPU_THREADS and its Compose entry; the owner's session listed it in .env.example, which sessions may not touch.
+---

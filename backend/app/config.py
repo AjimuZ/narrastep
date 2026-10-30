@@ -112,6 +112,8 @@ class Settings(BaseSettings):
     whisper_device: Literal["cpu"] = "cpu"
     whisper_compute_type: Literal["int8"] = "int8"
     whisper_local_files_only: bool = True
+    # None keeps the faster-whisper default; an empty variable also means unset (Compose passes "").
+    whisper_cpu_threads: int | None = Field(default=None, ge=1, le=64)
     frame_interval_seconds: float = Field(default=3.0, gt=0)
     frame_neighbor_seconds: float = Field(
         default=0.2,
@@ -178,6 +180,14 @@ class Settings(BaseSettings):
         """Expand environment variables and home markers in configured paths."""
         if isinstance(value, str):
             return Path(os.path.expandvars(value)).expanduser()
+        return value
+
+    @field_validator("whisper_cpu_threads", mode="before")
+    @classmethod
+    def treat_blank_threads_as_unset(cls, value: object) -> object:
+        """Map an empty or whitespace-only value to None so Compose can leave the key empty."""
+        if isinstance(value, str) and not value.strip():
+            return None
         return value
 
     @field_validator("allowed_video_extensions", "allowed_origins", mode="before")

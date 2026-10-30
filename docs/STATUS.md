@@ -63,7 +63,7 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 | Final verification of the finished roadmap | Planned | P10.2 |
 | Desktop window smoke test on the Docker stack, run by `scripts/ralph/desktop-smoke.sh` ([procedure](DEVELOPMENT.md#manual-smoke-test-on-docker-p072)) | Planned | P07.2 |
 | Optional local Gemma 4 generation | Planned | P06 |
-| `.env` generated from the computer's hardware when missing. `scripts/generate-env.sh` prints the file (P08.6); the backend setting for threads and the start scripts that call it are still to come | Partly done | P08.7–P08.8 |
+| `.env` generated from the computer's hardware when missing. `scripts/generate-env.sh` prints the file (P08.6); the backend setting `NARRASTEP_WHISPER_CPU_THREADS` and its Compose entry exist (P08.7, listed empty in `.env.example`); the start scripts that call the generator are still to come | Partly done | P08.7–P08.8 |
 | Podman support with `start-podman.sh`. The Compose file and Dockerfiles are engine-neutral (P08.9), and the stack is healthy on Docker; nothing has run on Podman yet | Planned | P08.10–P08.12 |
 | Clickable `[mm:ss]` references in Review and Document | Planned | P06.6 |
 | Model import from a read-only folder when `huggingface.co` is blocked; E2B default unless the E4B benchmark passes the set thresholds | Planned (decided 2026-10-29) | P06.2, P06.5 |

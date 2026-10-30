@@ -196,6 +196,51 @@ def test_transcription_rejects_audio_that_is_not_mono_16_khz_pcm(
     assert captured.value.code == "TRANSCRIPTION_INPUT_INVALID"
 
 
+def _factory_kwargs(tmp_path: Path, config: object | None) -> dict[str, object]:
+    """Run a transcription with a recording factory and return the keywords it received."""
+    audio = _write_wav(tmp_path / "audio.wav", b"\x00\x00" * 16_000)
+    seen: dict[str, object] = {}
+
+    class FakeModel:
+        """Return no segments so only the model construction is observed."""
+
+        def transcribe(self, *_: object, **__: object) -> tuple[object, object]:
+            """Return an empty segment list with minimal metadata."""
+            return iter(()), SimpleNamespace(language="en", language_probability=1, duration=1)
+
+    def factory(*_: object, **kwargs: object) -> FakeModel:
+        """Record the model keywords."""
+        seen.update(kwargs)
+        return FakeModel()
+
+    transcribe_audio(audio, config=config, model_path=tmp_path / "model", model_factory=factory)
+    return seen
+
+
+def test_whisper_cpu_threads_reach_the_model_only_when_set(tmp_path: Path) -> None:
+    """Pass cpu_threads to the model when configured and leave the library default otherwise."""
+    assert "cpu_threads" not in _factory_kwargs(tmp_path, None)
+    unset = Settings(data_root=tmp_path, mock_processing=False)
+    assert "cpu_threads" not in _factory_kwargs(tmp_path, unset)
+    configured = Settings(data_root=tmp_path, mock_processing=False, whisper_cpu_threads=4)
+    assert _factory_kwargs(tmp_path, configured)["cpu_threads"] == 4
+
+
+def test_whisper_cpu_threads_setting_is_validated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Accept a positive integer, treat an empty value as unset and reject everything else."""
+    monkeypatch.delenv("NARRASTEP_WHISPER_CPU_THREADS", raising=False)
+    assert Settings(data_root=tmp_path).whisper_cpu_threads is None
+    for raw, expected in (("6", 6), ("", None), ("  ", None)):
+        monkeypatch.setenv("NARRASTEP_WHISPER_CPU_THREADS", raw)
+        assert Settings(data_root=tmp_path).whisper_cpu_threads == expected
+    for bad in ("0", "-2", "abc", "2.5", "65"):
+        monkeypatch.setenv("NARRASTEP_WHISPER_CPU_THREADS", bad)
+        with pytest.raises(ValueError):
+            Settings(data_root=tmp_path)
+
+
 def test_mock_transcription_cannot_bypass_test_environment(tmp_path: Path) -> None:
     """Reject an ad-hoc mock config outside automated tests at the service boundary."""
     audio = tmp_path / "audio.wav"
