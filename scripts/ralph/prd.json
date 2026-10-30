@@ -740,8 +740,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 41,
-      "passes": false,
-      "notes": "Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Tests must never run against the owner's real `.env`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "start.sh now runs scripts/generate-env.sh --engine docker when .env is missing. The generator writes to a temporary file that is moved to .env only on success. An existing or empty .env is never touched. A failure prints a message and exits 1 before Compose starts. The step runs before the desktop watcher, so the launcher reads the generated NARRASTEP_WEB_PORT. `check.sh desktop` passed (202 of 202) and `check.sh docs` passed. Real Docker or Podman, macOS and Windows Git Bash were not run.",
       "dependsOn": [
         "P08.7"
       ],

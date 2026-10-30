@@ -27,6 +27,8 @@ beforeEach(() => {
   fs.mkdirSync(path.join(project, 'desktop'), { recursive: true });
   fs.mkdirSync(bin);
   fs.copyFileSync(START_SCRIPT, path.join(project, 'start.sh'));
+  // Most tests start from an existing .env so that they never reach the generator.
+  fs.writeFileSync(path.join(project, '.env'), 'NARRASTEP_WEB_PORT=4200\n');
   fs.writeFileSync(
     path.join(project, 'desktop', 'launch.cjs'),
     [
@@ -76,7 +78,7 @@ function systemTool(name) {
  * script uses, so the host's own docker, node and npm never take part.
  */
 function runStart(args, { env = {}, withNode = true } = {}) {
-  for (const tool of ['cat', 'dirname', 'sleep']) {
+  for (const tool of ['cat', 'dirname', 'sleep', 'sh', 'mv', 'rm']) {
     const link = path.join(bin, tool);
     if (!fs.existsSync(link)) {
       fs.symlinkSync(systemTool(tool), link);
@@ -109,6 +111,75 @@ async function eventually(check, timeoutMs = 8000) {
   }
   return true;
 }
+
+/**
+ * Installs a stub generator that appends its call to the shared record, then runs `body`.
+ * The real generator is covered by generate-env.test.cjs; here only the hand-over matters.
+ */
+function writeGenerator(body) {
+  fs.mkdirSync(path.join(project, 'scripts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(project, 'scripts', 'generate-env.sh'),
+    `#!/bin/sh\necho "generate $*" >> '${record}'\n${body}\n`,
+    { mode: 0o755 },
+  );
+}
+
+describe('start.sh .env generation', { skip }, () => {
+  it('creates a missing .env with the docker engine before Compose starts', () => {
+    fs.rmSync(path.join(project, '.env'));
+    writeGenerator('echo "NARRASTEP_WEB_PORT=4207"');
+    const result = runStart(['--headless']);
+    assert.equal(result.status, 0);
+    assert.deepEqual(dockerCalls(), ['generate --engine docker', 'compose up --build']);
+    assert.equal(fs.readFileSync(path.join(project, '.env'), 'utf8'), 'NARRASTEP_WEB_PORT=4207\n');
+    assert.deepEqual(
+      fs.readdirSync(project).filter((name) => name.startsWith('.env.generating')),
+      [],
+    );
+  });
+
+  it('leaves an existing or empty .env byte-identical and never runs the generator', () => {
+    writeGenerator('echo "NARRASTEP_WEB_PORT=9999"');
+    for (const content of ['KEEP=me\r\nNO_NEWLINE', '']) {
+      fs.writeFileSync(path.join(project, '.env'), content);
+      fs.rmSync(record, { force: true });
+      const result = runStart(['--headless']);
+      assert.equal(result.status, 0);
+      assert.equal(fs.readFileSync(path.join(project, '.env'), 'utf8'), content);
+      assert.deepEqual(dockerCalls(), ['compose up --build']);
+    }
+  });
+
+  it('stops with a readable message and no .env when generation fails', () => {
+    fs.rmSync(path.join(project, '.env'));
+    writeGenerator('echo "partial=1"; exit 1');
+    const result = runStart(['--headless']);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /could not generate \.env/);
+    assert.match(result.stderr, /\.env\.example/);
+    assert.equal(fs.existsSync(path.join(project, '.env')), false);
+    assert.deepEqual(dockerCalls(), ['generate --engine docker']);
+  });
+
+  it('stops the same way when the generator script is missing', () => {
+    fs.rmSync(path.join(project, '.env'));
+    const result = runStart(['--headless']);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /could not generate \.env/);
+    assert.equal(fs.existsSync(path.join(project, '.env')), false);
+    assert.deepEqual(dockerCalls(), []);
+  });
+
+  it('hands the generated web port to the desktop launcher', () => {
+    fs.rmSync(path.join(project, '.env'));
+    writeGenerator('echo "NARRASTEP_WEB_PORT=4207"');
+    assert.equal(runStart(['--headless']).status, 0);
+    const { resolveShellEnvironment } = require('../src/launcher.cjs');
+    const environment = resolveShellEnvironment({ env: {}, projectDirectory: project });
+    assert.equal(environment.NARRASTEP_WEB_PORT, '4207');
+  });
+});
 
 describe('start.sh', { skip }, () => {
   it('runs directly as ./start.sh, as the README says, because Git keeps it executable', () => {

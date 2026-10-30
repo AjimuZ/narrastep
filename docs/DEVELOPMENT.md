@@ -203,6 +203,18 @@ Prettier from the repository root:
 apps/web/node_modules/.bin/prettier --check "desktop/src/*.cjs" "desktop/test/**/*.cjs" desktop/package.json
 ```
 
+### Generated `.env` in `start.sh` (P08.8)
+
+After the Compose check and before the desktop watcher, `start.sh` runs
+`scripts/generate-env.sh --engine docker` when `.env` does not exist. The output goes to a
+temporary `.env.generating.<pid>` file that is moved to `.env` only on success; on failure the
+temporary file is removed, `start.sh` prints a message on standard error pointing to
+`.env.example` and exits 1 without starting Compose. An existing `.env`, including an empty one,
+is never read or rewritten. Because the file exists before the launcher starts, the launcher reads
+the generated `NARRASTEP_WEB_PORT` as for a hand-made file. `desktop/test/start-script.test.cjs`
+covers this with a stub generator and a stub `docker` in a temporary copy of the project, never
+the real `.env`. Not verified: a real Docker engine and macOS.
+
 ### Manual smoke test on Docker (P07.2)
 
 Not yet run. The build worker cannot run Docker (no root, no capabilities, no user namespaces) and

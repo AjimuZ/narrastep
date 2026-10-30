@@ -51,6 +51,11 @@ The exact state of each capability is in [Status](docs/STATUS.md); the plan is i
 
    On POSIX shells: `cp .env.example .env`.
 
+   This step is optional: when `.env` is missing, `./start.sh` creates it from this computer's
+   memory, CPUs, free disk and busy ports (see [ADR 0016](docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md)).
+   It never changes an existing `.env`, even an empty one; delete the file to generate a new one.
+   If generation fails, nothing starts and the script says so.
+
 2. Build and start the stack from Git Bash or WSL:
 
    ```bash

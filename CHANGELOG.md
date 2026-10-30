@@ -6,6 +6,9 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- `./start.sh` creates `.env` from the computer's memory, CPUs, free disk and busy ports when the
+  file is missing. An existing `.env`, even an empty one, is never changed, and a failed
+  generation stops the start with a message.
 - Initial Narrastep 0.2 local-first web application implementation.
 - Settings for the optional local generation: `NARRASTEP_LOCAL_GENERATION` (set to `disabled` to
   turn the feature off), `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and

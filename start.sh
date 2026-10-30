@@ -77,6 +77,22 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+# Create .env from this computer's hardware when it is missing (ADR 0016). An existing .env, even an
+# empty one, is never read, rewritten or replaced. The generator writes to a temporary file that is
+# moved into place only on success, so a failed run leaves no partial .env for the next start to trust.
+# This runs before the desktop watcher so the launcher reads the generated NARRASTEP_WEB_PORT.
+if [ ! -e .env ] && [ ! -L .env ]; then
+  generated_env=".env.generating.$$"
+  if ! sh "$script_directory/scripts/generate-env.sh" --engine docker >"$generated_env" 2>/dev/null ||
+    ! mv "$generated_env" .env 2>/dev/null; then
+    rm -f "$generated_env"
+    printf 'Narrastep: could not generate .env from this computer. Nothing was started.\n' >&2
+    printf 'Narrastep: copy .env.example to .env and try again.\n' >&2
+    exit 1
+  fi
+  printf 'Narrastep: created .env for this computer. Delete it to generate a new one.\n'
+fi
+
 # Open the desktop window in the background once the stack answers its health check.
 # The watcher runs next to Compose, which stays the foreground process of this script (the
 # 'exec' below keeps this shell's PID), so Compose output and Ctrl+C behave as in headless mode.
