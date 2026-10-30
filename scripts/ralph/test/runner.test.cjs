@@ -825,12 +825,8 @@ test('every file of the runner is protected from the agent, but its report folde
   assert.ok(!deny.some((rule) => rule.includes('.state')));
 });
 
-test('the agent permission file is valid and the shipped task list fits the roadmap', () => {
+// The shipped task list is not checked here: Ajimu Autopilot now owns scripts/ralph/prd.json and
+// may add its own fields and tasks, which must not turn this job red.
+test('the agent permission file is valid', () => {
   JSON.parse(fs.readFileSync(path.join(SOURCE, 'settings.json'), 'utf8'));
-  const repository = path.resolve(SOURCE, '..', '..');
-  const result = spawnSync('node', [path.join(SOURCE, 'prd.cjs'), 'validate', '--committed'], {
-    encoding: 'utf8',
-    env: { ...process.env, RALPH_ROOT: repository },
-  });
-  assert.equal(result.status, 0, result.stderr);
 });

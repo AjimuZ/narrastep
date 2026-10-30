@@ -251,7 +251,7 @@ function assertExportPackage(archivePath: string, reviewedText: string): void {
     '../02-screenshots/step-001_',
   );
   expect(requiredEntry(entries, '01-ai-input/generation-prompt.md').toString('utf8')).toContain(
-    'Do not invent',
+    'Never invent',
   );
   expect(
     requiredEntry(entries, '04-chatgpt-batches/batch-01-of-01/batch-input.md').toString('utf8'),
