@@ -17,6 +17,10 @@ const LANGUAGES = [
     typeError: 'Choose a project type to start processing.',
     moreOptions: 'More options',
     language: 'Spoken language',
+    glossary: 'Glossary (optional)',
+    glossaryHelp: 'Names and terms the speakers use, one per line.',
+    glossaryTooLong: 'A term is too long. Use at most 80 characters per line.',
+    glossaryTooMany: 'The glossary has too many terms. Use at most 200.',
   },
   {
     code: 'it',
@@ -29,6 +33,10 @@ const LANGUAGES = [
     typeError: "Scegli un tipo di progetto per avviare l'elaborazione.",
     moreOptions: 'Altre opzioni',
     language: 'Lingua parlata',
+    glossary: 'Glossario (facoltativo)',
+    glossaryHelp: 'Nomi e termini usati da chi parla, uno per riga.',
+    glossaryTooLong: 'Un termine è troppo lungo. Usa al massimo 80 caratteri per riga.',
+    glossaryTooMany: 'Il glossario ha troppi termini. Usane al massimo 200.',
   },
 ] as const;
 
@@ -40,8 +48,14 @@ interface ProcessApi {
   starts: unknown[];
 }
 
-/** Adds a saved recording without a project type to the fake API and records processing starts. */
-async function useSavedRecording(context: BrowserContext): Promise<ProcessApi> {
+/**
+ * Adds a saved recording without a project type, and with the given saved glossary, to the fake API
+ * and records processing starts.
+ */
+async function useSavedRecording(
+  context: BrowserContext,
+  glossary: string[] = [],
+): Promise<ProcessApi> {
   await useFakeApi(context, { status: 'review' });
   const api: ProcessApi = { starts: [] };
   const project = () => ({
@@ -50,7 +64,7 @@ async function useSavedRecording(context: BrowserContext): Promise<ProcessApi> {
     description: null,
     mode: api.starts.length > 0 ? 'meeting' : null,
     sourceLanguage: 'auto',
-    glossary: [],
+    glossary,
     detectedLanguage: null,
     status: api.starts.length > 0 ? 'queued' : 'uploaded',
     createdAt: timestamp,
@@ -190,6 +204,105 @@ for (const language of LANGUAGES) {
       expect(api.starts).toEqual([{ mode: 'meeting', sourceLanguage: 'it' }]);
     });
 
+    test('shows the saved glossary and sends it only when it changed', async ({
+      context,
+      page,
+    }) => {
+      const api = await useSavedRecording(context, ['Valkey', 'Città della Pieve']);
+      const { dialog } = await openProcessDialog(page, language);
+      await dialog.getByText(language.moreOptions).click();
+      const field = dialog.getByRole('textbox', { name: language.glossary });
+      await expect(field).toHaveValue('Valkey\nCittà della Pieve');
+      await expect(field).toHaveAccessibleDescription(new RegExp(language.glossaryHelp));
+
+      await dialog.getByRole('radio', { name: new RegExp(language.meeting) }).check();
+      await dialog.getByRole('button', { name: language.start }).click();
+      await expect(page).toHaveURL(/\/projects\/rec-1$/);
+      expect(api.starts).toEqual([{ mode: 'meeting' }]);
+    });
+
+    test('sends a changed glossary as normalized terms', async ({ context, page }) => {
+      const api = await useSavedRecording(context, ['Valkey']);
+      const { dialog } = await openProcessDialog(page, language);
+      await dialog.getByText(language.moreOptions).click();
+      await dialog
+        .getByRole('textbox', { name: language.glossary })
+        .fill('  Valkey \n\nvalkey\nCittà   della Pieve\n');
+      await dialog.getByRole('radio', { name: new RegExp(language.meeting) }).check();
+      await dialog.getByRole('button', { name: language.start }).click();
+
+      await expect(page).toHaveURL(/\/projects\/rec-1$/);
+      expect(api.starts).toEqual([{ mode: 'meeting', glossary: ['Valkey', 'Città della Pieve'] }]);
+    });
+
+    test('clears a saved glossary with an empty field', async ({ context, page }) => {
+      const api = await useSavedRecording(context, ['Valkey']);
+      const { dialog } = await openProcessDialog(page, language);
+      await dialog.getByText(language.moreOptions).click();
+      await dialog.getByRole('textbox', { name: language.glossary }).fill('  \n ');
+      await dialog.getByRole('radio', { name: new RegExp(language.meeting) }).check();
+      await dialog.getByRole('button', { name: language.start }).click();
+
+      await expect(page).toHaveURL(/\/projects\/rec-1$/);
+      expect(api.starts).toEqual([{ mode: 'meeting', glossary: [] }]);
+    });
+
+    test('refuses a glossary that breaks a limit, reopens More options and starts nothing', async ({
+      context,
+      page,
+    }) => {
+      const api = await useSavedRecording(context);
+      const { dialog } = await openProcessDialog(page, language);
+      await dialog.getByRole('radio', { name: new RegExp(language.meeting) }).check();
+      await dialog.getByText(language.moreOptions).click();
+      const field = dialog.getByRole('textbox', { name: language.glossary });
+      await field.fill('x'.repeat(81));
+      await dialog.getByText(language.moreOptions).click();
+      await expect(field).toBeHidden();
+
+      await dialog.getByRole('button', { name: language.start }).click();
+
+      await expect(field).toBeVisible();
+      await expect(field).toHaveAttribute('aria-invalid', 'true');
+      await expect(field).toHaveAccessibleDescription(new RegExp(language.glossaryTooLong));
+
+      await field.fill(Array.from({ length: 201 }, (_, index) => `term ${index}`).join('\n'));
+      await expect(field).toHaveAccessibleDescription(new RegExp(language.glossaryTooMany));
+      await dialog.getByRole('button', { name: language.start }).click();
+      await expect(dialog).toBeVisible();
+      expect(api.starts).toEqual([]);
+
+      const scan = await scanContrast(page);
+      expect(scan.textFailures).toEqual([]);
+      expect(scan.controlFailures).toEqual([]);
+    });
+
+    test('reaches the glossary with the keyboard and keeps focus in the dialog', async ({
+      context,
+      page,
+    }) => {
+      const api = await useSavedRecording(context);
+      const { dialog } = await openProcessDialog(page, language);
+      await dialog.getByRole('radio', { name: new RegExp(language.meeting) }).check();
+      await dialog.locator('details.more-options summary').focus();
+      await page.keyboard.press('Enter');
+      const field = dialog.getByRole('textbox', { name: language.glossary });
+      await expect(field).toBeVisible();
+      // The spoken language comes first.
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await expect(field).toBeFocused();
+      await page.keyboard.type('Valkey');
+      await page.keyboard.press('Tab');
+      await expect(dialog.getByRole('button', { name: language.cancel })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(dialog.getByRole('button', { name: language.start })).toBeFocused();
+      await page.keyboard.press('Enter');
+
+      await expect(page).toHaveURL(/\/projects\/rec-1$/);
+      expect(api.starts).toEqual([{ mode: 'meeting', glossary: ['Valkey'] }]);
+    });
+
     test('keeps text and controls readable, including the error state', async ({
       context,
       page,
@@ -209,6 +322,7 @@ for (const language of LANGUAGES) {
   for (const viewport of [
     { label: '320 px', width: 320, height: 640, scale: 1 },
     { label: '200% zoom of 1280 px', width: 640, height: 360, scale: 2 },
+    { label: '400% zoom of 1280 px', width: 320, height: 180, scale: 4 },
   ]) {
     test.describe(`Process dialog at ${viewport.label} in ${language.code === 'en' ? 'English' : 'Italian'}`, () => {
       test.use({
@@ -234,6 +348,25 @@ for (const language of LANGUAGES) {
         const start = dialog.getByRole('button', { name: language.start });
         await start.scrollIntoViewIfNeeded();
         await expect(start).toBeInViewport();
+        const overflow = await dialog.evaluate((node) => node.scrollWidth - node.clientWidth);
+        expect(overflow).toBeLessThanOrEqual(1);
+      });
+
+      test('fits with the glossary and its error open', async ({ context, page }) => {
+        await useSavedRecording(context);
+        const { dialog } = await openProcessDialog(page, language);
+        await dialog.getByText(language.moreOptions).click();
+        const field = dialog.getByRole('textbox', { name: language.glossary });
+        await field.fill('x'.repeat(81));
+        await dialog.getByRole('button', { name: language.start }).click();
+        const error = dialog.getByText(language.glossaryTooLong);
+        await error.scrollIntoViewIfNeeded();
+        await expect(error).toBeInViewport();
+
+        const box = await field.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(-1);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
         const overflow = await dialog.evaluate((node) => node.scrollWidth - node.clientWidth);
         expect(overflow).toBeLessThanOrEqual(1);
       });

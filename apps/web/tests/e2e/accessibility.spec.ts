@@ -1,8 +1,8 @@
 // Accessibility and responsive verification of every screen in English and Italian (docs/UI.md, Verification):
 // text and control contrast, keyboard operation, reduced motion, 320 px reflow, 200% zoom and text resize.
-import { expect, test as base, type Page } from '@playwright/test';
+import { expect, test as base, type Locator, type Page } from '@playwright/test';
 import { scanContrast } from './support/contrast';
-import { useFakeApi, type FakeScenario } from './support/fake-api';
+import { REMOVABLE_PROJECT, useFakeApi, type FakeScenario } from './support/fake-api';
 
 const test = base;
 
@@ -58,6 +58,13 @@ const SCREENS: Screen[] = [
     ready: { en: 'Create package', it: 'Crea pacchetto' },
   },
   {
+    name: 'storage',
+    path: '/storage',
+    scenario: { status: 'review' },
+    // Not the title: the menu entry has the same word before the figures have loaded.
+    ready: { en: 'Used by projects', it: 'Usato dai progetti' },
+  },
+  {
     name: 'not found',
     path: '/does-not-exist',
     scenario: { status: 'review' },
@@ -83,6 +90,22 @@ async function openScreen(page: Page, screen: Screen, language: 'en' | 'it'): Pr
   await expect(page.locator('html')).toHaveAttribute('lang', language);
   await expect(page.getByText(screen.ready[language]).first()).toBeAttached();
   await page.evaluate(() => document.fonts.ready);
+}
+
+/** The button of the only Storage row whose original video can be removed. */
+function removalTrigger(page: Page): Locator {
+  return page.getByRole('button', {
+    name: /^(Remove the original video of|Rimuovi il video originale di) /,
+  });
+}
+
+/** Opens the Storage screen and its removal confirmation; returns the dialog. */
+async function openRemovalDialog(page: Page, language: 'en' | 'it'): Promise<Locator> {
+  await openScreen(page, screenNamed('storage'), language);
+  await removalTrigger(page).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 /** Horizontal page scroll in pixels (zero when the page fits). */
@@ -178,6 +201,24 @@ for (const { code, locale } of LANGUAGES) {
       expect((await scanContrast(page)).textFailures).toEqual([]);
     });
 
+    test('storage removal confirmation and the notice after it', async ({ context, page }) => {
+      await useFakeApi(context, { status: 'review' });
+      const dialog = await openRemovalDialog(page, code);
+      const inDialog = await scanContrast(page);
+      expect(inDialog.textFailures).toEqual([]);
+      expect(inDialog.controlFailures).toEqual([]);
+
+      await dialog
+        .getByRole('button', {
+          name: code === 'en' ? 'Remove original video' : 'Rimuovi video originale',
+        })
+        .click();
+      await expect(page.getByRole('status').filter({ hasText: REMOVABLE_PROJECT })).toBeVisible();
+      const afterwards = await scanContrast(page);
+      expect(afterwards.textFailures).toEqual([]);
+      expect(afterwards.controlFailures).toEqual([]);
+    });
+
     test('hovered buttons, rows and menu entries keep their contrast', async ({
       context,
       page,
@@ -187,6 +228,7 @@ for (const { code, locale } of LANGUAGES) {
         screenNamed('projects'),
         screenNamed('review'),
         screenNamed('export'),
+        screenNamed('storage'),
       ]) {
         await openScreen(page, screen, code);
         const targets = page.locator(
@@ -411,6 +453,38 @@ for (const { code, locale } of LANGUAGES) {
       await expect(trigger).toBeFocused();
     });
 
+    test('storage removal confirmation keeps focus inside, returns it and closes with Escape', async ({
+      context,
+      page,
+    }) => {
+      await useFakeApi(context, { status: 'review' });
+      await openScreen(page, screenNamed('storage'), code);
+      const trigger = removalTrigger(page);
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAttribute('aria-modal', 'true');
+      for (let press = 0; press < 6; press += 1) {
+        expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+        await page.keyboard.press('Tab');
+      }
+      for (let press = 0; press < 3; press += 1) {
+        await page.keyboard.press('Shift+Tab');
+        expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+      }
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(trigger).toBeFocused();
+
+      await page.keyboard.press('Enter');
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole('button', { name: code === 'en' ? 'Cancel' : 'Annulla' }).focus();
+      await page.keyboard.press('Enter');
+      await expect(dialog).toBeHidden();
+      await expect(trigger).toBeFocused();
+    });
+
     test('split dialog and screenshot preview close with Escape', async ({ context, page }) => {
       await useFakeApi(context, { status: 'review' });
       await openScreen(page, screenNamed('review'), code);
@@ -511,6 +585,17 @@ for (const { code, locale } of LANGUAGES) {
         expect(await movingElements(page)).toEqual([]);
       });
     }
+
+    test('storage removal confirmation has no motion when the system asks for none', async ({
+      context,
+      page,
+    }) => {
+      await useFakeApi(context, { status: 'review' });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const dialog = await openRemovalDialog(page, code);
+      await dialog.getByRole('button').first().hover();
+      expect(await movingElements(page)).toEqual([]);
+    });
 
     test('the same processing screen does animate without the preference (the check can fail)', async ({
       context,
@@ -618,6 +703,29 @@ for (const { code, locale } of LANGUAGES) {
           }
         });
       }
+
+      test('storage removal confirmation fits and keeps its actions reachable', async ({
+        context,
+        page,
+      }) => {
+        await useFakeApi(context, { status: 'review' });
+        const dialog = await openRemovalDialog(page, code);
+        const box = await dialog.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(-1);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        expect(await clippedControls(page)).toEqual([]);
+        expect(await clippedText(page)).toEqual([]);
+        if (viewport.width <= 390) {
+          expect(await smallTargets(page)).toEqual([]);
+        }
+        // The dialog scrolls inside itself when it is taller than the window, as at 400% zoom.
+        for (const action of await dialog.getByRole('button').all()) {
+          await action.scrollIntoViewIfNeeded();
+          await expect(action).toBeInViewport();
+        }
+      });
     });
   }
 

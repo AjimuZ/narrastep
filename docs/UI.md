@@ -304,18 +304,21 @@ before the app has loaded:
 
 The browser checks live in `apps/web/tests/e2e/accessibility.spec.ts` (with `support/fake-api.ts` and
 `support/contrast.ts`) and run with `npx playwright test`, in desktop and mobile Chromium. They
-open all eight screens (Projects, New project, Recorder, Processing, Processing failed, Review,
-Export, Not found) in English and Italian against a deterministic fake API, and run the confirm,
-split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
+open all nine screens (Projects, New project, Recorder, Processing, Processing failed, Review,
+Export, Storage, Not found) in English and Italian against a deterministic fake API, and run the
+confirm, Storage removal, split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
 (the source checks); `tests/e2e/recorder.spec.ts` adds contrast and 320 px reflow of the checks,
 recording and save windows with fake devices in both languages. `tests/e2e/process.spec.ts` covers the Process dialog on a saved recording (journey, refusal
-without a type, keyboard, language option, contrast, 320 px and 200% zoom) in both languages.
+without a type, keyboard, language option, glossary, contrast, 320 px, 200% and 400% zoom) in both languages.
+`tests/e2e/storage.spec.ts` covers the Storage journeys (figures, reasons, confirmed removal, Cancel
+and Escape, API refusal, failed load, empty list) and `tests/e2e/glossary.spec.ts` the glossary field
+of New project (terms sent, limits, keyboard, contrast, 320 px, 200% and 400% zoom), in both languages (P09.3).
 The fake API's first segment carries an automatic You label, so every Review check covers the
 speaker select, and `tests/e2e/speaker-labels.spec.ts` changes and clears it with the keyboard,
 reports a refused save and checks contrast, 320 px and 200% zoom in both languages (P05.5). The
-last full run (2026-10-29, P05.5) passed 408 tests: 174 accessibility checks, 5 recorder tests,
-12 Process dialog tests and 10 speaker-label tests per Chromium project, plus the 6 contract
-tests.
+last full run (2026-10-30, P09.3) passed 592 tests: 214 accessibility checks, 30 Process dialog
+tests, 18 glossary tests, 12 Storage tests, 10 speaker-label tests, 5 recorder tests and 4
+permissions-policy tests per Chromium project, plus the 6 contract tests.
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).

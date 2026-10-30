@@ -173,12 +173,12 @@
       "verify": [],
       "verifyHost": [],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
       "blocked": false,
       "blockedReason": "",
       "lastFailure": "",
-      "verifiedAt": null,
+      "verifiedAt": "2026-10-30T17:04:46.875Z",
       "notes": "Baseline on 2026-10-30: 408 Playwright tests passed. See `tests/e2e/support/fake-api.ts` for the fake API; DEVELOPMENT.md says when to add a screen."
     },
     {

@@ -247,7 +247,7 @@ is generated and an existing one is untouched; the owner smoke test on Podman is
 ## P09 — Owner-selected improvements
 
 **Depends on:** P02, P03. **Areas:** backend, frontend, documentation.
-Chosen by the owner on 2026-10-29 (Q2). P09.1 and P09.2 are delivered; P09.3 adds their browser checks.
+Chosen by the owner on 2026-10-29 (Q2). P09.1 and P09.2 are delivered; P09.3 added their browser checks.
 
 - [x] P09.1 Glossary per project passed to Whisper as hints (I-02).
   Exit: names and terms saved in a project are sent to the transcriber as hints in both languages; tests cover an empty glossary and a long one; API, OpenAPI, PROCESSING_PIPELINE and UI documents updated.
@@ -304,10 +304,32 @@ covers the Storage screen yet, and the accessibility and contrast checks of the 
 languages were not run), a removal on a real recording with FFmpeg or on the Docker stack, and a
 real `adaptive_v1` project re-exported after a removal.
 
-- [ ] P09.3 Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and
+- [x] P09.3 Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and
   P09.2 were delivered without a browser.
   Exit: the Storage screen and its dialog are in the accessibility checks in English and Italian; a
   browser test covers the glossary field; the Playwright journeys pass.
+
+P09.3 evidence (2026-10-30): the Storage screen is in `SCREENS` of
+`apps/web/tests/e2e/accessibility.spec.ts`, so contrast, tab order and visible focus, reduced motion
+and reflow from 320 px to 400% zoom run on it in English and Italian, and hover contrast covers it
+too. Its removal confirmation has its own contrast, focus, Escape, reduced-motion and reflow tests.
+`support/fake-api.ts` answers `GET /storage` with one row per removal state and the
+`DELETE .../source-video` route. New `tests/e2e/storage.spec.ts` covers the figures, the reasons, a
+confirmed removal, Cancel and Escape, an API refusal, a failed load with Try again and an empty list.
+New `tests/e2e/glossary.spec.ts` covers the New project field (normalized terms, empty, keyboard, the
+80-character and 200-term limits, contrast, 320 px, 200% and 400% zoom), and `tests/e2e/process.spec.ts`
+adds the same field in the Process dialog (saved terms sent only when changed, clearing, limits,
+keyboard, reflow, and 400% zoom for the dialog itself). All of it runs in English and Italian.
+These checks found no defect in the product, so no product code changed. To prove they can fail, a
+temporary contrast fault in `storage.component.scss` failed the contrast check at 1.00:1 and a
+temporary overflow failed the 320 px check with 337 px of horizontal scroll; both were reverted.
+Screenshots of the screen at 1280 px in English and at 320 px in Italian, and of the dialog at 320 px
+in Italian, were read by eye. Checks: `./scripts/ralph/check.sh e2e` 592 passed (296 per Chromium
+project: 214 accessibility, 30 Process dialog, 18 glossary, 12 Storage, 10 speaker labels, 5 recorder,
+4 permissions policy, 3 contract), and `check.sh web` passed (183 unit tests, build, messages, lint,
+format, browser test types). Not run: a real removal or glossary through this browser suite, which
+uses the fake API, a browser with a 200% default font size (headless Chromium ignores the setting)
+and a screen reader.
 
 ## P10 — Autonomous development runner
 

@@ -11,6 +11,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - The broker is Valkey 9.1.3 under the Compose service name `redis`, with the `narrastep-redis` volume: the name is kept on purpose (ADR 0017).
 - `./scripts/ralph/stack.sh exec -T api python scripts/full_job_check.py --api http://127.0.0.1:8000/api/v1` proves a running stack end to end in seconds with the tiny model.
 - `check.sh stack` can reuse cached layers; use `stack.sh build --no-cache` when a check must really run in the image build.
+- Run one Playwright command at a time in the sandbox: parallel runs share the dev server on port 4200, and when one ends the other fails with ERR_CONNECTION_REFUSED.
 ---
 
 ## [2026-10-30T15:54:18.019Z] - P08.13 - passed
@@ -31,4 +32,9 @@ Not run: An arm64 image build: this computer builds amd64, so the arm64 layer si
 ## [2026-10-30T16:40:51.576Z] - P05.7 - passed
 The web container now sends `Permissions-Policy: camera=(), microphone=(self), geolocation=()` in both places, so the recorder is no longer refused the microphone by the policy on the Docker stack. wget inside the real web container of the isolated stack showed the header on /, /record and /api/v1/health; a new Playwright test serves the values of nginx.conf from a test server, grants the microphone, refuses the camera, and fails when the old header is put back. The desktop window still refuses the microphone in its own handler until P07.3-P07.4.
 Not run: A browser against the nginx container itself: the sandbox cannot reach the published ports, so the browser test serves the same headers from a test server.; A real microphone: that belongs to the manual test P05.6.
+---
+
+## [2026-10-30T17:04:46.875Z] - P09.3 - passed
+The Storage screen and its removal confirmation now run the contrast, keyboard, reduced-motion and 320 px to 400% zoom checks in English and Italian, and new browser tests cover the Storage journeys and the glossary field in New project and the Process dialog. The full Playwright suite passes with 592 tests; the checks found no product defect, and injected contrast and overflow faults proved they can fail. Separately from these checks, reading the code showed that the Process dialog's glossary and language errors have no role=alert, so a screen reader may not announce them; this was not changed or tested with a screen reader and could be a follow-up.
+Not run: A real removal or glossary through this browser suite: it uses the fake API.; A browser with a 200% default font size: headless Chromium ignores the setting.; A screen reader: none is available in the sandbox.
 ---

@@ -99,8 +99,60 @@ function job(status: 'processing' | 'failed') {
   };
 }
 
+const MB = 1024 * 1024;
+
+/** Name of the only project in the Storage list whose original video can be removed. */
+export const REMOVABLE_PROJECT = 'Weekly operations meeting';
+
+/** Builds a Storage row from its parts in MB; the total is their sum, as in the real API. */
+function storageRow(
+  projectId: string,
+  name: string,
+  status: string,
+  removalBlockedReason: 'no_video' | 'already_removed' | 'busy' | 'package_required' | null,
+  megabytes: { source?: number; audio?: number; screenshots?: number; exports?: number },
+) {
+  const categories = {
+    source: (megabytes.source ?? 0) * MB,
+    audio: (megabytes.audio ?? 0) * MB,
+    transcript: 0,
+    screenshots: (megabytes.screenshots ?? 0) * MB,
+    exports: (megabytes.exports ?? 0) * MB,
+    other: 0,
+  };
+  return {
+    projectId,
+    name,
+    status,
+    totalBytes: Object.values(categories).reduce((sum, bytes) => sum + bytes, 0),
+    categories,
+    sourceVideoBytes: categories.source,
+    sourceRemovedAt: removalBlockedReason === 'already_removed' ? timestamp : null,
+    removalBlockedReason,
+  };
+}
+
 /** Registers the fake API on a browser context for one scenario; unknown routes answer 404. */
 export async function useFakeApi(context: BrowserContext, scenario: FakeScenario): Promise<void> {
+  // One row per removal state, so every Storage check covers the button, each reason and the link.
+  let storageRows = [
+    storageRow('project-2', REMOVABLE_PROJECT, 'completed', null, {
+      source: 16,
+      audio: 1,
+      screenshots: 3,
+      exports: 1,
+    }),
+    storageRow('project-1', projectName, 'review', 'package_required', {
+      source: 12,
+      screenshots: 2,
+    }),
+    storageRow('project-5', 'Escalation call', 'completed', 'already_removed', {
+      screenshots: 2,
+      exports: 1,
+    }),
+    storageRow('project-6', 'Queued tutorial', 'queued', 'busy', { source: 1 }),
+    storageRow('project-3', 'New hire briefing', 'draft', 'no_video', {}),
+  ];
   // The first segment carries an automatic speaker label, so every screen check also covers the
   // Review speaker select with its hint; the second is unlabelled.
   const segments = [
@@ -207,6 +259,36 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
       });
     } else if (path === '/api/v1/projects/project-1/exports' && method === 'GET') {
       await route.fulfill({ json: [exportRow('failed', 2), exportRow('completed', 1)] });
+    } else if (path === '/api/v1/storage' && method === 'GET') {
+      await route.fulfill({
+        json: {
+          totalBytes: storageRows.reduce((sum, row) => sum + row.totalBytes, 0),
+          freeBytes: 20 * 1024 * MB,
+          items: storageRows,
+        },
+      });
+    } else if (/^\/api\/v1\/projects\/[^/]+\/source-video$/.test(path) && method === 'DELETE') {
+      // Like the API: only an allowed row loses its source files; any other is refused unchanged.
+      const row = storageRows.find((item) => path.includes(`/${item.projectId}/`));
+      if (row?.removalBlockedReason !== null) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            error: { code: 'PACKAGE_REQUIRED', message: 'A package is required.', details: {} },
+          },
+        });
+        return;
+      }
+      const updated = {
+        ...row,
+        totalBytes: row.totalBytes - row.categories.source,
+        categories: { ...row.categories, source: 0 },
+        sourceVideoBytes: 0,
+        sourceRemovedAt: timestamp,
+        removalBlockedReason: 'already_removed' as const,
+      };
+      storageRows = storageRows.map((item) => (item === row ? updated : item));
+      await route.fulfill({ json: updated });
     } else {
       await route.fulfill({
         status: 404,
