@@ -74,8 +74,13 @@ Implemented in P06.1 (`backend/Dockerfile`, `backend/app/services/llama_server.p
 
 ### Image growth
 
+Measured on 2026-10-30 in a real amd64 image built without cache: `docker history` gives the
+`COPY /opt/llama.cpp/` layer **40,148,992 bytes (40.1 MB)**, and the `LICENSE` layer 16,384 bytes.
+The layer is 28,672 bytes larger than the estimate below, which matches. arm64 was not built, so
+its figure is still only the estimate.
+
 Measured on 2026-10-29 from the files the Dockerfile keeps, extracted from the pinned image
-layers (the build itself was not run, because the worker that made P06.1 has no Docker):
+layers, before any image was built:
 
 | Platform | Files | Uncompressed layer | Compressed (gzip -9) |
 | --- | ---: | ---: | ---: |
@@ -83,12 +88,12 @@ layers (the build itself was not run, because the worker that made P06.1 has no 
 | `linux/arm64` | 25 (10 symlinks) | 27,996,160 bytes (26.7 MiB) | 12,305,424 bytes (11.7 MiB) |
 
 - `libgomp1` adds nothing: the existing packages already install it (368 KiB installed in Debian 13).
-- The `LICENSE` file adds 1,078 bytes and the check script and module a few kilobytes.
+- The `LICENSE` file holds 1,078 bytes and the check script and module a few kilobytes.
 - Docker reports the uncompressed layer size, so the backend image grows by about 40 MB on
   amd64. The first build also downloads the pinned image once (about 300 MB compressed on amd64,
   mostly its Ubuntu packages); it stays in the build cache and is not part of the backend image.
-- To confirm on a computer with Docker: `docker compose build api`, then
-  `docker history narrastep-backend:0.2.0` shows the `COPY /opt/llama.cpp/` layer size.
+- To measure again: `docker compose build api`, then `docker history narrastep-backend:0.2.0` shows
+  the `COPY /opt/llama.cpp/` layer size.
 
 ## States
 

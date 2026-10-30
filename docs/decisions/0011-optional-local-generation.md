@@ -52,7 +52,8 @@ document. The owner wants an optional local alternative with these constraints:
 - The backend image grows by the size of the `llama.cpp` CPU binaries. P06.1 pins
   `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` (build b11146) by its index digest, keeps only
   `llama-server` and the libraries it loads in `/opt/llama.cpp`, and measured 40.1 MB uncompressed
-  (16.5 MB compressed) on amd64 and 28.0 MB on arm64 from the extracted files. The binaries need
+  (16.5 MB compressed) on amd64 and 28.0 MB on arm64 from the extracted files; `docker history` of
+  a real amd64 image gave 40,148,992 bytes for the layer on 2026-10-30. The binaries need
   glibc 2.38 or newer, which the Debian 13 base of `python:3.12.13-slim` provides; the image build
   runs `llama-server --version` and fails when they do not load. Details:
   [Local generation](../LOCAL_GENERATION.md#server-in-the-backend-image).

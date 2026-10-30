@@ -22,3 +22,8 @@ Not run: A workflow run on GitHub: nothing is pushed at this point, so the first
 Every pinned image built without cache on Docker, including the llama.cpp and transcription checks; the isolated stack reported health ok on Valkey 9.1.3. The new backend/scripts/full_job_check.py took a generated spoken MP4 from upload through processing with the baked tiny model and export to a checked ZIP, and failed as it should with the worker stopped. P08.3 is ticked with the real output, and the status, ADR 0017 and risk K9 say what was and was not verified.
 Not run: The image build with the default small model: the isolated stack bakes tiny.; An arm64 build: this computer builds amd64.; Podman: it belongs to P08.9 and P08.12.; Valkey reading an existing Redis 7.2 volume: the isolated stack starts on empty volumes.
 ---
+
+## [2026-10-30T16:26:20.023Z] - P06.1 - passed
+The backend image built without cache on Docker, and scripts/check_llama_server.py passed both during the build and on the built image (llama-server 0.5.0-dev, build 11146, commit 7fe450e19). docker history gives the COPY /opt/llama.cpp/ layer as 40,148,992 bytes, 28,672 bytes above the 40,120,320 estimated from extracted files; the figure is recorded in docs/LOCAL_GENERATION.md and P06.1 is ticked with dated evidence.
+Not run: An arm64 image build: this computer builds amd64, so the arm64 layer size stays the estimate from the extracted files.
+---
