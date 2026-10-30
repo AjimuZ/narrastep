@@ -779,12 +779,13 @@
       "title": "Move the start logic into one sourced file",
       "description": "Shared logic of the start scripts moves to one file under scripts/, so the two scripts cannot drift apart. Behavior of ./start.sh does not change.",
       "acceptanceCriteria": [
-        "Option parsing, the window watcher and the `.env` step live in one sourced file under `scripts/`",
-        "`desktop/test/start-script.test.cjs` passes unchanged"
+        "Option parsing, the window watcher and the `.env` step live in one sourced file under `scripts/`, and `start.sh` sources it",
+        "`desktop/test/start-script.test.cjs` passes with no assertion changed; only its fixture setup may also copy the sourced file into the temporary project, because it copies only `start.sh` today",
+        "`./start.sh` behavior (options, messages, exit codes, `exec docker compose up`) is unchanged"
       ],
       "priority": 43,
       "passes": false,
-      "notes": "BLOCKED: correction drops acceptance criteria without justification: ['Option parsing, the window watcher and the `.env` step live in one sourced file under `scripts/`']",
+      "notes": "Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.8",
         "P08.9"
