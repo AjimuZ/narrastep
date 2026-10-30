@@ -622,7 +622,7 @@
       ],
       "priority": 36,
       "passes": false,
-      "notes": "",
+      "notes": "BLOCKED: still failing after 3 attempts: the review session did not confirm the conventions it was given",
       "dependsOn": [
         "P08.4a",
         "P08.4b"
