@@ -305,6 +305,10 @@ recorder can upload what is missing and save again, or discard.
   stops, saves with a name and finds the project as **Not processed**, with no job queued
   (`apps/web/tests/e2e/recorder.spec.ts`, P05.3, against the deterministic fake API; the
   real-API run above was a manual check with a scratch script).
+- `apps/web/tests/e2e/permissions-policy.spec.ts` (P05.7) serves the Permissions-Policy values of
+  `apps/web/nginx.conf` from a test server: `getUserMedia` gets the microphone, the camera stays
+  refused, and the old `microphone=()` value is refused. The development server sends no such
+  header, so the recorder journey above does not cover it.
 - Recorder unit tests (`apps/web/src/app/features/recorder/*.spec.ts`, P05.3) with doubles for
   `MediaRecorder` and the capture API: start offsets, chunk numbering, ordered uploads, retry and
   fatal errors, pause, stop and abort; source checks, start, save with and without a name, missing

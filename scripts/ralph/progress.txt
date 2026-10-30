@@ -27,3 +27,8 @@ Not run: The image build with the default small model: the isolated stack bakes 
 The backend image built without cache on Docker, and scripts/check_llama_server.py passed both during the build and on the built image (llama-server 0.5.0-dev, build 11146, commit 7fe450e19). docker history gives the COPY /opt/llama.cpp/ layer as 40,148,992 bytes, 28,672 bytes above the 40,120,320 estimated from extracted files; the figure is recorded in docs/LOCAL_GENERATION.md and P06.1 is ticked with dated evidence.
 Not run: An arm64 image build: this computer builds amd64, so the arm64 layer size stays the estimate from the extracted files.
 ---
+
+## [2026-10-30T16:40:51.576Z] - P05.7 - passed
+The web container now sends `Permissions-Policy: camera=(), microphone=(self), geolocation=()` in both places, so the recorder is no longer refused the microphone by the policy on the Docker stack. wget inside the real web container of the isolated stack showed the header on /, /record and /api/v1/health; a new Playwright test serves the values of nginx.conf from a test server, grants the microphone, refuses the camera, and fails when the old header is put back. The desktop window still refuses the microphone in its own handler until P07.3-P07.4.
+Not run: A browser against the nginx container itself: the sandbox cannot reach the published ports, so the browser test serves the same headers from a test server.; A real microphone: that belongs to the manual test P05.6.
+---

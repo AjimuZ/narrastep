@@ -137,12 +137,12 @@
       "verify": [],
       "verifyHost": [],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
       "blocked": false,
       "blockedReason": "",
       "lastFailure": "",
-      "verifiedAt": null,
+      "verifiedAt": "2026-10-30T16:40:51.576Z",
       "notes": ""
     },
     {

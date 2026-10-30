@@ -195,6 +195,7 @@ All notable changes to Narrastep are documented in this file.
 
 ### Fixed
 
+- Fixed the recorder being refused the microphone on the Docker stack: the web container now allows the microphone for the app's own address, while camera and geolocation stay denied.
 - Fixed transcription failing for every video in backend images built since 29 September 2026: PyAV 19 removed an argument that faster-whisper 1.2.1 passes when it decodes a file, so Whisper now receives the audio FFmpeg already extracted. The image build now checks that generated clips in every accepted container transcribe with the baked model.
 - Kept active export progress visible after refresh and kept processing cancellation available after queueing.
 - Improved keyboard focus, contextual control labels, review-operation locking, language entry, and live-region behavior across the Angular workflow.
