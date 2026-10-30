@@ -15,6 +15,12 @@ const MESSAGES = Object.freeze({
     leaveDetail: 'A recording, an upload or unsaved edits may be lost.',
     leaveStay: 'Stay',
     leaveConfirm: 'Leave',
+    pickerTitle: 'Choose what to record',
+    pickerBody: 'Narrastep records the screen or window you choose. Nothing leaves this computer.',
+    pickerScreens: 'Screens',
+    pickerWindows: 'Windows',
+    pickerEmpty: 'No screen or window is available.',
+    pickerCancel: 'Cancel',
   }),
   it: Object.freeze({
     unavailableTitle: 'Narrastep non è raggiungibile',
@@ -26,6 +32,13 @@ const MESSAGES = Object.freeze({
       'Una registrazione, un caricamento o modifiche non salvate potrebbero andare persi.',
     leaveStay: 'Resta',
     leaveConfirm: 'Esci',
+    pickerTitle: 'Scegli cosa registrare',
+    pickerBody:
+      'Narrastep registra lo schermo o la finestra che scegli. Nulla lascia questo computer.',
+    pickerScreens: 'Schermi',
+    pickerWindows: 'Finestre',
+    pickerEmpty: 'Nessuno schermo o finestra disponibile.',
+    pickerCancel: 'Annulla',
   }),
 });
 

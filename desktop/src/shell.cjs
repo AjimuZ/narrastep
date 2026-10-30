@@ -2,12 +2,13 @@
 'use strict';
 
 const { installContentsGuards, installSessionGuards } = require('./guards.cjs');
-const { resolveAppOrigin } = require('./policy.cjs');
+const { pickLanguage, resolveAppOrigin } = require('./policy.cjs');
+const { createSourcePicker } = require('./source-picker.cjs');
 const { createMainWindow } = require('./window.cjs');
 
 /**
- * Starts the shell with the Electron modules in `electron` (`app`, `BrowserWindow`, `dialog`,
- * `Menu`, `screen`, `session`), the environment `env` and the `platform` name. Must run before Electron is
+ * Starts the shell with the Electron modules in `electron` (`app`, `BrowserWindow`, `desktopCapturer`,
+ * `dialog`, `Menu`, `screen`, `session`), the environment `env` and the `platform` name. Must run before Electron is
  * ready, because the renderer sandbox is enabled for every process here.
  *
  * Returns `{ primary, appOrigin, ready }`:
@@ -21,7 +22,7 @@ const { createMainWindow } = require('./window.cjs');
  * or contacts Docker, so containers and running jobs are unaffected.
  */
 function startShell({ electron, env, platform }) {
-  const { app, BrowserWindow, Menu, dialog, screen, session } = electron;
+  const { app, BrowserWindow, Menu, desktopCapturer, dialog, screen, session } = electron;
   const appOrigin = resolveAppOrigin(env);
 
   app.enableSandbox();
@@ -43,7 +44,13 @@ function startShell({ electron, env, platform }) {
   });
 
   const ready = app.whenReady().then(() => {
-    installSessionGuards(session.defaultSession, appOrigin);
+    const picker = createSourcePicker({
+      BrowserWindow,
+      desktopCapturer,
+      getParent: () => mainWindow?.window ?? null,
+      getLanguage: () => mainWindow?.language() ?? pickLanguage(null, app.getLocale()),
+    });
+    installSessionGuards(session.defaultSession, appOrigin, picker.pickSource);
     // macOS keeps Electron's default menu, which carries the system editing shortcuts.
     if (platform !== 'darwin') {
       Menu.setApplicationMenu(null);

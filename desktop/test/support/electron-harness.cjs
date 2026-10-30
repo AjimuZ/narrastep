@@ -85,9 +85,16 @@ async function isolation(window, appOrigin) {
   result.microphone = await run(
     "navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'granted'; }, (e) => e.name)",
   );
-  result.screen = await run(
+  // The app origin gets the source picker, so the request stays pending until the picker window is
+  // closed; closing it is the user's cancel and rejects the page's promise.
+  const screenRequest = run(
     "navigator.mediaDevices.getDisplayMedia({ video: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'granted'; }, (e) => e.name)",
   );
+  await waitUntil(() => BrowserWindow.getAllWindows().length === 2);
+  BrowserWindow.getAllWindows()
+    .find((other) => other !== window)
+    .close();
+  result.screen = await screenRequest;
   result.notifications = await run('Notification.requestPermission()');
   result.fullscreen = await run(
     "document.documentElement.requestFullscreen().then(() => document.exitFullscreen()).then(() => 'granted', (e) => e.name)",

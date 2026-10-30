@@ -7,6 +7,7 @@ const { describe, it } = require('node:test');
 const { MESSAGES } = require('../src/messages.cjs');
 const { DesktopConfigurationError, WINDOW_WEB_PREFERENCES } = require('../src/policy.cjs');
 const { startShell } = require('../src/shell.cjs');
+const { choiceUrl } = require('../src/source-picker.cjs');
 const { ZOOM_FACTORS, nextZoomFactor, windowOptions, zoomShortcut } = require('../src/window.cjs');
 const { FakeEvent, createFakeElectron } = require('./support/fake-electron.cjs');
 
@@ -69,6 +70,23 @@ describe('startShell', () => {
       const index = calls.indexOf(guard);
       assert.ok(index >= 0 && index < firstLoad, `${guard} before the first load`);
     }
+  });
+
+  it('answers a screen capture request of the app with the picker in the system language', async () => {
+    const chosen = { id: 'screen:0:0', name: 'Screen 1', thumbnail: { isEmpty: () => true } };
+    const { session, windows } = await startOnFakes({ locale: 'it-IT', sources: [chosen] });
+    const answer = new Promise((resolve) => {
+      session.handlers.displayMedia(
+        { securityOrigin: 'http://127.0.0.1:4200', videoRequested: true },
+        resolve,
+      );
+    });
+    await new Promise(setImmediate);
+    const picker = windows[1];
+    assert.equal(picker.options.parent, windows[0]);
+    assert.match(decodePage(picker.webContents.loads[0]), /<html lang="it">/);
+    picker.webContents.emit('will-frame-navigate', new FakeEvent({ url: choiceUrl(0) }));
+    assert.deepEqual(await answer, { video: chosen });
   });
 
   it('opens the configured loopback port with the isolated preferences', async () => {

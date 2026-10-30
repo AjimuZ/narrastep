@@ -192,9 +192,15 @@ flowchart LR
   it is refused (`src/guards.cjs`), so the page reaches neither the Internet nor another local
   service.
 - **No host bridge.** The page runs with context isolation, the renderer sandbox and no Node.js,
-  without preload script or IPC. Only `fullscreen` is granted; the microphone, screen capture,
-  notifications, devices and external protocol links are denied until P07.3 and P07.4 add the
-  picker, the microphone and "Save as" in the main process.
+  without preload script or IPC. Only `fullscreen` and screen capture are granted; the
+  microphone, notifications, devices and external protocol links are denied until P07.4 adds the
+  microphone and "Save as" in the main process. Screen capture goes through the source picker
+  (`src/source-picker.cjs`): `getDisplayMedia()` from the app origin, and only from it, opens a
+  small modal window that lists the screens and windows of `desktopCapturer` and answers the
+  session's `setDisplayMediaRequestHandler` with the chosen source (or denies on cancel). The
+  picker page has no script, preload or IPC; its links are cancelled navigations that the main
+  process reads, and the choice is an index into the list the main process holds. The window
+  passes through the same contents guards as every other window.
 - **Lifecycle.** `src/shell.cjs` takes Electron's single-instance lock: a second launch exits and
   brings the window to the front, reloading the app when the window shows the fallback page.
   Closing the window quits the shell; the shell never starts, stops or calls Docker, so containers
@@ -239,8 +245,8 @@ flowchart LR
   window picker, Windows loopback system audio, microphone permission and native downloads. It
   has no other host bridge, and closing it never stops the containers. The shell with its
   loopback-only loading, isolation and single instance exists since P07.1 and the launcher since
-  P07.2 ("Desktop shell" above); the picker, microphone and downloads are still planned
-  (P07.3–P07.4).
+  P07.2 ("Desktop shell" above); the screen and window picker since P07.3a. Windows loopback
+  system audio (P07.3b), the microphone and downloads (P07.4) are still planned.
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it

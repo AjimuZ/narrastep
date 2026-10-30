@@ -622,7 +622,7 @@
       ],
       "priority": 36,
       "passes": false,
-      "notes": "BLOCKED: still failing after 3 attempts: the implementation session did not confirm the conventions it was given",
+      "notes": "",
       "dependsOn": [
         "P08.4a",
         "P08.4b"
@@ -645,7 +645,7 @@
       ],
       "priority": 37,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.4c"
       ],
@@ -667,7 +667,7 @@
       ],
       "priority": 38,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.5a"
       ],
@@ -692,7 +692,7 @@
       ],
       "priority": 39,
       "passes": false,
-      "notes": "Read docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md. Add the tests under desktop/test/ beside start-script.test.cjs, so `npm test` runs them. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Read docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md. Add the tests under desktop/test/ beside start-script.test.cjs, so `npm test` runs them. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.5b"
       ],
@@ -714,7 +714,7 @@
       ],
       "priority": 40,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.6"
       ],
@@ -739,7 +739,7 @@
       ],
       "priority": 41,
       "passes": false,
-      "notes": "Tests must never run against the owner's real `.env`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Tests must never run against the owner's real `.env`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.7"
       ],
@@ -782,7 +782,7 @@
       ],
       "priority": 43,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.8",
         "P08.9"
@@ -809,7 +809,7 @@
       ],
       "priority": 44,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.10a"
       ],
@@ -833,7 +833,7 @@
       ],
       "priority": 45,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.10b",
         "P08.5b"
@@ -856,7 +856,7 @@
       ],
       "priority": 46,
       "passes": false,
-      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/podman-smoke.sh` once as a background command. On 2026-10-30 Podman 5.4.2 ran a container, a published port and `podman compose` in that container. If Podman itself cannot run there, report blocked with the error. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/podman-smoke.sh` once as a background command. On 2026-10-30 Podman 5.4.2 ran a container, a published port and `podman compose` in that container. If Podman itself cannot run there, report blocked with the error. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.11",
         "P08.3"
@@ -879,7 +879,7 @@
       ],
       "priority": 47,
       "passes": false,
-      "notes": "Read docs/LOCAL_GENERATION.md and ADR 0011. Default is not installed (rule 14). If huggingface.co cannot be reached from the sandbox, report blocked rather than inventing hashes. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Read docs/LOCAL_GENERATION.md and ADR 0011. Default is not installed (rule 14). If huggingface.co cannot be reached from the sandbox, report blocked rather than inventing hashes. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P08.5b"
       ],
@@ -904,7 +904,7 @@
       ],
       "priority": 48,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.2a"
       ],
@@ -926,7 +926,7 @@
       ],
       "priority": 49,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.2b"
       ],
@@ -951,7 +951,7 @@
       ],
       "priority": 50,
       "passes": false,
-      "notes": "Read \"Import from disk\" in docs/LOCAL_GENERATION.md. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Read \"Import from disk\" in docs/LOCAL_GENERATION.md. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.2c",
         "P08.10b"
@@ -975,7 +975,7 @@
       ],
       "priority": 51,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.2a"
       ],
@@ -996,7 +996,7 @@
       ],
       "priority": 52,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.3a"
       ],
@@ -1018,7 +1018,7 @@
       ],
       "priority": 53,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.3b",
         "P06.1"
@@ -1042,7 +1042,7 @@
       ],
       "priority": 54,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.3c",
         "P06.2c"
@@ -1065,7 +1065,7 @@
       ],
       "priority": 55,
       "passes": false,
-      "notes": "Keep the model in the sandbox cache at /cache, never in the repository. The first download is about 3.4 GB. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Keep the model in the sandbox cache at /cache, never in the repository. The first download is about 3.4 GB. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.3d"
       ],
@@ -1090,7 +1090,7 @@
       ],
       "priority": 56,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.2d"
       ],
@@ -1113,7 +1113,7 @@
       ],
       "priority": 57,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.4a",
         "P06.3d"
@@ -1136,7 +1136,7 @@
       ],
       "priority": 58,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.4b"
       ],
@@ -1159,7 +1159,7 @@
       ],
       "priority": 59,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.4c"
       ],
@@ -1181,7 +1181,7 @@
       ],
       "priority": 60,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.3e"
       ],
@@ -1202,7 +1202,7 @@
       ],
       "priority": 61,
       "passes": false,
-      "notes": "Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e2b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e2b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.5a"
       ],
@@ -1225,7 +1225,7 @@
       ],
       "priority": 62,
       "passes": false,
-      "notes": "Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e4b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Start the stack with `./scripts/ralph/stack.sh up --build --detach --wait`, then run `./scripts/ralph/stack.sh exec -T api python scripts/benchmark_generation.py --model e4b` as a background command and wait for it. It downloads the model and keeps the computer busy. Stop the stack afterwards. When the output cannot be measured on this computer, report blocked. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.5b"
       ],
@@ -1248,7 +1248,7 @@
       ],
       "priority": 63,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.4d"
       ],
@@ -1271,7 +1271,7 @@
       ],
       "priority": 64,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.6a"
       ],
@@ -1293,8 +1293,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 65,
-      "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "Fixed the review findings on P07.3a. The stale comment in desktop/src/guards.cjs now says the handler answers the picker's source for the app origin and null otherwise. The policy.cjs comment now matches the P07.3a/P07.3b split. The opt-in real-Electron harness would have hung, because getDisplayMedia() from the app origin now opens the picker and waits, so desktop/test/support/electron-harness.cjs starts the request, waits for the picker window, closes it and expects NotAllowedError. DEVELOPMENT.md describes that check. The earlier work (picker module, messages, shell wiring, tests, docs, changelog) is unchanged. `check.sh desktop` passed 148 of 148 and `check.sh docs` passed. Not run: the real-Electron window tests, including the edited harness, and Windows loopback audio (P07.3b).",
       "dependsOn": [
         "P05.7"
       ],
@@ -1318,7 +1318,7 @@
       ],
       "priority": 66,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P07.3a"
       ],
@@ -1340,7 +1340,7 @@
       ],
       "priority": 67,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P07.3b"
       ],
@@ -1363,7 +1363,7 @@
       ],
       "priority": 68,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P07.4a"
       ],
@@ -1385,7 +1385,7 @@
       ],
       "priority": 69,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P07.4b"
       ],
@@ -1407,7 +1407,7 @@
       ],
       "priority": 70,
       "passes": false,
-      "notes": "The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/desktop-smoke.sh` once as a background command, because it takes several minutes and opens windows on the owner's screen. It reads only window titles. It passed all 11 steps on 2026-10-30, before the later changes to start.sh. Run it again after any fix. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. The owner approved this replacement of the manual test on 2026-10-30. Run `./scripts/ralph/desktop-smoke.sh` once as a background command, because it takes several minutes and opens windows on the owner's screen. It reads only window titles. It passed all 11 steps on 2026-10-30, before the later changes to start.sh. Run it again after any fix. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P07.4b",
         "P08.10b"
@@ -1431,7 +1431,7 @@
       ],
       "priority": 71,
       "passes": false,
-      "notes": "Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
       "dependsOn": [
         "P06.6b",
         "P07.5",
@@ -1453,7 +1453,7 @@
       ],
       "priority": 72,
       "passes": false,
-      "notes": "Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
       "dependsOn": [
         "P07.4b"
       ]
@@ -1467,7 +1467,7 @@
       ],
       "priority": 73,
       "passes": false,
-      "notes": "Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
+      "notes": "In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
       "dependsOn": [
         "P05.7",
         "P07.4b"

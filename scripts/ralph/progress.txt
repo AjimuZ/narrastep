@@ -2,6 +2,7 @@
 Each session sees the patterns below and the last entries. Older entries move to archive/.
 
 ## Codebase Patterns
+- In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is.
 - The owner's computer has Docker and the runner runs there. Older notes saying a check could not run because a worker had no Docker are history; run those checks now.
 - Host Python (3.15) and Node.js (24) differ from the project's (3.14.10 and 22.23.1): run project commands through scripts/ralph/sandbox.sh.
 - Baseline on 2026-10-30, in the sandbox: 281 backend passed and 17 opt-in skipped, 183 frontend, 127 desktop, 408 Playwright; `check.sh stack` builds every image and reports health ok in about 2.5 minutes.
@@ -15,6 +16,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Declare health checks in `docker-compose.yml`, not in a Dockerfile `HEALTHCHECK`, because Podman's default OCI image format drops it; `backend/tests/test_container_images.py` enforces this.
 - Name images built from this repository `localhost/<name>:<version>` and pulled images with their full registry path, keeping tag and digest; `backend/tests/test_container_images.py` enforces this.
 - When a version appears in tests as both the pin and an 'older installed' value, bump only the pin and keep the older value older.
+- When a stub-tested handler changes behavior, grep the opt-in real-runtime harness for the same call, because a prompt that now waits for input can hang it.
 
 ---
 
@@ -87,4 +89,14 @@ The model import bind mount of P06.2 is not in the Compose file yet, so its SELi
   - A pipe inside a single-quoted sandbox.sh argument works: `sandbox.sh 'cd desktop && node --test --test-reporter=dot test/*.test.cjs 2>&1 | tail -60'` shows only the failures, because check.sh output gets truncated in the middle.
   - A direct `for` loop over npm view in sandbox.sh was denied; only single simple npm view calls were allowed, so the transitive packages were not compared with the registry.
   - ROADMAP lines 168, 172 and 357 still say Electron 45.1.0 as dated historical evidence, and I left them unchanged.
+---
+
+## 2026-10-30T20:13:34Z - P07.3a
+- Fixed the review findings on P07.3a. The stale comment in desktop/src/guards.cjs now says the handler answers the picker's source for the app origin and null otherwise. The policy.cjs comment now matches the P07.3a/P07.3b split. The opt-in real-Electron harness would have hung, because getDisplayMedia() from the app origin now opens the picker and waits, so desktop/test/support/electron-harness.cjs starts the request, waits for the picker window, closes it and expects NotAllowedError. DEVELOPMENT.md describes that check. The earlier work (picker module, messages, shell wiring, tests, docs, changelog) is unchanged. `check.sh desktop` passed 148 of 148 and `check.sh docs` passed. Not run: the real-Electron window tests, including the edited harness, and Windows loopback audio (P07.3b).
+- Files changed: CHANGELOG.md, desktop/src/guards.cjs, desktop/src/messages.cjs, desktop/src/policy.cjs, desktop/src/shell.cjs, desktop/src/source-picker.cjs, desktop/src/window.cjs, desktop/test/guards.test.cjs, desktop/test/shell.test.cjs, desktop/test/source-picker.test.cjs, desktop/test/support/fake-electron.cjs, desktop/test/support/electron-harness.cjs, docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/ROADMAP.md, docs/STATUS.md, docs/decisions/0014-desktop-app-shell.md
+- **Learnings for future iterations:**
+  - The real-Electron harness runs the production shell, so any change to what getDisplayMedia() does for the app origin needs a matching change in desktop/test/support/electron-harness.cjs. The edit made in this session was not run, because the window tests are opt-in.
+  - The picker is wired in shell.cjs: createSourcePicker({BrowserWindow, desktopCapturer, getParent, getLanguage}).pickSource is passed to installSessionGuards as a third argument. Without it every capture request is refused.
+  - The picker answers {video: source} only. P07.3b adds audio: 'loopback' on Windows in answerDisplayMediaRequest in guards.cjs and needs a manual check on Windows.
+  - Closing the picker window counts as cancel and answers null, which rejects the page's promise with NotAllowedError.
 ---

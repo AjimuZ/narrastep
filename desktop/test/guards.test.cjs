@@ -70,15 +70,75 @@ describe('installSessionGuards', () => {
     );
   });
 
-  it('refuses devices and screen capture and turns the spell checker off', () => {
+  it('refuses devices and turns the spell checker off', () => {
     const session = guardedSession();
     assert.equal(session.handlers.devicePermission({ deviceType: 'usb', origin: ORIGIN }), false);
-    let streams;
-    session.handlers.displayMedia({}, (value) => {
-      streams = value;
-    });
-    assert.equal(streams, null);
     assert.equal(session.spellCheckerEnabled, false);
+  });
+});
+
+describe('screen capture requests', () => {
+  const SOURCE = { id: 'screen:0:0', name: 'Screen 1' };
+
+  /** Returns a `pickSource` stand-in that resolves to `result` and counts its calls. */
+  function picker(result) {
+    const stub = async () => {
+      stub.calls += 1;
+      if (result instanceof Error) {
+        throw result;
+      }
+      return result;
+    };
+    stub.calls = 0;
+    return stub;
+  }
+
+  /** Sends `request` to the display media handler of a session guarded with `pickSource`. */
+  async function capture(request, pickSource) {
+    const { session } = createFakeElectron();
+    installSessionGuards(session, ORIGIN, pickSource);
+    return new Promise((resolve) => {
+      session.handlers.displayMedia(request, resolve);
+    });
+  }
+
+  const appRequest = Object.freeze({
+    securityOrigin: ORIGIN,
+    videoRequested: true,
+    audioRequested: true,
+    frame: { url: `${ORIGIN}/record` },
+  });
+
+  it('offers the picker to the app origin and grants the chosen source', async () => {
+    const pickSource = picker(SOURCE);
+    assert.deepEqual(await capture(appRequest, pickSource), { video: SOURCE });
+    assert.equal(pickSource.calls, 1);
+  });
+
+  it('denies the request when the picker is cancelled or fails', async () => {
+    assert.equal(await capture(appRequest, picker(null)), null);
+    assert.equal(await capture(appRequest, picker(new Error('boom'))), null);
+  });
+
+  it('never opens the picker for a foreign origin, a foreign frame or a malformed request', async () => {
+    const pickSource = picker(SOURCE);
+    for (const request of [
+      { ...appRequest, securityOrigin: 'http://127.0.0.1:4300' },
+      { ...appRequest, securityOrigin: 'http://localhost:4200' },
+      { ...appRequest, securityOrigin: 'https://example.com' },
+      { ...appRequest, frame: { url: 'https://example.com/embed' } },
+      { ...appRequest, securityOrigin: undefined },
+      { ...appRequest, videoRequested: false },
+      {},
+      null,
+    ]) {
+      assert.equal(await capture(request, pickSource), null);
+    }
+    assert.equal(pickSource.calls, 0);
+  });
+
+  it('denies every request when no picker is installed', async () => {
+    assert.equal(await capture(appRequest, undefined), null);
   });
 });
 

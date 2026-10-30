@@ -9,11 +9,13 @@ const { isAllowedRequestUrl, isAppUrl, isPermissionAllowed } = require('./policy
  * - every network request outside the app origin is cancelled (only inline `data:` is exempt);
  * - permission requests and checks are denied, except the policy's allowed permissions for the
  *   app origin, so external protocol links, notifications, location, camera and microphone fail;
- * - HID, serial and USB devices are refused, and screen capture requests are denied;
+ * - HID, serial and USB devices are refused;
+ * - screen capture requests from the app origin get the Narrastep picker (`pickSource`, from
+ *   `createSourcePicker`); other origins, and every request when `pickSource` is omitted, are denied;
  * - the spell checker is off, so Chromium never downloads dictionaries.
  * Throws only if the session object lacks one of these Electron methods.
  */
-function installSessionGuards(session, appOrigin) {
+function installSessionGuards(session, appOrigin, pickSource) {
   session.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
     callback({ cancel: !isAllowedRequestUrl(details.url, appOrigin) });
   });
@@ -24,9 +26,45 @@ function installSessionGuards(session, appOrigin) {
     isPermissionAllowed(permission, requestingOrigin, appOrigin),
   );
   session.setDevicePermissionHandler(() => false);
-  // `null` streams deny getDisplayMedia(); the source picker of P07.3 replaces this handler.
-  session.setDisplayMediaRequestHandler((_request, callback) => callback(null));
+  // Answers the picker's source for the app origin and `null` (which rejects getDisplayMedia()) otherwise.
+  session.setDisplayMediaRequestHandler((request, callback) => {
+    answerDisplayMediaRequest(request, callback, appOrigin, pickSource);
+  });
   session.setSpellCheckerEnabled(false);
+}
+
+/**
+ * Returns whether a screen capture `request` comes from the app origin: its security origin and,
+ * when Electron reports the frame, the frame's URL must both be the app origin, and it must ask
+ * for video. Anything else, including a missing or malformed request, returns false.
+ */
+function isAppCaptureRequest(request, appOrigin) {
+  if (request === null || typeof request !== 'object' || request.videoRequested === false) {
+    return false;
+  }
+  if (!isAppUrl(request.securityOrigin, appOrigin)) {
+    return false;
+  }
+  return request.frame?.url === undefined || isAppUrl(request.frame.url, appOrigin);
+}
+
+/**
+ * Answers one `getDisplayMedia()` request. A request from the app origin opens the picker through
+ * `pickSource()` and is granted the video of the chosen source; cancelling, a picker failure, a
+ * foreign origin or a missing `pickSource` all answer `null`, which makes the page's promise reject.
+ * Windows loopback system audio is not requested here (P07.3b). Never throws.
+ */
+function answerDisplayMediaRequest(request, callback, appOrigin, pickSource) {
+  if (typeof pickSource !== 'function' || !isAppCaptureRequest(request, appOrigin)) {
+    callback(null);
+    return;
+  }
+  Promise.resolve()
+    .then(() => pickSource())
+    .then(
+      (source) => callback(source ? { video: source } : null),
+      () => callback(null),
+    );
 }
 
 /**

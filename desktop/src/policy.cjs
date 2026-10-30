@@ -13,7 +13,8 @@ const DEFAULT_WEB_PORT = 4200;
 /**
  * Chromium permissions the app origin may use; every other permission is denied, for every origin.
  * `fullscreen` lets the native video controls in Review fill the screen and exposes no host data.
- * Screen capture (P07.3) and the microphone (P07.4) are added by their own roadmap tasks.
+ * Screen capture is not a Chromium permission: the display-media handler (P07.3a) decides it, and
+ * Windows loopback audio follows in P07.3b. The microphone (P07.4) is added by its own task.
  */
 const ALLOWED_PERMISSIONS = Object.freeze(['fullscreen']);
 

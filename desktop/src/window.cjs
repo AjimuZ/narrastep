@@ -84,8 +84,9 @@ function nextZoomFactor(current, action) {
  * `BrowserWindow` and `dialog`, the app origin from the policy, the system locale and the work
  * area of the primary display.
  * The session and contents guards must already be installed: the load starts immediately.
- * Returns `{ window, bringToFront }`; `bringToFront()` restores, shows and focuses the window and,
- * when it shows the fallback page, loads the app again. It does nothing once the window is closed.
+ * Returns `{ window, bringToFront, language }`; `bringToFront()` restores, shows and focuses the
+ * window and, when it shows the fallback page, loads the app again. It does nothing once the window
+ * is closed. `language()` returns `'en'` or `'it'`, the language of the shell's texts right now.
  *
  * Behavior:
  * - a main-frame load of the app that fails (stack stopped, wrong port) shows the local fallback
@@ -160,6 +161,7 @@ function createMainWindow({ BrowserWindow, dialog, appOrigin, systemLocale, work
 
   return {
     window,
+    language,
     bringToFront() {
       if (window.isDestroyed()) {
         return;

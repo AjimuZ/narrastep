@@ -15,6 +15,10 @@ All notable changes to Narrastep are documented in this file.
 - Project-local numeric diagnostics, configuration snapshots, WebP review thumbnails, lazy full-PNG materialization, exact-frame recovery, and export estimates.
 - Searchable and sortable project library, processing stage timeline, Review Studio filters and shortcuts, persisted desktop pane sizing, and actual export metrics.
 - Foreground `start.sh` launcher with an explicit `-r` mode that reuses images without building.
+- Screen and window picker in the desktop window: choosing "Choose screen" in the recorder opens a
+  small Narrastep window with the screens and windows of the computer, in English or Italian.
+  Choosing one shares it, Cancel or closing the window shares nothing, and only the Narrastep
+  page can ask. System audio on Windows and the microphone are not part of this change.
 
 - Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
   activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and

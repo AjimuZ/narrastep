@@ -18,17 +18,20 @@ class FakeEvent {
 
 /**
  * Returns `{ electron, calls, windows, session, dialogChoices }`. `electron` has `app`,
- * `BrowserWindow`, `dialog`, `Menu` and `session` with the methods the shell calls; `calls` lists
+ * `BrowserWindow`, `desktopCapturer`, `dialog`, `Menu` and `session` with the methods the shell calls; `calls` lists
  * `'module.method'` names in call order; `windows` lists created windows. `lock` is the result of
  * `requestSingleInstanceLock()`, `locale` of `app.getLocale()`, `dialogChoices` the button
  * indexes `dialog.showMessageBoxSync()` returns, in order (0 when empty), and `workArea` the
- * primary display's work area size.
+ * primary display's work area size. `sources` is what `desktopCapturer.getSources()` resolves to,
+ * or it rejects with `sourcesError` when that is set.
  */
 function createFakeElectron({
   lock = true,
   locale = 'en-US',
   dialogChoices = [],
   workArea = { width: 1920, height: 1040 },
+  sources = [],
+  sourcesError = null,
 } = {}) {
   const calls = [];
   const windows = [];
@@ -154,12 +157,33 @@ function createFakeElectron({
     isDestroyed() {
       return this.state.destroyed;
     }
+
+    // Like Electron, closing destroys the window and then announces `closed`.
+    close() {
+      record('BrowserWindow.close');
+      this.state.destroyed = true;
+      this.state.visible = false;
+      this.emit('closed');
+    }
   }
+
+  const desktopCapturer = {
+    requests: [],
+    async getSources(options) {
+      record('desktopCapturer.getSources');
+      desktopCapturer.requests.push(options);
+      if (sourcesError) {
+        throw sourcesError;
+      }
+      return sources;
+    },
+  };
 
   const electron = {
     app,
     session: { defaultSession: session },
     BrowserWindow: FakeBrowserWindow,
+    desktopCapturer,
     screen: {
       getPrimaryDisplay: () => ({ workAreaSize: workArea }),
     },

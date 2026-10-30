@@ -68,9 +68,14 @@ The shell in `desktop/` applies this decision with these details:
 - The page gets no host interface: no preload script and no IPC channel. P07.3 and P07.4 add the
   picker, the microphone and "Save as" in the main process.
 - `fullscreen` is the one permission granted, to the app origin only, so the native video controls
-  in Review can fill the screen; it exposes no host data. Every other permission and every
-  screen-capture request is denied, and HID, serial and USB devices are refused, until P07.3 and
-  P07.4 open what they need.
+  in Review can fill the screen; it exposes no host data. Every other permission is denied, and
+  HID, serial and USB devices are refused, until P07.4 opens what it needs.
+- Screen capture (P07.3a) is answered by `setDisplayMediaRequestHandler`: a request whose security
+  origin and frame are the app origin opens the Narrastep picker, every other request is denied.
+  The picker is a modal window with a script-free local page that follows the fallback page rules.
+  Without IPC, its links point to a reserved `.invalid` host and the main process reads the cancelled
+  navigation; the answer is an index into the list the main process holds, never an id from a URL.
+  Windows loopback system audio comes with P07.3b.
 - The spell checker is off, because Chromium would download its dictionaries.
 - Windows and Linux have no menu bar; the shell handles Ctrl `+`, `-` and `0` itself so browser
   zoom stays available. macOS keeps Electron's default menu for the system editing shortcuts.
