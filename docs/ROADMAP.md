@@ -249,6 +249,7 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
 - [ ] P08.10 `start-podman.sh` with the same options and desktop window, sharing its logic with `start.sh`.
   **Requires tasks:** P08.8, P08.9.
   Exit: `./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests; it prefers `podman compose`, falls back to `podman-compose` and explains a missing provider; it never uses `sudo` or `--privileged`; the Podman script is executable in Git; the `.env` step reads `podman info`; a failure leaves the stack usable in a browser as in P07.2.
+  Progress (2026-10-31, not yet checked): `scripts/start-common.sh` now holds option parsing, the `.env` step and the window watcher, and `start.sh` sources it, so `start-podman.sh` can share them. The start-script test only copies that file into its temporary project, with no assertion changed. All nine project checks passed on this content. `start-podman.sh` itself is still to come.
 - [ ] P08.11 Update the user and contributor documentation for Podman, the generated `.env` and the new constraint.
   **Requires tasks:** P08.5, P08.10.
   Exit: `README.md` and `docs/DEVELOPMENT.md` explain both engines, the generated `.env` and `podman machine` memory; `docs/REQUIREMENTS.md` (R16–R18) and `docs/STATUS.md` say what is delivered and what is not; `CLAUDE.md` rule 13, `CONTRIBUTING.md` and `CHANGELOG.md` say "Docker or Podman"; `python scripts/check_docs.py` passes.

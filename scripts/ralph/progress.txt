@@ -239,3 +239,7 @@ Choices and limits:
   - Delete is allowed only from installed or enabled. A failed model leaves through the next download or cancel, not through delete.
   - backend/tests/test_model_lifecycle.py overrides get_settings with a tmp data root and has a put_in_state helper that walks a model to any state and writes a generated file.
 ---
+
+## [2026-10-30T23:51:28.905Z] - P08.10a - published by hand
+scripts/start-common.sh holds option parsing, the .env step and the window watcher; start.sh sources it. A test fixture that copies start.sh must also copy this file.
+---

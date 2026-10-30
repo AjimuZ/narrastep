@@ -8,6 +8,7 @@ const path = require('node:path');
 const { afterEach, beforeEach, describe, it } = require('node:test');
 
 const START_SCRIPT = path.resolve(__dirname, '..', '..', 'start.sh');
+const START_COMMON = path.resolve(__dirname, '..', '..', 'scripts', 'start-common.sh');
 
 // start.sh is a POSIX shell script; on Windows it runs in Git Bash, which this suite does not drive.
 const skip = process.platform === 'win32' ? 'start.sh is exercised on POSIX shells' : false;
@@ -27,6 +28,8 @@ beforeEach(() => {
   fs.mkdirSync(path.join(project, 'desktop'), { recursive: true });
   fs.mkdirSync(bin);
   fs.copyFileSync(START_SCRIPT, path.join(project, 'start.sh'));
+  fs.mkdirSync(path.join(project, 'scripts'));
+  fs.copyFileSync(START_COMMON, path.join(project, 'scripts', 'start-common.sh'));
   // Most tests start from an existing .env so that they never reach the generator.
   fs.writeFileSync(path.join(project, '.env'), 'NARRASTEP_WEB_PORT=4200\n');
   fs.writeFileSync(
