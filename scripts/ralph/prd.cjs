@@ -581,9 +581,13 @@ async function printCiStatus(root, paths, branch) {
         headers: { 'User-Agent': 'narrastep-ralph', Accept: 'application/vnd.github+json' },
         signal: AbortSignal.timeout(5000),
       });
-      if (response.ok) {
+      if (response.status === 404) {
+        label = 'not visible without a login (private repository)';
+      } else if (response.ok) {
         const run = (await response.json()).workflow_runs?.[0];
         label = run ? (run.conclusion ?? run.status) : 'no run yet';
+      }
+      if (response.status === 404 || response.ok) {
         fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
         fs.writeFileSync(cacheFile, JSON.stringify({ sha, label, at: Date.now() }));
       }
