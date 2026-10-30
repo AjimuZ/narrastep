@@ -123,6 +123,10 @@ Decision: [ADR 0010](decisions/0010-in-browser-recording.md). Specification: [Re
   (I-03).
   Evidence (2026-10-29): completion keeps the system audio alone as `source/system.webm` (Opus 96 kbit/s, same `aresample=async=1` and start as the mix) next to `source/microphone.webm` when a recording has both sources, with `metadataJson.recording.systemTrack`. New `backend/app/services/speaker_labels.py`: after transcription the worker decodes both tracks to 8 kHz mono PCM under `.processing/{jobId}/speakers/`, keeps the mean square per 50 ms frame, removes the WAVs and labels each segment **You** when the microphone is ≥10 dB louder, **Others** when the system audio is ≥10 dB louder, none when closer or when the louder track is below −50 dBFS; uploads, one-source recordings and recordings saved before this change are skipped; a track that cannot be decoded leaves processing completed without labels (`speakerLabelFailed: 1`), otherwise the metrics count You, Others and unlabelled segments. `TranscriptSegment.speaker` is a `you`/`others` enum and new `speaker_source` is `automatic`/`user` (migration `20261029_0007`, named CHECK constraints, `command.check` clean, round trip tested with lineage kept). `PATCH /api/v1/segments/{id}` accepts `reviewedText`, `speakerLabel` (`you`, `others`, null) or both (`422` for neither or another label); a sent label is stored as `user`; split copies label and source, merge keeps a label only when all parts share it (`user` when any part was set by the user); responses add `speakerSource`. Exports: `**Speaker:** You` in `reviewed-transcript.md`, `You:` / `Others:` in `subtitles.srt`, a `Speaker:` line and one explanatory note in `llm-input.md` and `batch-input.md`. Review: **Speaker** select (No label / You / Others, Italian Chi parla: Nessuna etichetta / Tu / Altri) saved at once without touching unsaved text, "Set from the audio levels" for automatic labels, the speaker in the Segments row, a live-region announcement, last choice wins while saving, a refused save restores the stored label; 8 new messages in English and Italian (485), glossary extended. Checks: new `backend/tests/test_speaker_labels.py` (10 tests: thresholds, frame averaging, block reading, synthetic Opus tracks with microphone only, system only, both, echo 20 dB lower, a quiet microphone, noise and silence measured at −21.1/−41.1/−43.0/−63.0 dBFS as designed, an undecodable track, track discovery, a recording uploaded, saved and processed through the API and edited through `PATCH`, processing that continues without labels, review validation, split and merge) passed three runs in a row with the completion, export and migration tests; completion tests extended for `system.webm`; new export test; negative controls (margin 0 dB; label edits not stored as `user`) failed the matching tests. Backend `python -B -m pytest` with FFmpeg 7.1: 203 passed, 1 skipped (was 191); without FFmpeg: 193 passed, 11 skipped; `ruff format --check`, `ruff check`, `mypy app`, `scripts/export_openapi.py --check` (regenerated), `scripts/check_docs.py`, `git diff --check HEAD` passed. `apps/web`: `npm run build` and `npm run check:i18n` ("485 messages in en and it"), `npm run test` 161 passed (was 157; a negative control without the pending-choice queue failed its test), `npm run lint`, `npm run typecheck:e2e`, `npx prettier --check .`. `npx playwright test` (Chromium 149 headless shell): 408 passed (was 388; new `tests/e2e/speaker-labels.spec.ts`, 10 per Chromium project: automatic label shown, changed with ArrowDown and cleared from the keyboard with focus kept, saved across a reload, a `PROJECT_BUSY` refusal restores the label, contrast, 320 px and 200% zoom, each in English and Italian; the fake API's labelled segment puts the select into every accessibility check of Review). The Transcript window was checked by eye at 1280 and 375 px in both languages. Color literals outside `tokens.scss`: none (grep; the skill's `check_colors.py` is absent on this worker). Not run: `docker compose` (no Docker on this worker), a real Teams call with a headset (P05.6), a Review session on a project processed by a real worker with Whisper (no Redis, worker or model here; the processing path is covered with the mock transcription and real FFmpeg).
 - [ ] P05.6 Manual test with a real Teams call on Windows, with a headset.
+- [ ] P05.7 Allow the microphone on the app origin in the web container (risk K14); needed before
+  P05.6 and P07.4. Added on 2026-10-30, when the code still sent `microphone=()`.
+  Exit: `apps/web/nginx.conf` sends `microphone=(self)`; the header is checked through the real web
+  container; a browser test fails with the old header and passes with the new one.
 
 Exit: API tests, speaker-label tests and fake-device Playwright test pass; a saved recording has
 no queued job; manual test recorded in [Status](STATUS.md).
@@ -214,6 +218,10 @@ Requested by the owner on 2026-10-29. Tasks that touch `start.sh` keep `./start.
 - [ ] P08.12 Owner smoke test of `start-podman.sh`, the generated `.env` and a transcription on a real computer.
   **Requires tasks:** P08.10, P08.11.
   Exit: the owner runs `./start-podman.sh` without a `.env`, records the generated values next to the computer's real CPU, memory and free disk, confirms the window opens after health, transcribes a real video successfully, then repeats the start with Docker; results with `podman version`, `podman compose version`, `docker version` and `node --version` are recorded in `docs/STATUS.md` with the date.
+- [ ] P08.13 Repair the CI workflow file. Added on 2026-10-30: `.github/workflows/ci.yml` has not been
+  valid YAML since commit `85adb65` (`--only-binary=:all: -r` holds a colon and a space), so GitHub
+  cannot run it.
+  Exit: the file parses and every job is present; a test fails on invalid YAML.
 
 Exit: the transcription stack check passes in a freshly built image; backend, frontend and desktop
 suites pass on the updated dependencies; shell tests pass for both start scripts; a missing `.env`
@@ -223,7 +231,7 @@ is generated and an existing one is untouched; the owner smoke test on Podman is
 ## P09 — Owner-selected improvements
 
 **Depends on:** P02, P03. **Areas:** backend, frontend, documentation.
-Chosen by the owner on 2026-10-29 (Q2). P09.1 and P09.2 are delivered.
+Chosen by the owner on 2026-10-29 (Q2). P09.1 and P09.2 are delivered; P09.3 adds their browser checks.
 
 - [x] P09.1 Glossary per project passed to Whisper as hints (I-02).
   Exit: names and terms saved in a project are sent to the transcriber as hints in both languages; tests cover an empty glossary and a long one; API, OpenAPI, PROCESSING_PIPELINE and UI documents updated.
@@ -279,6 +287,24 @@ typecheck:e2e`; `desktop` `npm run test` 127 passed; `python3 scripts/check_docs
 covers the Storage screen yet, and the accessibility and contrast checks of the new screen in both
 languages were not run), a removal on a real recording with FFmpeg or on the Docker stack, and a
 real `adaptive_v1` project re-exported after a removal.
+
+- [ ] P09.3 Cover the Storage screen and the glossary in the browser. Added on 2026-10-30: P09.1 and
+  P09.2 were delivered without a browser.
+  Exit: the Storage screen and its dialog are in the accessibility checks in English and Italian; a
+  browser test covers the glossary field; the Playwright journeys pass.
+
+## P10 — Autonomous development runner
+
+**Depends on:** none. **Areas:** tooling, documentation.
+Decision: [ADR 0019](decisions/0019-autonomous-development-runner.md). Guide:
+[scripts/ralph](../scripts/ralph/README.md). Requested by the owner on 2026-10-30. The runner is a
+development tool, not part of the product.
+
+- [x] P10.1 Runner, verified task list and isolated checks for the open roadmap items.
+  Evidence (2026-10-30): `scripts/ralph/` adapts upstream commit `6c53cb0`; `prd.json` holds 44 tasks (39 for an agent, 5 owner checks) and `node scripts/ralph/prd.cjs validate` passes against this roadmap. `node --test 'scripts/ralph/test/*.test.cjs'`: 53 passed on Windows in Git Bash with Node.js 24.22.1 and in the Linux check container with 22.23.1; the tests run the real `ralph.sh`, `verify.sh`, `stop.sh` and `status.sh` with a stand-in agent. Real Claude Code 2.1.314, model `haiku`, in a throwaway clone: the permission probe gave the expected result for all items, with `git push`, `git commit`, `rm`, `curl`, `docker volume`, `docker compose`, `python -c`, `bash -c`, reading `.env`, `data/` and `~/.gitconfig`, writing outside the repository and `check.sh docs && git push` denied; `.env` and `data/` stayed byte-identical. `ralph.sh` then ran two tasks in two separate processes, in dependency order, verified and committed each with its `Task:` trailer and ended from the verified state with status 0; before that, an agent reported a contradictory task as blocked instead of ticking its item. Those runs and the Linux test run found and fixed three runner defects: an unignored state folder was removed with its logs, the blocked state failed to commit without `archive/`, and `--resume` refused a task whose item was already ticked in the working tree. Baseline in the check container: `check.sh` docs, backend (281 passed, 17 skipped), web (183 passed, build, 525 messages), desktop (127 passed), e2e (408 passed; a first run on empty caches failed all 408 with `ERR_CONNECTION_REFUSED` and the next run passed unchanged, cause not established), stack (all images built, health `ok`). Found: `.github/workflows/ci.yml` is invalid YAML since `85adb65` (P08.13), the microphone is still denied by `nginx.conf` (P05.7), `.python-version` is out of date (P08.4c). Not run: a long run with real tasks, a real usage limit (classified from the documented result fields, tested only with a stand-in), `Ctrl+C` with the real binary, the new `runner` CI job on GitHub.
+- [ ] P10.2 Verify the finished roadmap as a whole, with no new features.
+  Exit: every suite and the opt-in full-stack journey pass together; `README.md`, Status and the
+  specifications agree with the code; every open item left is an owner check, with what to do.
 
 ## Improvement candidates
 

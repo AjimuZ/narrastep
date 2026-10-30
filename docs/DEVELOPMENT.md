@@ -506,6 +506,21 @@ CI runs the same path with the `tiny` model baked into the image, despite mock t
 the built image retains the offline model contract. Review and export screenshots plus the ZIP are
 retained as Playwright artifacts for diagnosis and documentation review.
 
+## Autonomous runner
+
+`scripts/ralph/` can complete roadmap tasks without supervision, one fresh Claude Code process per
+task, and commits each verified task on `main`. It never pushes. Its [guide](../scripts/ralph/README.md)
+has every command, and [ADR 0019](decisions/0019-autonomous-development-runner.md) the limits. Two of
+its scripts are useful on their own, because they need nothing on the computer except Docker:
+
+```bash
+./scripts/ralph/check.sh docs backend web desktop   # the project's checks, in a container
+./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_storage.py'
+```
+
+When a roadmap item is added, add its task to `scripts/ralph/prd.json`;
+`node scripts/ralph/prd.cjs validate` fails otherwise, and so do the runner's tests.
+
 ## Local agent skills
 
 The owner keeps agent skills in `.claude/skills/`, recorded in `skills-lock.json`. Both paths are

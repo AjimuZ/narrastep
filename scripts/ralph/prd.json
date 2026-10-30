@@ -1,0 +1,1510 @@
+{
+  "project": "Narrastep",
+  "branchName": "main",
+  "description": "Complete the Narrastep roadmap. Generated on 2026-10-30 from docs/ROADMAP.md, docs/STATUS.md and a comparison with the code. The roadmap stays the source of the requirements.",
+  "userStories": [
+    {
+      "id": "P08.13",
+      "title": "Repair the invalid CI workflow file",
+      "description": "`.github/workflows/ci.yml` is not valid YAML since commit 85adb65: `--only-binary=:all: -r` holds \": \" on lines 69 and 90 (in the file as of 2026-10-30), so GitHub cannot run the workflow at all.",
+      "roadmapItems": [
+        "P08.13"
+      ],
+      "closes": [
+        "P08.13"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "`.github/workflows/ci.yml` parses as YAML and every job, including `runner`, is present",
+        "A backend test parses the workflow file and fails on invalid YAML; it must fail on the old lines (negative control recorded in the evidence)",
+        "`backend/tests/test_dependencies.py` still finds the locked install commands",
+        "Risks or docs/STATUS.md say that CI could not run between 85adb65 and this fix; a run on GitHub is named as not run, because nothing is pushed",
+        "P08.13 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 1,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Confirmed on 2026-10-30 with PyYAML: \"mapping values are not allowed here\", line 69, column 81. Quote the two commands. PyYAML is in the development lock; check that it is a direct or stable part of it before relying on it in a test."
+    },
+    {
+      "id": "P08.3",
+      "title": "Prove the pinned images with a healthy stack and a full job",
+      "description": "Every image is pinned and the broker is Valkey, but the roadmap records no build on a real engine. Prove it and close the item.",
+      "roadmapItems": [
+        "P08.3"
+      ],
+      "closes": [
+        "P08.3"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "compose",
+        "stack"
+      ],
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "`./scripts/ralph/check.sh stack` passes: all images build, including the transcription and llama.cpp checks of the image build, and `/api/v1/health` reports `status: ok` for database, broker and worker",
+        "A full job completes on the isolated stack through the API at 127.0.0.1:18002: a generated MP4 with speech is uploaded, processed with the baked model, and exported, and the downloaded ZIP has the expected layout",
+        "Every external image has an exact tag and digest, or a recorded reason (`backend/tests/test_container_images.py` passes)",
+        "docs/STATUS.md no longer says \"build not yet run\" for the pinned images, the transcription stack check and the backend lock, and records the date; ADR 0017 and risk K9 say what was verified",
+        "P08.3 is checked in docs/ROADMAP.md with dated evidence that holds the real output"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 2,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Setup baseline on 2026-10-30: the stack built and reported ok through `check.sh stack` in about 2.5 minutes, with the tiny model. The full job was not run. Generate the media in a script or test; never use a real recording."
+    },
+    {
+      "id": "P06.1",
+      "title": "Measure the bundled llama.cpp server in a real image",
+      "description": "P06.1 only waits for the in-image check and the measured layer size, which need a real build.",
+      "roadmapItems": [
+        "P06.1"
+      ],
+      "closes": [
+        "P06.1"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "stack"
+      ],
+      "dependsOn": [
+        "P08.3"
+      ],
+      "acceptanceCriteria": [
+        "`./scripts/ralph/stack.sh run --rm --no-deps api python scripts/check_llama_server.py` passes on the built image",
+        "`docker history narrastep-ralph-backend:dev` gives the size of the `COPY /opt/llama.cpp/` layer, recorded in docs/LOCAL_GENERATION.md (Image growth) beside the earlier figures from extracted files",
+        "P06.1 is checked in docs/ROADMAP.md with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 3,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P05.7",
+      "title": "Allow the microphone on the app origin in the web container",
+      "description": "Risk K14 is confirmed in the code: apps/web/nginx.conf sends `microphone=()` on lines 25 and 41, so the recorder cannot use the microphone on the Docker stack. No roadmap item fixed it, and the manual test P05.6 needs it.",
+      "roadmapItems": [
+        "P05.7"
+      ],
+      "closes": [
+        "P05.7"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "web",
+        "e2e",
+        "stack"
+      ],
+      "dependsOn": [
+        "P08.3"
+      ],
+      "acceptanceCriteria": [
+        "`apps/web/nginx.conf` sends `microphone=(self)` wherever it sends Permissions-Policy, and camera and geolocation stay denied",
+        "Through the isolated stack, `curl -sI http://127.0.0.1:14200/` run in the sandbox or an equivalent test shows the new header on the app page",
+        "A browser test against the nginx configuration, or the same headers, shows `getUserMedia` for the microphone is no longer refused by the policy; it must fail with the old header",
+        "Risk K14 in docs/RISKS.md says it is fixed and how it was checked; CHANGELOG.md has the entry; P05.7 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 4,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P09.3",
+      "title": "Cover the Storage screen and glossary in the browser",
+      "description": "P09.1 and P09.2 were delivered without a browser. No journey covers the Storage screen, and its accessibility and contrast checks never ran in either language.",
+      "roadmapItems": [
+        "P09.3"
+      ],
+      "closes": [
+        "P09.3"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P08.3"
+      ],
+      "acceptanceCriteria": [
+        "The Storage screen is added to `SCREENS` in `apps/web/tests/e2e/accessibility.spec.ts`, and its removal dialog to the dialog tests, so contrast, keyboard, reduced motion and 320 px to 400% zoom run in English and Italian",
+        "A browser test covers the glossary field in New project and the Process dialog in both languages",
+        "Any defect these checks find is fixed in this task, not skipped",
+        "P09.3 is checked with dated evidence, and docs/STATUS.md gives the new Playwright totals"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 5,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Baseline on 2026-10-30: 408 Playwright tests passed. See `tests/e2e/support/fake-api.ts` for the fake API; DEVELOPMENT.md says when to add a screen."
+    },
+    {
+      "id": "P08.4a",
+      "title": "Update the Angular application packages to the latest that pass",
+      "description": "Move every npm package of apps/web to its newest stable release that passes, one logical change.",
+      "roadmapItems": [
+        "P08.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P08.3"
+      ],
+      "acceptanceCriteria": [
+        "Every package in `apps/web/package.json` is its newest stable release, or docs/LICENSES.md says why it stays behind",
+        "`npm ci`, `npm run build`, `npm run lint`, `npm run test`, `npm run typecheck:e2e` and `npx prettier --check .` pass in `apps/web`",
+        "The browser journeys pass (area e2e)",
+        "docs/LICENSES.md lists the new versions and licenses; no package with a non-free license is added"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 6,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "`npm outdated` and `npm view` work in the sandbox. Deprecated packages seen on 2026-10-30: `@angular/platform-browser-dynamic` and `@angular/animations`; replace them when the newest Angular requires it."
+    },
+    {
+      "id": "P08.4b",
+      "title": "Update Electron and the desktop shell packages",
+      "description": "Move the packages of desktop/ to the newest stable release that passes.",
+      "roadmapItems": [
+        "P08.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P08.4a"
+      ],
+      "acceptanceCriteria": [
+        "Electron and every package in `desktop/package.json` are their newest stable release, or docs/LICENSES.md says why not",
+        "`npm test` passes in `desktop`",
+        "The Electron pin in ADR 0014, docs/DEVELOPMENT.md and docs/LICENSES.md is current"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 7,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.4c",
+      "title": "Update Node.js and GitHub Actions and align every version file",
+      "description": "Move Node.js and the Actions to the newest versions that pass, and make every version file agree.",
+      "roadmapItems": [
+        "P08.4"
+      ],
+      "closes": [
+        "P08.4"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "web",
+        "e2e",
+        "desktop",
+        "compose",
+        "stack"
+      ],
+      "dependsOn": [
+        "P08.4a",
+        "P08.4b"
+      ],
+      "acceptanceCriteria": [
+        "`.nvmrc`, `apps/web/Dockerfile`, `engines` and `.github/workflows/ci.yml` name the same Node.js version, the newest LTS that passes",
+        "Each Action in `.github/workflows/ci.yml` is at its newest release",
+        "`.python-version` says 3.14.10 like the Dockerfile and CI (it still says 3.12.13), and a test fails when it differs",
+        "All images build and the stack is healthy on the new version (area stack)",
+        "P08.4 is checked with dated evidence; browser journeys are recorded as run"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 8,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The check container reads the Node.js version from `.nvmrc` and rebuilds itself. The host keeps its own Node.js; it needs at least 22.12 only for the desktop window."
+    },
+    {
+      "id": "P08.5a",
+      "title": "Document the dependency policy and the update procedure",
+      "description": "Write the procedure so a refresh can be repeated.",
+      "roadmapItems": [
+        "P08.5"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [
+        "P08.4c"
+      ],
+      "acceptanceCriteria": [
+        "docs/DEVELOPMENT.md has an \"Updating dependencies\" section: what to run, where licenses are recorded, what stays pinned and why",
+        "docs/LICENSES.md matches the installed versions",
+        "Risks K9 and K15 are updated"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 9,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.5b",
+      "title": "Add the automated license inventory of the containers",
+      "description": "I-15: a check that compares the packages really installed in the containers with docs/LICENSES.md.",
+      "roadmapItems": [
+        "P08.5"
+      ],
+      "closes": [
+        "P08.5"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "stack"
+      ],
+      "dependsOn": [
+        "P08.5a"
+      ],
+      "acceptanceCriteria": [
+        "A script lists the packages inside the built containers and fails when docs/LICENSES.md lacks an installed package or lists a license outside the free ones",
+        "A test shows it failing on a wrong entry",
+        "P08.5 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 10,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.6",
+      "title": "Generate .env values from the computer in a POSIX script",
+      "description": "Hardware probe and pure profile function of ADR 0016: CPU, memory, free disk and free ports become .env values.",
+      "roadmapItems": [
+        "P08.6"
+      ],
+      "closes": [
+        "P08.6"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P08.5b"
+      ],
+      "acceptanceCriteria": [
+        "`scripts/generate-env.sh`, a POSIX shell script, prints a complete `.env` on standard output and writes nothing",
+        "Tests with fixed hardware cover each row of the ADR 0016 table, an unknown value, a busy port and a low-memory warning",
+        "The table in ADR 0016 matches the code",
+        "The script makes no network request; a test proves it does not call any network tool",
+        "P08.6 is checked with dated evidence"
+      ],
+      "verify": [
+        "sh -n scripts/generate-env.sh"
+      ],
+      "verifyHost": [],
+      "priority": 11,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Read docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md. Add the tests under desktop/test/ beside start-script.test.cjs, so `npm test` runs them."
+    },
+    {
+      "id": "P08.7",
+      "title": "Add the Whisper thread setting to the backend and Compose",
+      "description": "The backend setting and Compose entries for the generated keys.",
+      "roadmapItems": [
+        "P08.7"
+      ],
+      "closes": [
+        "P08.7"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "compose"
+      ],
+      "dependsOn": [
+        "P08.6"
+      ],
+      "acceptanceCriteria": [
+        "`NARRASTEP_WHISPER_CPU_THREADS` is validated, passed to the model and listed in `.env.example` and `docker-compose.yml`",
+        "Backend tests pass; the default behavior without the key is unchanged",
+        "`docker compose config` renders the new value",
+        "P08.7 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 12,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.8",
+      "title": "Generate .env in start.sh when it is missing",
+      "description": "start.sh generates .env when it is missing and never touches an existing one.",
+      "roadmapItems": [
+        "P08.8"
+      ],
+      "closes": [
+        "P08.8"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P08.7"
+      ],
+      "acceptanceCriteria": [
+        "Shell tests with a stubbed engine show a missing `.env` is created before Compose starts",
+        "An existing or empty `.env` stays byte-identical",
+        "A failed generation stops the start with a readable message",
+        "The generated web port reaches the desktop launcher",
+        "The existing start-script tests still pass",
+        "docs/DEVELOPMENT.md and README.md describe the step; P08.8 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 13,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Tests must never run against the owner's real `.env`."
+    },
+    {
+      "id": "P08.9",
+      "title": "Make the Compose file and Dockerfiles engine-neutral",
+      "description": "One definition for Docker and Podman, as decided in ADR 0016.",
+      "roadmapItems": [
+        "P08.9"
+      ],
+      "closes": [
+        "P08.9"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "compose",
+        "stack"
+      ],
+      "dependsOn": [
+        "P08.3"
+      ],
+      "acceptanceCriteria": [
+        "Every image name is fully qualified, and `backend/tests/test_container_images.py` and docs/LICENSES.md follow",
+        "Each service that others wait for has a Compose health check",
+        "`docker compose config` renders the file, and the stack becomes healthy on Docker with the output recorded (area stack)",
+        "`podman compose config` is run if it can be installed in the sandbox; otherwise it is reported as not run, as the roadmap allows",
+        "P08.9 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 14,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.10a",
+      "title": "Move the start logic into one sourced file",
+      "description": "Shared logic of the start scripts moves to one file under scripts/, so the two scripts cannot drift apart. Behavior of ./start.sh does not change.",
+      "roadmapItems": [
+        "P08.10"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P08.8",
+        "P08.9"
+      ],
+      "acceptanceCriteria": [
+        "Option parsing, the window watcher and the `.env` step live in one sourced file under `scripts/`",
+        "`desktop/test/start-script.test.cjs` passes unchanged"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 15,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.10b",
+      "title": "Add start-podman.sh with the same options and window",
+      "description": "The dedicated Podman launcher of ADR 0016.",
+      "roadmapItems": [
+        "P08.10"
+      ],
+      "closes": [
+        "P08.10"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P08.10a"
+      ],
+      "acceptanceCriteria": [
+        "`./start-podman.sh`, `-r`, `--headless` and `-h` behave like `start.sh` in stub tests",
+        "It prefers `podman compose`, falls back to `podman-compose`, and explains a missing provider",
+        "It never uses `sudo` or `--privileged`, and it is executable in Git",
+        "The `.env` step reads `podman info`",
+        "A failure leaves the stack usable in a browser as in P07.2",
+        "P08.10 is checked with dated evidence; a real Podman run is named as not run (it belongs to P08.12)"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 16,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.11",
+      "title": "Document Podman, the generated .env and the new constraint",
+      "description": "User and contributor documentation for the delivered work.",
+      "roadmapItems": [
+        "P08.11"
+      ],
+      "closes": [
+        "P08.11"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [],
+      "dependsOn": [
+        "P08.10b",
+        "P08.5b"
+      ],
+      "acceptanceCriteria": [
+        "`README.md` and docs/DEVELOPMENT.md explain both engines, the generated `.env` and `podman machine` memory",
+        "docs/REQUIREMENTS.md (R16 to R18) and docs/STATUS.md say what is delivered and what is not",
+        "`CLAUDE.md` rule 13, `CONTRIBUTING.md` and `CHANGELOG.md` say \"Docker or Podman\"",
+        "P08.11 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 17,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P08.12",
+      "title": "Owner smoke test of start-podman.sh on a real computer",
+      "description": "Podman is not installed here, and the check needs the owner's computer.",
+      "roadmapItems": [
+        "P08.12"
+      ],
+      "closes": [
+        "P08.12"
+      ],
+      "owner": true,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [
+        "P08.11"
+      ],
+      "acceptanceCriteria": [
+        "The owner runs `./start-podman.sh` without a `.env`, records the generated values next to the real CPU, memory and free disk, confirms the window opens after health, transcribes a real video, then repeats the start with Docker",
+        "Results with `podman version`, `podman compose version`, `docker version` and `node --version` are in docs/STATUS.md with the date"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 18,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+    },
+    {
+      "id": "P06.2a",
+      "title": "Pin the model files and add the local generation settings",
+      "description": "The base of the model manager: pinned catalog, kill switch and stored state.",
+      "roadmapItems": [
+        "P06.2"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "compose"
+      ],
+      "dependsOn": [
+        "P08.5b"
+      ],
+      "acceptanceCriteria": [
+        "A catalog pins the repository revision and the name, size and SHA-256 of each E2B and E4B file listed in docs/LOCAL_GENERATION.md, read from the real repository",
+        "`NARRASTEP_LOCAL_GENERATION`, `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` are validated, documented and in `.env.example`, `docker-compose.yml` and README.md",
+        "An Alembic migration stores the model state of the diagram in the document (upgrade test on the previous head; `alembic check` clean)",
+        "State-transition tests pass, and the stack starts as before with nothing installed"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 19,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Read docs/LOCAL_GENERATION.md and ADR 0011. Default is not installed (rule 14). If huggingface.co cannot be reached from the sandbox, report blocked rather than inventing hashes."
+    },
+    {
+      "id": "P06.2b",
+      "title": "Download models with resume and verification",
+      "description": "API and download service: progress in SQLite, resume with HTTP ranges after a restart, SHA-256 verification.",
+      "roadmapItems": [
+        "P06.2"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.2a"
+      ],
+      "acceptanceCriteria": [
+        "Download, progress and cancel endpoints are in docs/API.md and docs/openapi.json, with stable error codes translated into Italian",
+        "Progress survives an API restart and a restart resumes with a range request (test against a local HTTP server)",
+        "A file with a wrong SHA-256 is deleted and the state becomes `failed` with a readable message",
+        "The license name and link come with the state; the license text is kept beside the files in `/data/models`",
+        "`NARRASTEP_LOCAL_GENERATION=disabled` makes the API refuse downloads",
+        "No request except to the pinned repository; the worker keeps no Internet route"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 20,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.2c",
+      "title": "Enable, disable and delete an installed model",
+      "description": "The remaining transitions of the model manager.",
+      "roadmapItems": [
+        "P06.2"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.2b"
+      ],
+      "acceptanceCriteria": [
+        "Enable, disable and delete endpoints follow the state diagram, with tests for refused transitions",
+        "Delete removes the files and returns to `not installed`, and is refused while a generation runs",
+        "docs/API.md and docs/openapi.json are updated"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 21,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.2d",
+      "title": "Import the pinned model files from a read-only folder",
+      "description": "Owner decision Q5: import from disk when huggingface.co is blocked.",
+      "roadmapItems": [
+        "P06.2"
+      ],
+      "closes": [
+        "P06.2"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "backend",
+        "desktop",
+        "compose",
+        "stack"
+      ],
+      "dependsOn": [
+        "P06.2c",
+        "P08.10b"
+      ],
+      "acceptanceCriteria": [
+        "A pinned file in the import folder is installed; a file with another name, size or hash is refused and reported as \"not a pinned model file\"",
+        "The folder is never modified, no path is taken from the user, and the mount is read-only on the `api` service only",
+        "Both start scripts create the folder, so the stack starts when it was missing, and the Compose entry has the SELinux relabel option",
+        "The license is shown before the import and kept beside the files",
+        "P06.2 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 22,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Read \"Import from disk\" in docs/LOCAL_GENERATION.md."
+    },
+    {
+      "id": "P06.3a",
+      "title": "Build the generation input and the prompts per project type",
+      "description": "Pure functions: the input from reviewed segments and export-selected screenshots, in transcript order, with the type-specific prompts.",
+      "roadmapItems": [
+        "P06.3"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.2a"
+      ],
+      "acceptanceCriteria": [
+        "Rendering tests per type show the sections listed in docs/LOCAL_GENERATION.md (Output per project type) and the shared rules, including \"Not stated in the recording\" and that transcript text is evidence, never instructions",
+        "You / Others labels are used when present and never guessed",
+        "Screenshots are downscaled to `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`",
+        "Transcript text never reaches normal logs"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 23,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.3b",
+      "title": "Split long recordings into chronological parts",
+      "description": "The part planner that keeps each request inside the context and CPU budget, and the final merge request.",
+      "roadmapItems": [
+        "P06.3"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.3a"
+      ],
+      "acceptanceCriteria": [
+        "Parts are chronological, cover every segment once, and fit the configured budget; tests cover empty, short and very long projects",
+        "The merge request receives the notes of every part in order"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 24,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.3c",
+      "title": "Start and stop the llama.cpp server for a generation",
+      "description": "The worker starts `llama-server` on 127.0.0.1 in its container, waits for health, sends requests and stops it.",
+      "roadmapItems": [
+        "P06.3"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.3b",
+        "P06.1"
+      ],
+      "acceptanceCriteria": [
+        "Safe argument arrays and `llama_server_environment`, with a loopback address only",
+        "Tests with a stand-in server cover start, a failed health check, a request failure, and that the process is always stopped",
+        "A memory check before the job gives a readable `GENERATION_OUT_OF_MEMORY` error (K5), translated into Italian"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 25,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.3d",
+      "title": "Queue a generation job and store its document",
+      "description": "The Celery job and API that produce the document.",
+      "roadmapItems": [
+        "P06.3"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.3c",
+        "P06.2c"
+      ],
+      "acceptanceCriteria": [
+        "The job writes `projects/{id}/generations/{generationId}/document.md` with its prompt version and model file hashes, and reports real progress per part",
+        "It shares the single worker with processing, and cannot run at the same time",
+        "Endpoints and a migration are documented in docs/API.md, docs/openapi.json and docs/DATA_MODEL.md",
+        "Tests cover success, cancellation, a missing or disabled model, and failure with the server stopped"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 26,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.3e",
+      "title": "Prove generation with the real model in an opt-in test",
+      "description": "The opt-in integration test of the local generation document.",
+      "roadmapItems": [
+        "P06.3"
+      ],
+      "closes": [
+        "P06.3"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.3d"
+      ],
+      "acceptanceCriteria": [
+        "An opt-in test, off by default like the real Whisper test, turns a short synthetic project into a document with the expected sections and only cited times that exist",
+        "It is run once with the real E2B files; if that is impossible on this computer it is reported, and P06.3 stays unchecked",
+        "P06.3 is checked with dated evidence that includes the run"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 27,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "Keep the model in the sandbox cache at /cache, never in the repository. The first download is about 3.4 GB."
+    },
+    {
+      "id": "P06.4a",
+      "title": "Add the Settings screen with the model manager",
+      "description": "The `/settings` screen: install, enable, delete, model size and license, language switch.",
+      "roadmapItems": [
+        "P06.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P06.2d"
+      ],
+      "acceptanceCriteria": [
+        "Settings joins the menu and follows docs/UI.md and the `ajimu-pixel-ui` skill: existing tokens and primitives only",
+        "Install shows the license name and link first, with real progress; `NARRASTEP_LOCAL_GENERATION=disabled` hides every control",
+        "The language switch from the header is also in Settings",
+        "Every text is in English and Italian (`npm run check:i18n`)",
+        "Added to the accessibility checks in both languages (area e2e)"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 28,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.4b",
+      "title": "Add the Document screen with generation and result",
+      "description": "The `/projects/:id/document` screen, shown only when local generation is installed and enabled.",
+      "roadmapItems": [
+        "P06.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P06.4a",
+        "P06.3d"
+      ],
+      "acceptanceCriteria": [
+        "Generate, real progress per part, result with the video beside it, and regenerate",
+        "Planned actions do not appear as enabled; the screen is absent when the feature is not installed or is disabled",
+        "Every text is in English and Italian; added to the accessibility checks in both languages"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 29,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.4c",
+      "title": "Include a generated document in the next package",
+      "description": "Optional `05-generated-document/document.md` in the export.",
+      "roadmapItems": [
+        "P06.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "backend",
+        "web"
+      ],
+      "dependsOn": [
+        "P06.4b"
+      ],
+      "acceptanceCriteria": [
+        "The user can include a generation in the next export, and older exports are not changed",
+        "A test checks the file in the ZIP, and its absence when not chosen; the manifest and docs/PROCESSING_PIPELINE.md are updated"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 30,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.4d",
+      "title": "Copy the result as Markdown and as a single file with images",
+      "description": "I-05: two ways to take the result out.",
+      "roadmapItems": [
+        "P06.4"
+      ],
+      "closes": [
+        "P06.4"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "backend",
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P06.4c"
+      ],
+      "acceptanceCriteria": [
+        "Copy as Markdown puts the document on the clipboard, with a visible confirmation in both languages",
+        "A single-file Markdown with the images embedded can be downloaded, with a test on its content",
+        "P06.4 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 31,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.5a",
+      "title": "Add the generation benchmark script for the owner",
+      "description": "The owner measures time and peak memory; this builds the tool and the procedure.",
+      "roadmapItems": [
+        "P06.5"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend"
+      ],
+      "dependsOn": [
+        "P06.3e"
+      ],
+      "acceptanceCriteria": [
+        "A script generates synthetic 10-minute and 60-minute projects and reports generation time and peak memory for E2B and E4B",
+        "It applies the fixed thresholds of \"Default model rule\" in docs/LOCAL_GENERATION.md and prints whether E4B passes",
+        "docs/DEVELOPMENT.md has the procedure; tests cover the report and the threshold logic with stand-ins"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 32,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.5",
+      "title": "Owner benchmark of E2B and E4B on the real computer",
+      "description": "The thresholds are fixed; the measurement belongs on the owner's computer.",
+      "roadmapItems": [
+        "P06.5"
+      ],
+      "closes": [
+        "P06.5"
+      ],
+      "owner": true,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [
+        "P06.5a"
+      ],
+      "acceptanceCriteria": [
+        "The owner runs the benchmark for 10 and 60 minutes with E2B and E4B; the results are in docs/STATUS.md and apply the default model rule"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 33,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+    },
+    {
+      "id": "P06.6a",
+      "title": "Make [mm:ss] references clickable in Review",
+      "description": "I-04: every `[mm:ss]` in Review moves the video to that time.",
+      "roadmapItems": [
+        "P06.6"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "web",
+        "e2e"
+      ],
+      "dependsOn": [
+        "P06.4d"
+      ],
+      "acceptanceCriteria": [
+        "Each `[mm:ss]` is a real button with an accessible name that seeks the video",
+        "Keyboard use, a removed source video and an out-of-range time are tested",
+        "Every text is in English and Italian; docs/UI.md is updated"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 34,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P06.6b",
+      "title": "Make [mm:ss] citations clickable in Document",
+      "description": "The same for the generated document, closing the local generation package.",
+      "roadmapItems": [
+        "P06.6"
+      ],
+      "closes": [
+        "P06.6"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "web",
+        "e2e",
+        "stack"
+      ],
+      "dependsOn": [
+        "P06.6a"
+      ],
+      "acceptanceCriteria": [
+        "Each citation in Document is a button that plays the video from that time, and a citation for a time that does not exist is shown as plain text",
+        "P06 exit holds: the stack starts and works with the feature not installed and with `NARRASTEP_LOCAL_GENERATION=disabled` (area stack)",
+        "P06.6 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 35,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.3a",
+      "title": "Add the screen and window source picker to the desktop shell",
+      "description": "ADR 0014: a Narrastep picker over `desktopCapturer`, through `setDisplayMediaRequestHandler`, for the loopback origin only.",
+      "roadmapItems": [
+        "P07.3"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P05.7"
+      ],
+      "acceptanceCriteria": [
+        "`desktop/src/guards.cjs` no longer refuses every capture: the app origin gets the picker, and every other origin stays refused",
+        "The picker page has no Node.js, follows the fallback page rules, and has English and Italian text",
+        "Tests with the Electron stand-ins cover choosing, cancelling and a foreign origin; the isolation tests still pass"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 36,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.3b",
+      "title": "Capture Windows loopback system audio in the desktop window",
+      "description": "ADR 0014: `audio: 'loopback'` on Windows, for any chosen source.",
+      "roadmapItems": [
+        "P07.3"
+      ],
+      "closes": [
+        "P07.3"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop",
+        "web"
+      ],
+      "dependsOn": [
+        "P07.3a"
+      ],
+      "acceptanceCriteria": [
+        "On Windows the handler passes loopback audio for screens and single windows; elsewhere it stays off and the recorder says so",
+        "The recorder notice about notification sounds (K12) is present in both languages",
+        "Tests cover the platforms with stand-ins; a real capture is named as not run, because it belongs to the owner check",
+        "P07.3 is checked with dated evidence, and the manual check stays open under the P07 exit"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 37,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.4a",
+      "title": "Grant the microphone to the app origin in the desktop shell",
+      "description": "ADR 0014: microphone permission for the loopback origin only.",
+      "roadmapItems": [
+        "P07.4"
+      ],
+      "closes": [],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P07.3b"
+      ],
+      "acceptanceCriteria": [
+        "Microphone requests from the app origin are granted, every other origin and permission stays denied",
+        "The policy tests and window tests are updated, including a negative control"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 38,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.4b",
+      "title": "Save downloads with a native dialog from the app origin only",
+      "description": "ADR 0014: native \"Save as\" for packages and documents.",
+      "roadmapItems": [
+        "P07.4"
+      ],
+      "closes": [
+        "P07.4"
+      ],
+      "owner": false,
+      "userVisible": true,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P07.4a"
+      ],
+      "acceptanceCriteria": [
+        "Downloads from the app origin open a native \"Save as\" dialog, and others are cancelled",
+        "Tests cover both; ADR 0014 notes are updated",
+        "P07.4 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 39,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.5",
+      "title": "Add the optional unsigned portable desktop build",
+      "description": "ADR 0014: `npm --prefix desktop run package` with `@electron/packager`, optional and unsigned, never published as an installer.",
+      "roadmapItems": [
+        "P07.5"
+      ],
+      "closes": [
+        "P07.5"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "desktop"
+      ],
+      "dependsOn": [
+        "P07.4b"
+      ],
+      "acceptanceCriteria": [
+        "The command produces a portable build into a Git-ignored folder, and the default install does not need it",
+        "New dependencies and their licenses are in docs/LICENSES.md; docs/DEVELOPMENT.md has the command",
+        "P07.5 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 40,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    },
+    {
+      "id": "P07.2",
+      "title": "Owner smoke test of the desktop window on the Docker stack",
+      "description": "Everything but this check is done; it needs a display on the owner's computer.",
+      "roadmapItems": [
+        "P07.2"
+      ],
+      "closes": [
+        "P07.2"
+      ],
+      "owner": true,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        "The owner follows \"Manual smoke test on Docker\" in docs/DEVELOPMENT.md and records each step with the versions"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 41,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+    },
+    {
+      "id": "P07-CHECK",
+      "title": "Owner check of one window with system audio on Windows",
+      "description": "The manual check in the P07 exit.",
+      "roadmapItems": [
+        "P07.3"
+      ],
+      "closes": [],
+      "owner": true,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [
+        "P07.4b"
+      ],
+      "acceptanceCriteria": [
+        "The owner records one single window with system audio in the desktop window on Windows, and the result is in docs/STATUS.md"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 42,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+    },
+    {
+      "id": "P05.6",
+      "title": "Owner test with a real Teams call and a headset on Windows",
+      "description": "The manual test of the recording package.",
+      "roadmapItems": [
+        "P05.6"
+      ],
+      "closes": [
+        "P05.6"
+      ],
+      "owner": true,
+      "userVisible": false,
+      "areas": [],
+      "dependsOn": [
+        "P05.7"
+      ],
+      "acceptanceCriteria": [
+        "The owner records a real Teams call with a headset and processes it; You / Others labels and the K2 echo risk are recorded in docs/STATUS.md"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 43,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": "The owner runs this on a real computer. Record the result as dated evidence under the roadmap item, check it, then run `node scripts/ralph/prd.cjs confirm <id>` and commit."
+    },
+    {
+      "id": "P10.2",
+      "title": "Verify the finished roadmap as a whole",
+      "description": "A final pass with no new features: every suite on the finished code, and documents that match it.",
+      "roadmapItems": [
+        "P10.2"
+      ],
+      "closes": [
+        "P10.2"
+      ],
+      "owner": false,
+      "userVisible": false,
+      "areas": [
+        "backend",
+        "web",
+        "e2e",
+        "desktop",
+        "compose",
+        "stack"
+      ],
+      "dependsOn": [
+        "P06.6b",
+        "P07.5",
+        "P08.11",
+        "P09.3"
+      ],
+      "acceptanceCriteria": [
+        "Every area passes together, and the opt-in full-stack journey `npm run e2e:fullstack` passes against the isolated stack",
+        "README.md no longer lists delivered work as planned, and docs/STATUS.md, docs/ROADMAP.md, docs/UI.md, docs/RECORDING.md and docs/LOCAL_GENERATION.md agree with the code",
+        "Every remaining open roadmap item is an owner check, listed with what the owner must do",
+        "P10.2 is checked with dated evidence"
+      ],
+      "verify": [],
+      "verifyHost": [],
+      "priority": 44,
+      "passes": false,
+      "attempts": 0,
+      "blocked": false,
+      "blockedReason": "",
+      "lastFailure": "",
+      "verifiedAt": null,
+      "notes": ""
+    }
+  ]
+}

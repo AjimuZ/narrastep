@@ -40,6 +40,9 @@ desktop.ini
 *.log
 *.zip
 
+# State and logs of the development runner; its task list and progress log are tracked
+scripts/ralph/.state/
+
 # Local agent tooling (personal development only, never published)
 .claude/
 skills-lock.json

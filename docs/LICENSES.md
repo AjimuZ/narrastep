@@ -235,6 +235,17 @@ Files copied into the repository and shipped unmodified are recorded in
 | Playwright | Apache-2.0 |
 | Pytest, Ruff, mypy, uv | MIT (uv: MIT OR Apache-2.0); versions in [Backend Python packages](#backend-python-packages) |
 
+## Autonomous runner (development only)
+
+| Component | Version | License | Note |
+| --- | --- | --- | --- |
+| Ralph runner | Commit `6c53cb0` of `snarktank/ralph` | MIT | Adapted in `scripts/ralph/`; [notice](../THIRD_PARTY_NOTICES.md#ralph-runner) |
+| Check container | Python and Node.js versions of the project | As listed above | `scripts/ralph/checks.Dockerfile`, built locally from the official images by tag; never shipped, and adds only `curl` (curl license) and `git` (GPL-2.0-only) from Debian to what the project already uses |
+
+Claude Code, which the runner starts, is the owner's own tool and needs the owner's plan. It is not a
+dependency of the product, its build, its tests or CI, and contributors do not need it
+([ADR 0019](decisions/0019-autonomous-development-runner.md)).
+
 ## Local agent tooling
 
 `.claude/` and `skills-lock.json` hold the owner's local agent skills. They are ignored by Git and

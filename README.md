@@ -136,7 +136,7 @@ Invalid values stop startup with a readable error.
 
 Start from the [documentation index](docs/README.md). Development setup and every check command are
 in [Development](docs/DEVELOPMENT.md). Read [CONTRIBUTING.md](CONTRIBUTING.md) and
-[CLAUDE.md](CLAUDE.md) before changing code.
+[CLAUDE.md](CLAUDE.md) before changing code. The optional development loop that works through the roadmap is in [scripts/ralph](scripts/ralph/README.md).
 
 ## License
 

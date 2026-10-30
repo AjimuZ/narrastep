@@ -1,0 +1,9 @@
+# Own image tags for the isolated stack (stack.sh): it bakes another Whisper model, and
+# `./start.sh -r` must keep finding the owner's images under the names in docker-compose.yml.
+services:
+  api:
+    image: narrastep-ralph-backend:dev
+  worker:
+    image: narrastep-ralph-backend:dev
+  web:
+    image: narrastep-ralph-web:dev

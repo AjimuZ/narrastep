@@ -39,3 +39,4 @@
 | [0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md) | Podman launcher, generated environment file and dependency refresh | Accepted (planned, P08) |
 | [0017](decisions/0017-valkey-broker.md) | Valkey as the Redis-protocol broker | Accepted (P08.3) |
 | [0018](decisions/0018-remove-original-video-after-export.md) | Remove the original video after export | Accepted (P09.2) |
+| [0019](decisions/0019-autonomous-development-runner.md) | Autonomous development runner | Accepted |

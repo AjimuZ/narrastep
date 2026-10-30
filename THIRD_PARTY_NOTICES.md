@@ -31,6 +31,17 @@ hash with the upstream release before publishing. The font is not sold by itself
 renamed or modified, as the license requires. The unit test `ui.spec.ts` fails when the font file
 no longer matches the hash in this file.
 
+## Ralph runner
+
+| Item | Value |
+| --- | --- |
+| Use | Development loop in `scripts/ralph/`; not shipped in any image |
+| Upstream | <https://github.com/snarktank/ralph>, commit `6c53cb0b831ebe8739c6a003e22af14902d8b0b5` |
+| Form | `ralph.sh`, `CLAUDE.md` and the `prd.json` format, **modified** ([differences](scripts/ralph/README.md#differences-from-upstream)) |
+| Copyright | Copyright (c) 2026 snarktank |
+| License | MIT License |
+| License text | `scripts/ralph/LICENSE.upstream` (SHA-256 `71314d597f52507c3ce1bbe05f9c6a26ce82bd1a60613dbc7785b747cd53179a`), unmodified |
+
 ## llama.cpp license text
 
 | Item | Value |

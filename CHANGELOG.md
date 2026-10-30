@@ -111,6 +111,11 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- Development only, no change to the product: `scripts/ralph/` works through the roadmap without
+  supervision, one fresh Claude Code process per task. Each task is verified in a container and
+  committed on `main` by the runner, and nothing is pushed. The outdated `.python-version` and the
+  blocked microphone (risk K14) were found on the way and are scheduled in P08.4 and P05.7.
+
 - The background queue now runs on Valkey 9.1.3 (BSD-3-Clause) instead of Redis 7.2.14, because
   newer Redis releases are not under a free license. Existing data volumes are kept. The web
   server moves to nginx 1.30.6, and every container image is now pinned to an exact version and

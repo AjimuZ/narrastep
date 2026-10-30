@@ -62,5 +62,12 @@ Claude Code and every contributor working in this repository must follow these r
     When the local skill is present, validate with
     `python .claude/skills/ajimu-conventions/scripts/check_commit_message.py .git/COMMIT_EDITMSG`.
     Never commit `.claude/` or `skills-lock.json`.
-19. Commit, push or publish only when the owner asks. Never bypass hooks or change Git
-    configuration.
+19. Commit, push or publish only when the owner asks. Starting the runner is asking it to commit
+    verified tasks on `main`; it never pushes. Never bypass hooks or change Git configuration.
+
+## Autonomous runner
+
+20. `scripts/ralph/` runs one fresh Claude Code process per task
+    ([guide](scripts/ralph/README.md)). In such a session `scripts/ralph/CLAUDE.md` applies too: the
+    runner verifies and commits, and the agent never commits or edits the task state. Add a task to
+    `scripts/ralph/prd.json` whenever a roadmap item is added.
