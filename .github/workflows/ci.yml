@@ -15,10 +15,10 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.23.1
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
@@ -36,10 +36,10 @@ jobs:
       run:
         working-directory: desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.23.1
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       # Without package scripts the Electron binary is not downloaded; the opt-in window tests skip.
@@ -49,12 +49,12 @@ jobs:
   runner:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.23.1
+          node-version: 26.13.0
       # The tests run the documentation check through a stand-in sandbox, which calls `python`.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.14.10
       - run: node --test 'scripts/ralph/test/*.test.cjs'
@@ -62,8 +62,8 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.14.10
           cache: pip
@@ -84,8 +84,8 @@ jobs:
       NARRASTEP_ENV: test
       NARRASTEP_ENABLE_MOCK_PROCESSING: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.14.10
           cache: pip
@@ -102,7 +102,7 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cp .env.example .env
       - run: docker compose config
       - run: NARRASTEP_WHISPER_MODEL=tiny docker compose build
@@ -117,10 +117,10 @@ jobs:
       NARRASTEP_WHISPER_MODEL: tiny
       NARRASTEP_MIN_FREE_DISK_MB: 64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.23.1
+          node-version: 26.13.0
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: sudo apt-get update && sudo apt-get install --yes ffmpeg
@@ -149,7 +149,7 @@ jobs:
       - if: failure()
         run: docker compose --project-name narrastep-fullstack logs --no-color
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fullstack-playwright-results
           path: |

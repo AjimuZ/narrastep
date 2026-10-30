@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -126,10 +127,21 @@ def test_broker_is_valkey_with_its_own_commands() -> None:
 
 
 def test_web_build_uses_the_node_version_of_nvmrc() -> None:
-    """Build the web image with the Node.js version contributors and CI use (`engine-strict`)."""
+    """Build the web image with the Node.js version contributors and CI use (`engine-strict`).
 
-    dockerfile = (REPOSITORY / "apps" / "web" / "Dockerfile").read_text(encoding="utf-8")
+    `desktop/package.json` is left out on purpose: its `engines` is the oldest host Node.js the
+    pinned Electron accepts, a floor and not the version the project itself runs on.
+    """
+
+    web = REPOSITORY / "apps" / "web"
+    dockerfile = (web / "Dockerfile").read_text(encoding="utf-8")
     image = re.search(r"^FROM docker\.io/library/node:(\d+\.\d+\.\d+)-alpine@", dockerfile, re.M)
     assert image
-    for nvmrc in (REPOSITORY / ".nvmrc", REPOSITORY / "apps" / "web" / ".nvmrc"):
+    for nvmrc in (REPOSITORY / ".nvmrc", web / ".nvmrc"):
         assert nvmrc.read_text(encoding="utf-8").strip() == image[1], nvmrc
+    package = json.loads((web / "package.json").read_text(encoding="utf-8"))
+    assert package["engines"]["node"] == image[1]
+    lock = json.loads((web / "package-lock.json").read_text(encoding="utf-8"))
+    assert lock["packages"][""]["engines"]["node"] == image[1]
+    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert set(re.findall(r"node-version: (\S+)", workflow)) == {image[1]}

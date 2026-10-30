@@ -156,6 +156,18 @@ def test_python_version_agrees_across_project_image_ci_and_locks() -> None:
         assert "--python-version 3.14 " in lock.read_text(encoding="utf-8"), lock.name
 
 
+def test_python_version_file_names_the_version_of_the_image_and_ci() -> None:
+    """Give version managers the Python of the image and CI; `.python-version` once fell behind."""
+    dockerfile = (BACKEND / "Dockerfile").read_text(encoding="utf-8")
+    image = re.search(
+        r"^FROM docker\.io/library/python:(\d+\.\d+\.\d+)-slim-trixie@", dockerfile, re.M
+    )
+    assert image
+    assert (REPOSITORY / ".python-version").read_text(encoding="utf-8").strip() == image[1]
+    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert set(re.findall(r"python-version: (\S+)", workflow)) == {image[1]}
+
+
 def test_image_and_ci_install_only_from_the_locks() -> None:
     """Install every package from a lock with hashes and the project without resolving anything."""
     dockerfile = (BACKEND / "Dockerfile").read_text(encoding="utf-8")
@@ -181,6 +193,24 @@ def test_image_and_ci_install_only_from_the_locks() -> None:
 def test_ci_workflow_parses_and_keeps_every_job() -> None:
     """Keep the CI file valid YAML, because GitHub runs no job at all of an invalid workflow."""
     assert set(_ci_jobs()) == CI_JOBS
+
+
+def test_ci_jobs_use_one_release_tag_of_each_action() -> None:
+    """Keep each Action on one release tag in every job, so that an update cannot miss a job."""
+    tags: dict[str, set[str]] = {}
+    for job in _ci_jobs().values():
+        for step in job["steps"]:
+            if "uses" in step:
+                action, tag = step["uses"].split("@")
+                tags.setdefault(action, set()).add(tag)
+    assert set(tags) == {
+        "actions/checkout",
+        "actions/setup-node",
+        "actions/setup-python",
+        "actions/upload-artifact",
+    }
+    for action, used in tags.items():
+        assert len(used) == 1 and re.fullmatch(r"v\d+", next(iter(used))), (action, used)
 
 
 def test_ci_job_environments_do_not_use_the_runner_context() -> None:

@@ -1,7 +1,6 @@
-# Build-only Node.js, pinned by the digest of its multi-platform index. The version must equal
-# `.nvmrc` and `engines.node` (`engine-strict` stops `npm ci` otherwise), so P08.4 moves them
-# together.
-FROM docker.io/library/node:22.23.1-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
+# Build-only Node.js LTS, pinned by the digest of its multi-platform index. The version must equal
+# `.nvmrc` and `engines.node` (`engine-strict` stops `npm ci` otherwise), so they move together.
+FROM docker.io/library/node:26.13.0-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 
 WORKDIR /workspace
 

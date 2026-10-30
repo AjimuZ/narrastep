@@ -36,7 +36,7 @@ inventory inside the containers is roadmap item I-15.
 | `llama.cpp` server (CPU) | v0.5.0, build b11146 | MIT | Copied into `/opt/llama.cpp` from `ghcr.io/ggml-org/llama.cpp:server-v0.5.0` pinned by digest (P06.1); license text in `backend/third_party/llama.cpp/LICENSE`, copied beside the binaries |
 | OpenMP runtime `libgomp1` (Debian package) | 14.2.0-19 (Debian 13) | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |
 | Nginx | 1.30.6 | BSD-2-Clause | Newest stable line |
-| Node.js (build only) | 22.23.1 | MIT | [Kept behind](#container-images) 26.13.0 until P08.4 |
+| Node.js (build only) | 26.13.0 | MIT | Newest LTS on 2026-10-30 (P08.4) |
 | Angular, Angular CDK | 22.2.4, 22.2.5 | MIT | Every package in [Angular application packages](#angular-application-packages) |
 | `@angular/localize` | 22.2.4 | MIT | Runtime `$localize` and `loadTranslations`; its Babel tooling (`@babel/core`, MIT) is a build-time dependency of the Angular tools and is not shipped in the web image |
 | RxJS | 7.8.2 | Apache-2.0 | |
@@ -52,15 +52,17 @@ A security update can therefore change them between builds; the image build's tr
 
 Every image the stack builds from or pulls has a fully qualified name (P08.9), an exact version tag
 and the digest of its multi-platform index (amd64 and arm64 included), checked against the registry
-on 2026-10-29 (P08.3). `backend/tests/test_container_images.py` fails when this table and the
-Dockerfiles or `docker-compose.yml` differ, or when an image has a short name, a floating tag or no
-digest.
+on 2026-10-29 (P08.3), and on 2026-10-30 for Node.js (P08.4).
+`backend/tests/test_container_images.py` fails when this table and the Dockerfiles or
+`docker-compose.yml` differ, or when an image has a short name, a floating tag or no digest. It also
+fails when `.nvmrc`, `engines.node`, the lock and CI do not name the Node.js version of the image,
+because `.npmrc` sets `engine-strict`.
 
 | Image | Tag | Index digest | Used for | License |
 | --- | --- | --- | --- | --- |
 | `ghcr.io/ggml-org/llama.cpp` | `server-v0.5.0` | `sha256:a94b642b3e2620749bf2ff5672df922c23a6202710e54a8f7667e58df70aba5a` | `llama-server` and its libraries, copied into the backend image | MIT |
 | `docker.io/library/python` | `3.14.10-slim-trixie` | `sha256:3cabfd7d7aaf394e6040e79fa1eec6ca1c52b74ed9188650472695d9a9326999` | Backend runtime base (Debian 13.7) | PSF-2.0; Debian packages under their own licenses |
-| `docker.io/library/node` | `22.23.1-alpine` | `sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2` | Web build stage only | MIT |
+| `docker.io/library/node` | `26.13.0-alpine` | `sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94` | Web build stage only | MIT |
 | `docker.io/library/nginx` | `1.30.6-alpine` | `sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949` | Web server | BSD-2-Clause |
 | `docker.io/valkey/valkey` | `9.1.3-alpine` | `sha256:bf09d58e96d6b4524a15396b65b242bbe18beebbcc15a04d8ee75ddac62fae0b` | Redis-protocol broker (`redis` service) | BSD-3-Clause |
 
@@ -68,7 +70,6 @@ Kept behind or unchanged, with the reason:
 
 | Component | Pinned | Newest | Reason |
 | --- | --- | --- | --- |
-| Node.js | 22.23.1 | 26.13.0 (current LTS); 22.23.4 in the 22 line | `apps/web/package.json` requires exactly `.nvmrc`'s version and `.npmrc` sets `engine-strict`, so the image, `.nvmrc`, `engines.node`, the lock and CI move together in P08.4 |
 | `llama.cpp` server | `server-v0.5.0` (build b11146) | `server-v0.5.0`; rolling builds up to `server-b11977` | Newest versioned release; the `server-b*` tags are per-commit builds without a release, which [Local generation](LOCAL_GENERATION.md#server-in-the-backend-image) does not adopt |
 | Python | 3.14.10 | 3.15.2 | No ONNX Runtime wheels for 3.15 ([below](#kept-behind-their-newest-release)) |
 | FFmpeg, Tesseract, `libgomp1` | Debian 13 versions above | FFmpeg 9.0.2, Tesseract 5.5.0-1.1, `libgomp1` 16.2.0-3 in Debian testing (`forky`) | The base stays on the Debian stable release; no Python image is published for Debian testing and `trixie-backports` carries none of them |

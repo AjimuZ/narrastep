@@ -100,3 +100,7 @@ The model import bind mount of P06.2 is not in the Compose file yet, so its SELi
   - The picker answers {video: source} only. P07.3b adds audio: 'loopback' on Windows in answerDisplayMediaRequest in guards.cjs and needs a manual check on Windows.
   - Closing the picker window counts as cancel and answers null, which rejects the page's promise with NotAllowedError.
 ---
+
+## [2026-10-30T21:15:38.538Z] - P08.4c - published by hand
+Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfile`, `engines`, the web lock and all four Node jobs in CI. The Actions are at `v7`, and `.python-version` says 3.14.10.
+---

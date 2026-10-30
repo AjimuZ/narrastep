@@ -39,7 +39,7 @@ docker compose down -v
 
 ## Native frontend
 
-Use Node 22.23.1 from `.nvmrc`:
+Use Node 26.13.0 from `.nvmrc`:
 
 ```bash
 cd apps/web

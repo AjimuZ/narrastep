@@ -129,12 +129,15 @@ All notable changes to Narrastep are documented in this file.
 - The background queue now runs on Valkey 9.1.3 (BSD-3-Clause) instead of Redis 7.2.14, because
   newer Redis releases are not under a free license. Existing data volumes are kept. The web
   server moves to nginx 1.30.6, and every container image is now pinned to an exact version and
-  digest, so each build uses the same base images. Node.js stays at 22.23.1 until the npm
-  package refresh.
+  digest, so each build uses the same base images.
 
 - The web application is built with the newest Angular 22.2 and its tools (Vite 8, Vitest 5,
   Playwright 1.64). No screen changes. TypeScript stays at 6.0.3, the newest version Angular 22.2
   accepts.
+- Development only, no change to the product: the web image, native frontend work and CI now use
+  Node.js 26.13.0, the newest LTS (`.nvmrc` asks for it, and `npm ci` in `apps/web` refuses any
+  other version), and the CI workflow uses the newest GitHub Actions. `.python-version` now says
+  3.14.10 like the image and CI. The desktop window still needs only Node.js 22.12 or newer.
 - The backend image now contains the CPU `llama.cpp` server (release v0.5.0, MIT) for the coming
   optional local document generation. It is copied from the official image pinned by digest, only
   the server and its libraries are kept, and the build fails when they cannot run. Nothing starts
