@@ -1318,8 +1318,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 66,
-      "passes": false,
-      "notes": "Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "On Windows the desktop window now shares the chosen screen or window together with system audio (`audio: 'loopback'`). On macOS and Linux it shares video only. The recorder warns about notification sounds on Windows and says system audio is not shared elsewhere, in English and Italian. `check.sh desktop` passed 152 of 152, `check.sh web` passed 189 tests plus build and i18n, and `check.sh docs` passed. Not run: a real capture on Windows and the opt-in real-Electron window tests.",
       "dependsOn": [
         "P07.3a"
       ],

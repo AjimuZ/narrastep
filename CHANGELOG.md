@@ -19,6 +19,12 @@ All notable changes to Narrastep are documented in this file.
   small Narrastep window with the screens and windows of the computer, in English or Italian.
   Choosing one shares it, Cancel or closing the window shares nothing, and only the Narrastep
   page can ask. System audio on Windows and the microphone are not part of this change.
+- System audio in the desktop window on Windows: the screen or window chosen in the picker is
+  shared together with the sound of the computer, so a call can be recorded without a browser. The
+  recorder warns that the sound of every application is recorded, also notification sounds, and
+  that notifications are best muted while recording. On macOS and Linux the desktop window shares
+  no system audio and the recorder says so; the recording then keeps only the microphone. The
+  browser flow is unchanged. Not yet checked with a real capture on Windows.
 
 - Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
   activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and

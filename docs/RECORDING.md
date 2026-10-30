@@ -4,8 +4,8 @@ Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording sessio
 per-track chunk storage, resume and discard (P05.1), the completion into a validated source video
 with the kept microphone track (P05.2), the recorder screen (P05.3) and the You / Others speaker
 labels (P05.5) are implemented; the manual test with a real call (P05.6) is planned. The desktop window's own
-source picker and Windows loopback audio arrive with the desktop shell (P07); until then the
-recorder uses the browser picker.
+source picker (P07.3a) and Windows loopback audio (P07.3b) are implemented and tested with
+stand-ins; a real capture on Windows is an owner check that has not been run.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
 
 ## Goal
@@ -17,7 +17,7 @@ to recording with OBS and uploading the file. Nothing is installed system-wide.
 
 | Where | How the source is chosen | System audio on Windows |
 | --- | --- | --- |
-| **Desktop window** (default, [ADR 0014](decisions/0014-desktop-app-shell.md)) | Narrastep's own picker lists screens and windows | Always, for a whole screen and for a single window (`audio: 'loopback'`) |
+| **Desktop window** (default, [ADR 0014](decisions/0014-desktop-app-shell.md)) | Narrastep's own picker lists screens and windows | On Windows, for a whole screen and for a single window (`audio: 'loopback'`); none on macOS and Linux (microphone only) |
 | Chrome or Edge with `--headless` | The browser picker | Only for an entire screen with "Share system audio", or a tab with "Share tab audio" |
 | Firefox or Safari with `--headless` | The browser picker | None; microphone only |
 
@@ -35,7 +35,13 @@ is not supported. When system audio is missing, the recorder says so before reco
 offers to continue with the microphone only.
 
 On Windows, loopback system audio includes every application's sound, also when one window is
-recorded. Notification sounds from other applications are therefore recorded too.
+recorded. Notification sounds from other applications are therefore recorded too, so the recorder
+shows a notice in the desktop window on Windows (risk K12) asking to mute notifications while
+recording. The desktop window on macOS and Linux shares no system audio: the recorder says that
+the window captures it only on Windows, and the recording keeps only the microphone. The desktop
+window is recognised from the user agent (`Electron/` token and the system name), because the
+page has no bridge to the shell. Implemented in P07.3b and tested with stand-ins; a real capture
+on Windows has not been run.
 
 `127.0.0.1` is a secure context, so the capture APIs work without HTTPS.
 

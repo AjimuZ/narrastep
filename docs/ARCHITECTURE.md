@@ -245,8 +245,9 @@ flowchart LR
   window picker, Windows loopback system audio, microphone permission and native downloads. It
   has no other host bridge, and closing it never stops the containers. The shell with its
   loopback-only loading, isolation and single instance exists since P07.1 and the launcher since
-  P07.2 ("Desktop shell" above); the screen and window picker since P07.3a. Windows loopback
-  system audio (P07.3b), the microphone and downloads (P07.4) are still planned.
+  P07.2 ("Desktop shell" above); the screen and window picker since P07.3a and Windows loopback
+  system audio since P07.3b (implemented, not yet run on a real Windows system). The microphone
+  and downloads (P07.4) are still planned.
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it

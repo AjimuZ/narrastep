@@ -6,6 +6,7 @@ import {
   MICROPHONE_MIME_TYPES,
   SCREEN_MIME_TYPES_WITH_AUDIO,
   captureSupported,
+  desktopWindowSystem,
   levelPercent,
   nextShownLevel,
   pickMimeType,
@@ -67,6 +68,26 @@ describe('screenSourceKind', () => {
     }
     expect(screenSourceKind(fakeStream(new FakeTrack('video')))).toBe('unknown');
     expect(screenSourceKind(fakeStream())).toBe('unknown');
+  });
+});
+
+describe('desktopWindowSystem', () => {
+  const electron = (system: string) =>
+    `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) desktop/0.2.0 Chrome/150.0.0.0 Electron/45.2.0 Safari/537.36`;
+
+  it('names the system of the desktop window', () => {
+    expect(desktopWindowSystem(electron('Windows NT 10.0; Win64; x64'))).toBe('windows');
+    expect(desktopWindowSystem(electron('Macintosh; Intel Mac OS X 10_15_7'))).toBe('other');
+    expect(desktopWindowSystem(electron('X11; Linux x86_64'))).toBe('other');
+  });
+
+  it('is null in an ordinary browser, also on Windows', () => {
+    expect(
+      desktopWindowSystem(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36 Edg/150.0.0.0',
+      ),
+    ).toBeNull();
+    expect(desktopWindowSystem('')).toBeNull();
   });
 });
 

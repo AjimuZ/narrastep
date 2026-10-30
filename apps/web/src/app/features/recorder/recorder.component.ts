@@ -51,6 +51,7 @@ import {
   SCREEN_MIME_TYPES_WITH_AUDIO,
   ScreenSourceKind,
   captureSupported,
+  desktopWindowSystem,
   listMicrophones,
   nextShownLevel,
   pickMimeType,
@@ -137,6 +138,8 @@ export function defaultRecordingName(now: Date = new Date()): string {
 })
 export class RecorderComponent implements OnInit {
   readonly supported = captureSupported();
+  /** Which system the desktop window runs on, or null in a browser; shapes the system audio notes. */
+  readonly desktopSystem = desktopWindowSystem();
   readonly saveTitle = $localize`:@@recorder.save_title:Save recording`;
   readonly phase = signal<RecorderPhase>('checks');
 

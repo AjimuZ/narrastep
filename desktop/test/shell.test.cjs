@@ -72,21 +72,37 @@ describe('startShell', () => {
     }
   });
 
-  it('answers a screen capture request of the app with the picker in the system language', async () => {
+  /** Opens the picker for a capture request of the app, chooses the first source and returns the grant. */
+  async function captureFirstSource(platform, locale = 'en-US') {
     const chosen = { id: 'screen:0:0', name: 'Screen 1', thumbnail: { isEmpty: () => true } };
-    const { session, windows } = await startOnFakes({ locale: 'it-IT', sources: [chosen] });
+    const { session, windows } = await startOnFakes({ platform, locale, sources: [chosen] });
     const answer = new Promise((resolve) => {
       session.handlers.displayMedia(
-        { securityOrigin: 'http://127.0.0.1:4200', videoRequested: true },
+        { securityOrigin: 'http://127.0.0.1:4200', videoRequested: true, audioRequested: true },
         resolve,
       );
     });
     await new Promise(setImmediate);
     const picker = windows[1];
     assert.equal(picker.options.parent, windows[0]);
-    assert.match(decodePage(picker.webContents.loads[0]), /<html lang="it">/);
+    assert.match(
+      decodePage(picker.webContents.loads[0]),
+      new RegExp(`<html lang="${locale.slice(0, 2)}">`),
+    );
     picker.webContents.emit('will-frame-navigate', new FakeEvent({ url: choiceUrl(0) }));
-    assert.deepEqual(await answer, { video: chosen });
+    return { chosen, grant: await answer };
+  }
+
+  it('answers a screen capture request of the app with the picker in the system language', async () => {
+    const { chosen, grant } = await captureFirstSource('linux', 'it-IT');
+    assert.deepEqual(grant, { video: chosen });
+  });
+
+  it('adds Windows loopback audio to the picked source only when the shell runs on Windows', async () => {
+    const windows = await captureFirstSource('win32');
+    assert.deepEqual(windows.grant, { video: windows.chosen, audio: 'loopback' });
+    const macos = await captureFirstSource('darwin');
+    assert.deepEqual(macos.grant, { video: macos.chosen });
   });
 
   it('opens the configured loopback port with the isolated preferences', async () => {

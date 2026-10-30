@@ -17,6 +17,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Name images built from this repository `localhost/<name>:<version>` and pulled images with their full registry path, keeping tag and digest; `backend/tests/test_container_images.py` enforces this.
 - When a version appears in tests as both the pin and an 'older installed' value, bump only the pin and keep the older value older.
 - When a stub-tested handler changes behavior, grep the opt-in real-runtime harness for the same call, because a prompt that now waits for input can hang it.
+- Inject platform-dependent behaviour (such as process.platform) into the pure function and cover every platform with stand-ins. Keep a real run on the target system as a named owner check, never as a claim.
+- Where the page has no bridge to the shell, derive the host from the user agent rather than adding a preload or IPC channel; this leaves the isolation rules untouched.
 
 ---
 
@@ -103,4 +105,16 @@ The model import bind mount of P06.2 is not in the Compose file yet, so its SELi
 
 ## [2026-10-30T21:15:38.538Z] - P08.4c - published by hand
 Node.js 26.13.0 is now named by `.nvmrc`, `apps/web/.nvmrc`, `apps/web/Dockerfile`, `engines`, the web lock and all four Node jobs in CI. The Actions are at `v7`, and `.python-version` says 3.14.10.
+---
+
+## 2026-10-30T21:26:13Z - P07.3b
+- On Windows the desktop window now shares the chosen screen or window together with system audio (`audio: 'loopback'`). On macOS and Linux it shares video only. The recorder warns about notification sounds on Windows and says system audio is not shared elsewhere, in English and Italian. `check.sh desktop` passed 152 of 152, `check.sh web` passed 189 tests plus build and i18n, and `check.sh docs` passed. Not run: a real capture on Windows and the opt-in real-Electron window tests.
+- Files changed: desktop/src/guards.cjs, desktop/src/shell.cjs, desktop/test/guards.test.cjs, desktop/test/shell.test.cjs, apps/web/src/app/features/recorder/media-capture.ts, apps/web/src/app/features/recorder/media-capture.spec.ts, apps/web/src/app/features/recorder/recorder.component.ts, apps/web/src/app/features/recorder/recorder.component.html, apps/web/src/app/features/recorder/recorder.component.spec.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, CHANGELOG.md, docs/ROADMAP.md, docs/STATUS.md, docs/RECORDING.md, docs/ARCHITECTURE.md, docs/UI.md, docs/decisions/0014-desktop-app-shell.md
+- **Learnings for future iterations:**
+  - installSessionGuards(session, appOrigin, pickSource, platform) takes the platform as a fourth argument; shell.cjs passes its own `platform`. Without it (undefined) the grant is video only.
+  - Loopback audio is added only when platform is win32 and request.audioRequested is not false. A missing audioRequested counts as asked, which matches Electron requests that omit the flag in the stand-ins.
+  - The recorder detects the desktop window from the user agent: `desktopWindowSystem()` in media-capture.ts returns 'windows', 'other' or null. Electron's default user agent carries `Electron/<version>`, and the desktop shell does not change it. A future preload or user-agent override would break this detection.
+  - In apps/web/src/locale/*.json, the Edit tool strips the trailing space of a new_string that ends the line. A replacement ending with `"key": ` therefore lost its space and failed the Prettier check. End the replacement on a full value or check with `npx prettier` through sandbox.sh.
+  - The recorder spec fakes the desktop window with `vi.spyOn(navigator, 'userAgent', 'get')` through the new `desktop` option of `setup()`. It is restored in afterEach; a test that calls setup() twice must restore it and the fake media between the calls.
+  - The orchestrator still has to tick the P07.3 checkbox. The manual Windows check stays open in the P07 exit: record one window with system audio on a real Windows system. The real-Electron harness was not run, but it should be unaffected: the request from the app origin still opens the picker, and the harness closes the picker.
 ---

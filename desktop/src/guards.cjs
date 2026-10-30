@@ -12,10 +12,12 @@ const { isAllowedRequestUrl, isAppUrl, isPermissionAllowed } = require('./policy
  * - HID, serial and USB devices are refused;
  * - screen capture requests from the app origin get the Narrastep picker (`pickSource`, from
  *   `createSourcePicker`); other origins, and every request when `pickSource` is omitted, are denied;
+ *   when `platform` is `'win32'` the grant also carries the system audio (loopback) of the chosen
+ *   source, and on any other platform it carries video only;
  * - the spell checker is off, so Chromium never downloads dictionaries.
  * Throws only if the session object lacks one of these Electron methods.
  */
-function installSessionGuards(session, appOrigin, pickSource) {
+function installSessionGuards(session, appOrigin, pickSource, platform) {
   session.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
     callback({ cancel: !isAllowedRequestUrl(details.url, appOrigin) });
   });
@@ -28,7 +30,7 @@ function installSessionGuards(session, appOrigin, pickSource) {
   session.setDevicePermissionHandler(() => false);
   // Answers the picker's source for the app origin and `null` (which rejects getDisplayMedia()) otherwise.
   session.setDisplayMediaRequestHandler((request, callback) => {
-    answerDisplayMediaRequest(request, callback, appOrigin, pickSource);
+    answerDisplayMediaRequest(request, callback, appOrigin, pickSource, platform);
   });
   session.setSpellCheckerEnabled(false);
 }
@@ -50,11 +52,12 @@ function isAppCaptureRequest(request, appOrigin) {
 
 /**
  * Answers one `getDisplayMedia()` request. A request from the app origin opens the picker through
- * `pickSource()` and is granted the video of the chosen source; cancelling, a picker failure, a
- * foreign origin or a missing `pickSource` all answer `null`, which makes the page's promise reject.
- * Windows loopback system audio is not requested here (P07.3b). Never throws.
+ * `pickSource()` and is granted the video of the chosen source, plus `audio: 'loopback'` (the system
+ * audio mix) when `platform` is `'win32'` and the request asked for audio; elsewhere Electron has no
+ * loopback capture, so only video is granted. Cancelling, a picker failure, a foreign origin or a
+ * missing `pickSource` all answer `null`, which makes the page's promise reject. Never throws.
  */
-function answerDisplayMediaRequest(request, callback, appOrigin, pickSource) {
+function answerDisplayMediaRequest(request, callback, appOrigin, pickSource, platform) {
   if (typeof pickSource !== 'function' || !isAppCaptureRequest(request, appOrigin)) {
     callback(null);
     return;
@@ -62,9 +65,24 @@ function answerDisplayMediaRequest(request, callback, appOrigin, pickSource) {
   Promise.resolve()
     .then(() => pickSource())
     .then(
-      (source) => callback(source ? { video: source } : null),
+      (source) => callback(grantFor(source, request, platform)),
       () => callback(null),
     );
+}
+
+/**
+ * Returns the grant for the picked `source`, or `null` when nothing was picked. Loopback audio is
+ * added only on Windows and only when the page asked for audio (a missing flag counts as asked).
+ */
+function grantFor(source, request, platform) {
+  if (!source) {
+    return null;
+  }
+  const grant = { video: source };
+  if (platform === 'win32' && request.audioRequested !== false) {
+    grant.audio = 'loopback';
+  }
+  return grant;
 }
 
 /**

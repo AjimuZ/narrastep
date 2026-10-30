@@ -261,6 +261,8 @@
     "recorder.system_audio.included": "Incluso",
     "recorder.system_audio.missing": "Non condiviso",
     "recorder.system_audio.help": "Il suono del computer, per esempio le altre persone in una chiamata, non viene registrato. Per includerlo, scegli di nuovo lo schermo e seleziona \"Condividi audio di sistema\" per uno schermo intero o \"Condividi audio della scheda\" per una scheda. Altrimenti la registrazione tiene solo il microfono.",
+    "recorder.system_audio.help_desktop": "Il suono del computer, per esempio le altre persone in una chiamata, non viene registrato. La finestra desktop lo cattura solo su Windows. Altrimenti la registrazione tiene solo il microfono.",
+    "recorder.system_audio.notice_windows": "Su Windows la registrazione prende il suono di ogni applicazione, anche le notifiche sonore. Disattiva le notifiche mentre registri.",
     "recorder.microphone": "Microfono",
     "recorder.mic.device": "Microfono in uso",
     "recorder.level": "Livello",

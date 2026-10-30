@@ -261,6 +261,8 @@
     "recorder.system_audio.included": "Included",
     "recorder.system_audio.missing": "Not shared",
     "recorder.system_audio.help": "The sound of the computer, such as the other people in a call, is not recorded. To include it, choose the screen again and select \"Share system audio\" for an entire screen or \"Share tab audio\" for a tab. Otherwise the recording keeps only the microphone.",
+    "recorder.system_audio.help_desktop": "The sound of the computer, such as the other people in a call, is not recorded. The desktop window captures it only on Windows. Otherwise the recording keeps only the microphone.",
+    "recorder.system_audio.notice_windows": "On Windows the recording takes the sound of every application, also notification sounds. Mute notifications while recording.",
     "recorder.microphone": "Microphone",
     "recorder.mic.device": "Microphone in use",
     "recorder.level": "Level",

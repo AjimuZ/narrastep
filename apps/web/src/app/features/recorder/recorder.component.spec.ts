@@ -56,13 +56,24 @@ interface SetupOptions {
   uploadRecordingChunk?: ReturnType<typeof vi.fn>;
   confirm?: boolean;
   supported?: boolean;
+  /** Pretends to be the desktop window on this system; omitted means an ordinary browser. */
+  desktop?: 'windows' | 'macos' | 'linux';
 }
 
+const DESKTOP_USER_AGENTS = {
+  windows: 'Windows NT 10.0; Win64; x64',
+  macos: 'Macintosh; Intel Mac OS X 10_15_7',
+  linux: 'X11; Linux x86_64',
+} as const;
+
 let media: FakeMedia | null = null;
+let userAgent: { mockRestore: () => void } | null = null;
 
 afterEach(() => {
   media?.restore();
   media = null;
+  userAgent?.mockRestore();
+  userAgent = null;
   vi.useRealTimers();
 });
 
@@ -132,6 +143,13 @@ async function setup(options: SetupOptions = {}) {
     .compileComponents();
   const router = TestBed.inject(Router);
   const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+  if (options.desktop) {
+    userAgent = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        `Mozilla/5.0 (${DESKTOP_USER_AGENTS[options.desktop]}) AppleWebKit/537.36 (KHTML, like Gecko) desktop/0.2.0 Chrome/150.0.0.0 Electron/45.2.0 Safari/537.36`,
+      );
+  }
   const fixture = TestBed.createComponent(RecorderComponent);
   fixture.detectChanges();
   const host = fixture.nativeElement as HTMLElement;
@@ -234,6 +252,39 @@ describe('RecorderComponent', () => {
     ctx.button('Use microphone')?.click();
     await settle(ctx.fixture);
     expect(ctx.button('Start recording')?.disabled).toBe(false);
+  });
+
+  it('warns about notification sounds in the desktop window on Windows', async () => {
+    const { host } = await setup({ desktop: 'windows' });
+    expect(host.textContent).toContain('also notification sounds');
+    expect(host.textContent).toContain('Mute notifications while recording');
+  });
+
+  it('shows no notification warning on other desktop systems or in a browser', async () => {
+    expect((await setup({ desktop: 'macos' })).host.textContent).not.toContain(
+      'notification sounds',
+    );
+    TestBed.resetTestingModule();
+    userAgent?.mockRestore();
+    media?.restore();
+    expect((await setup()).host.textContent).not.toContain('notification sounds');
+  });
+
+  it('says the desktop window has no system audio outside Windows', async () => {
+    const ctx = await setup({ desktop: 'linux', systemAudio: false });
+    await prepareSources(ctx, false);
+
+    expect(ctx.host.textContent).toContain('Not shared');
+    expect(ctx.host.textContent).toContain('captures it only on Windows');
+    expect(ctx.host.textContent).not.toContain('Share system audio');
+  });
+
+  it('keeps the browser guidance about sharing system audio', async () => {
+    const ctx = await setup({ systemAudio: false });
+    await prepareSources(ctx, false);
+
+    expect(ctx.host.textContent).toContain('Share system audio');
+    expect(ctx.host.textContent).not.toContain('captures it only on Windows');
   });
 
   it('shows a blocked microphone with what to do', async () => {

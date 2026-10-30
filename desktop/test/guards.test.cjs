@@ -93,10 +93,10 @@ describe('screen capture requests', () => {
     return stub;
   }
 
-  /** Sends `request` to the display media handler of a session guarded with `pickSource`. */
-  async function capture(request, pickSource) {
+  /** Sends `request` to the display media handler of a session guarded with `pickSource` on `platform`. */
+  async function capture(request, pickSource, platform = 'linux') {
     const { session } = createFakeElectron();
-    installSessionGuards(session, ORIGIN, pickSource);
+    installSessionGuards(session, ORIGIN, pickSource, platform);
     return new Promise((resolve) => {
       session.handlers.displayMedia(request, resolve);
     });
@@ -115,9 +115,34 @@ describe('screen capture requests', () => {
     assert.equal(pickSource.calls, 1);
   });
 
-  it('denies the request when the picker is cancelled or fails', async () => {
-    assert.equal(await capture(appRequest, picker(null)), null);
-    assert.equal(await capture(appRequest, picker(new Error('boom'))), null);
+  it('adds loopback system audio on Windows for a screen and for a single window', async () => {
+    const windowSource = { id: 'window:42:0', name: 'Call' };
+    assert.deepEqual(await capture(appRequest, picker(SOURCE), 'win32'), {
+      video: SOURCE,
+      audio: 'loopback',
+    });
+    assert.deepEqual(await capture(appRequest, picker(windowSource), 'win32'), {
+      video: windowSource,
+      audio: 'loopback',
+    });
+  });
+
+  it('grants video only on macOS, Linux and an unknown platform', async () => {
+    for (const platform of ['darwin', 'linux', 'freebsd', undefined]) {
+      assert.deepEqual(await capture(appRequest, picker(SOURCE), platform), { video: SOURCE });
+    }
+  });
+
+  it('adds no audio on Windows when the page did not ask for audio', async () => {
+    const videoOnly = { ...appRequest, audioRequested: false };
+    assert.deepEqual(await capture(videoOnly, picker(SOURCE), 'win32'), { video: SOURCE });
+  });
+
+  it('denies the request when the picker is cancelled or fails, on every platform', async () => {
+    for (const platform of ['win32', 'darwin', 'linux']) {
+      assert.equal(await capture(appRequest, picker(null), platform), null);
+      assert.equal(await capture(appRequest, picker(new Error('boom')), platform), null);
+    }
   });
 
   it('never opens the picker for a foreign origin, a foreign frame or a malformed request', async () => {
@@ -132,13 +157,14 @@ describe('screen capture requests', () => {
       {},
       null,
     ]) {
-      assert.equal(await capture(request, pickSource), null);
+      assert.equal(await capture(request, pickSource, 'win32'), null);
     }
     assert.equal(pickSource.calls, 0);
   });
 
   it('denies every request when no picker is installed', async () => {
     assert.equal(await capture(appRequest, undefined), null);
+    assert.equal(await capture(appRequest, undefined, 'win32'), null);
   });
 });
 

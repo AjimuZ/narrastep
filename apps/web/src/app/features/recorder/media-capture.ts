@@ -29,6 +29,22 @@ export function captureSupported(): boolean {
 }
 
 /**
+ * Where the page runs when it is the Narrastep desktop window: `'windows'` (system audio comes from
+ * Windows loopback capture) or `'other'` (macOS, Linux: the window has no system audio), and `null`
+ * in an ordinary browser. The desktop window has no preload or bridge (ADR 0014), so this reads the
+ * user agent, which Electron fills with an `Electron/` token and the host system. `userAgent`
+ * defaults to the browser's own.
+ */
+export function desktopWindowSystem(
+  userAgent: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+): 'windows' | 'other' | null {
+  if (!/\bElectron\//.test(userAgent)) {
+    return null;
+  }
+  return /\bWindows\b/.test(userAgent) ? 'windows' : 'other';
+}
+
+/**
  * First MIME type the browser can record, or null when none is supported. `isSupported` defaults
  * to `MediaRecorder.isTypeSupported`.
  */

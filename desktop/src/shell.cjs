@@ -50,7 +50,7 @@ function startShell({ electron, env, platform }) {
       getParent: () => mainWindow?.window ?? null,
       getLanguage: () => mainWindow?.language() ?? pickLanguage(null, app.getLocale()),
     });
-    installSessionGuards(session.defaultSession, appOrigin, picker.pickSource);
+    installSessionGuards(session.defaultSession, appOrigin, picker.pickSource, platform);
     // macOS keeps Electron's default menu, which carries the system editing shortcuts.
     if (platform !== 'darwin') {
       Menu.setApplicationMenu(null);

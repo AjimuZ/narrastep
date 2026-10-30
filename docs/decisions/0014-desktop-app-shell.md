@@ -75,7 +75,14 @@ The shell in `desktop/` applies this decision with these details:
   The picker is a modal window with a script-free local page that follows the fallback page rules.
   Without IPC, its links point to a reserved `.invalid` host and the main process reads the cancelled
   navigation; the answer is an index into the list the main process holds, never an id from a URL.
-  Windows loopback system audio comes with P07.3b.
+  Windows loopback system audio (P07.3b): when the shell runs on `win32` and the page asked for
+  audio, the grant is `{ video: source, audio: 'loopback' }` for a screen and for a single
+  window; on any other platform it is `{ video: source }`. The shell passes `process.platform`
+  to the handler, so tests cover all platforms with stand-ins. Because the page has no bridge,
+  the recorder tells the desktop window and its system apart from the user agent (`Electron/`
+  token and `Windows`); this adds no channel and changes no permission. Loopback records every
+  application, so on Windows the recorder shows the notification sound notice (risk K12), and on
+  other systems it says the window shares no system audio.
 - The spell checker is off, because Chromium would download its dictionaries.
 - Windows and Linux have no menu bar; the shell handles Ctrl `+`, `-` and `0` itself so browser
   zoom stays available. macOS keeps Electron's default menu for the system editing shortcuts.

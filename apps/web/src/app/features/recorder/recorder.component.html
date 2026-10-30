@@ -70,11 +70,25 @@
               }
             </div>
             @if (screenStream() && !hasSystemAudio()) {
-              <p class="ns-help source-check__detail" i18n="@@recorder.system_audio.help">
-                The sound of the computer, such as the other people in a call, is not recorded. To
-                include it, choose the screen again and select "Share system audio" for an entire
-                screen or "Share tab audio" for a tab. Otherwise the recording keeps only the
-                microphone.
+              @if (desktopSystem) {
+                <p class="ns-help source-check__detail" i18n="@@recorder.system_audio.help_desktop">
+                  The sound of the computer, such as the other people in a call, is not recorded.
+                  The desktop window captures it only on Windows. Otherwise the recording keeps only
+                  the microphone.
+                </p>
+              } @else {
+                <p class="ns-help source-check__detail" i18n="@@recorder.system_audio.help">
+                  The sound of the computer, such as the other people in a call, is not recorded. To
+                  include it, choose the screen again and select "Share system audio" for an entire
+                  screen or "Share tab audio" for a tab. Otherwise the recording keeps only the
+                  microphone.
+                </p>
+              }
+            }
+            @if (desktopSystem === 'windows') {
+              <p class="ns-help source-check__detail" i18n="@@recorder.system_audio.notice_windows">
+                On Windows the recording takes the sound of every application, also notification
+                sounds. Mute notifications while recording.
               </p>
             }
           </li>
