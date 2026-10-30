@@ -53,6 +53,8 @@ from app.schemas import (
     HealthResponse,
     JobResponse,
     MediaAssetResponse,
+    ModelListResponse,
+    ModelResponse,
     ProcessStart,
     ProjectCreate,
     ProjectListResponse,
@@ -76,6 +78,9 @@ from app.schemas import (
 from app.services.export_names import stored_export_zip_file_name
 from app.services.exporting import ExportRequest, estimate_export_package
 from app.services.media import MediaServiceError, validate_video
+from app.services.model_catalog import MODEL_CATALOG
+from app.services.model_download import begin_download, request_cancel
+from app.services.model_manager import model_payload, require_known_model
 from app.services.pipeline import (
     PipelineServiceError,
     calculate_exposure_penalty,
@@ -325,6 +330,71 @@ def get_storage(
         "freeBytes": free_bytes,
         "items": items,
     }
+
+
+@router.get("/models", response_model=ModelListResponse)
+def list_models(
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """List the pinned generation models with their state, progress and license.
+
+    `localGeneration` is `disabled` when the kill switch is set; the list is still answered so the
+    interface can explain why downloads are refused.
+    """
+    return {
+        "local_generation": settings.local_generation,
+        "items": [model_payload(session, option) for option in MODEL_CATALOG.values()],
+    }
+
+
+@router.get("/models/{model_id}", response_model=ModelResponse)
+def read_model(
+    model_id: str,
+    session: Session = Depends(get_session),
+) -> dict[str, object]:
+    """Read one model's state and download progress; `404 MODEL_NOT_FOUND` for an unknown id."""
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.post(
+    "/models/{model_id}/download",
+    response_model=ModelResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def download_model(
+    model_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Start or resume the download of a pinned model and answer its `downloading` state.
+
+    Refused with `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED` (kill switch),
+    `409 MODEL_STATE_CONFLICT` unless the model is not installed or failed, and
+    `507 INSUFFICIENT_DISK_SPACE`. The transfer runs in the background; poll `GET /models/{id}`.
+    """
+    begin_download(session, settings, model_id)
+    session.expire_all()
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.post(
+    "/models/{model_id}/cancel",
+    response_model=ModelResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def cancel_model_download(
+    model_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Cancel a download or its verification, delete the files and answer the model's state.
+
+    The model returns to `not_installed`. Refused with `404 MODEL_NOT_FOUND` and
+    `409 MODEL_STATE_CONFLICT` when nothing is in progress.
+    """
+    request_cancel(session, settings, model_id)
+    return model_payload(session, require_known_model(model_id))
 
 
 @router.delete("/projects/{project_id}/source-video", response_model=ProjectStorageResponse)

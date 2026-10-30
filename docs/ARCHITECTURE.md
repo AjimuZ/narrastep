@@ -243,8 +243,15 @@ flowchart LR
   Since P06.2a `services/model_catalog.py` pins the repository revision and the name, size and
   SHA-256 of each file, `services/model_manager.py` keeps the install state in the
   `generation_models` table and allows only the transitions of the state diagram, and the kill
-  switch `NARRASTEP_LOCAL_GENERATION=disabled` refuses new downloads. Downloading, verifying and
-  deleting files are still to come (P06.2b).
+  switch `NARRASTEP_LOCAL_GENERATION=disabled` refuses new downloads. Since P06.2b
+  `services/model_download.py` runs the download in a background thread of the API process (the
+  only service on `local`; the worker has no route and never downloads): it requests only the
+  revision-pinned files of the repository, follows a redirect only to the repository's own
+  storage hosts, resumes a partial `<file>.part` with an HTTP `Range` request, stores progress in
+  SQLite, hashes each file, deletes one that differs and keeps `LICENSE.txt` beside the files in
+  `/data/models/<model>/`. The API start-up resumes models left `downloading` or `verifying`. The
+  routes are `GET /models`, `GET /models/{id}`, `POST /models/{id}/download` and
+  `POST /models/{id}/cancel`. Enabling, deleting and importing are still to come (P06.2c, P06.2d).
 - **Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)).** A host Electron shell,
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It

@@ -43,9 +43,13 @@ class ModelOption:
         """Return the download size of all files of the option."""
         return sum(item.size_bytes for item in self.files)
 
-    def file_url(self, file: ModelFile) -> str:
-        """Return the revision-pinned download address of `file`; nothing is requested here."""
-        return f"{HUGGING_FACE_BASE_URL}/{self.repository}/resolve/{self.revision}/{file.name}"
+    def file_url(self, file: ModelFile, base_url: str = HUGGING_FACE_BASE_URL) -> str:
+        """Return the revision-pinned download address of `file`; nothing is requested here.
+
+        `base_url` exists so the download tests can aim at a local server; the application always
+        uses the default.
+        """
+        return f"{base_url}/{self.repository}/resolve/{self.revision}/{file.name}"
 
 
 # Read on 2026-10-30 from https://huggingface.co/api/models/ggml-org/gemma-4-<size>-it-GGUF (the

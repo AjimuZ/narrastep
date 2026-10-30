@@ -327,6 +327,108 @@
         "title": "MediaAssetResponse",
         "type": "object"
       },
+      "ModelFileResponse": {
+        "description": "Name one pinned file of a generation model with its size; the path is never exposed.",
+        "properties": {
+          "name": {
+            "title": "Name"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          }
+        },
+        "required": [
+          "name",
+          "sizeBytes"
+        ],
+        "title": "ModelFileResponse",
+        "type": "object"
+      },
+      "ModelInstallState": {
+        "description": "Represent where a local generation model is in its install lifecycle (ADR 0011).\n\nA model with no stored row is `not_installed`. `installed` means the verified files are present\nbut generation is off; `enabled` means generation may use them. The transitions allowed between\nthese values are defined in `services/model_manager.py`.",
+        "enum": [
+          "not_installed",
+          "downloading",
+          "verifying",
+          "installed",
+          "enabled",
+          "failed"
+        ],
+        "title": "ModelInstallState",
+        "type": "string"
+      },
+      "ModelListResponse": {
+        "description": "List the catalog models and say whether the kill switch allows downloads.",
+        "properties": {
+          "items": {
+            "title": "Items"
+          },
+          "localGeneration": {
+            "title": "Localgeneration"
+          }
+        },
+        "required": [
+          "localGeneration",
+          "items"
+        ],
+        "title": "ModelListResponse",
+        "type": "object"
+      },
+      "ModelResponse": {
+        "description": "Expose the install state, download progress and license of one local generation model.\n\n`error_message` is the readable English reason of a `failed` state and null otherwise;\n`downloaded_bytes` of a model without a stored row is 0.",
+        "properties": {
+          "downloadedBytes": {
+            "title": "Downloadedbytes"
+          },
+          "errorMessage": {
+            "title": "Errormessage"
+          },
+          "files": {
+            "title": "Files"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "label": {
+            "title": "Label"
+          },
+          "licenseName": {
+            "title": "Licensename"
+          },
+          "licenseUrl": {
+            "title": "Licenseurl"
+          },
+          "repository": {
+            "title": "Repository"
+          },
+          "revision": {
+            "title": "Revision"
+          },
+          "state": {},
+          "totalBytes": {
+            "title": "Totalbytes"
+          },
+          "updatedAt": {
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "state",
+          "downloadedBytes",
+          "totalBytes",
+          "files",
+          "repository",
+          "revision",
+          "licenseName",
+          "licenseUrl",
+          "errorMessage",
+          "updatedAt"
+        ],
+        "title": "ModelResponse",
+        "type": "object"
+      },
       "OutputMode": {
         "description": "Describe the project type: the purpose of the recording and the package built for it.\n\nThe API keeps the historical field name `mode` (ADR 0009). Version 0.2 stored\n`technical_walkthrough`; migration 20261029_0003 rewrites it to `task_briefing`.",
         "enum": [
@@ -1456,6 +1558,155 @@
           }
         },
         "summary": "Stream Job Events"
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "description": "List the pinned generation models with their state, progress and license.\n\n`localGeneration` is `disabled` when the kill switch is set; the list is still answered so the\ninterface can explain why downloads are refused.",
+        "operationId": "list_models_api_v1_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Models"
+      }
+    },
+    "/api/v1/models/{model_id}": {
+      "get": {
+        "description": "Read one model's state and download progress; `404 MODEL_NOT_FOUND` for an unknown id.",
+        "operationId": "read_model_api_v1_models__model_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Read Model"
+      }
+    },
+    "/api/v1/models/{model_id}/cancel": {
+      "post": {
+        "description": "Cancel a download or its verification, delete the files and answer the model's state.\n\nThe model returns to `not_installed`. Refused with `404 MODEL_NOT_FOUND` and\n`409 MODEL_STATE_CONFLICT` when nothing is in progress.",
+        "operationId": "cancel_model_download_api_v1_models__model_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Cancel Model Download"
+      }
+    },
+    "/api/v1/models/{model_id}/download": {
+      "post": {
+        "description": "Start or resume the download of a pinned model and answer its `downloading` state.\n\nRefused with `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED` (kill switch),\n`409 MODEL_STATE_CONFLICT` unless the model is not installed or failed, and\n`507 INSUFFICIENT_DISK_SPACE`. The transfer runs in the background; poll `GET /models/{id}`.",
+        "operationId": "download_model_api_v1_models__model_id__download_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Download Model"
       }
     },
     "/api/v1/projects": {

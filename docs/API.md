@@ -16,7 +16,7 @@ Validation and business failures use this envelope:
 }
 ```
 
-The API uses `400` for malformed domain input, `404` for missing resources, `409` for state conflicts, `413` for oversized uploads, `416` for invalid byte ranges, `422` for schema validation, and `503` for unavailable local infrastructure.
+The API uses `400` for malformed domain input, `403` for a feature turned off by configuration, `404` for missing resources, `409` for state conflicts, `413` for oversized uploads, `416` for invalid byte ranges, `422` for schema validation, and `503` for unavailable local infrastructure.
 
 ## Endpoints
 
@@ -58,6 +58,10 @@ The API uses `400` for malformed domain input, `404` for missing resources, `409
 | PUT | `/api/v1/recordings/{recordingId}/tracks/{track}/chunks/{sequence}` | Store one `screen` or `microphone` chunk; an identical repeat is a no-op | 201/200 |
 | POST | `/api/v1/recordings/{recordingId}/complete` | Join, align, mix and validate the tracks into the source video; never starts processing | 200 |
 | DELETE | `/api/v1/recordings/{recordingId}` | Discard an open session, its chunks and its project | 204 |
+| GET | `/api/v1/models` | List the pinned generation models with state, progress and license, and whether the kill switch allows downloads | 200 |
+| GET | `/api/v1/models/{modelId}` | Read one model's state and download progress | 200 |
+| POST | `/api/v1/models/{modelId}/download` | Start, or resume after a failure, the download of a model | 202 |
+| POST | `/api/v1/models/{modelId}/cancel` | Cancel a download or its verification and delete the files | 202 |
 
 ## Important requests
 
@@ -246,11 +250,62 @@ refused with `409 PROJECT_TYPE_REQUIRED` before anything is queued; the job's co
 records the type that was used. The Process dialog sends `mode` for every start from a Not
 processed project; a retry of a failed project sends no body because its type is already stored.
 
+### Local generation models (P06.2b)
+
+Implemented in P06.2b; the states, the pinned files and the license rules are in
+[Local generation](LOCAL_GENERATION.md#states). `modelId` is `gemma-4-e2b` (Light) or
+`gemma-4-e4b` (Quality). `GET /api/v1/models` answers `{localGeneration, items}`, where
+`localGeneration` is `available` or `disabled` (the kill switch `NARRASTEP_LOCAL_GENERATION`) and
+`items` has one entry per model; `GET /api/v1/models/{modelId}` answers one entry:
+
+```json
+{
+  "id": "gemma-4-e2b",
+  "label": "Light",
+  "state": "downloading",
+  "downloadedBytes": 1258291200,
+  "totalBytes": 3398849248,
+  "files": [
+    {"name": "gemma-4-E2B-it-Q4_0.gguf", "sizeBytes": 2841481184},
+    {"name": "mmproj-gemma-4-E2B-it-Q8_0.gguf", "sizeBytes": 557368064}
+  ],
+  "repository": "ggml-org/gemma-4-E2B-it-GGUF",
+  "revision": "6938c58e698502037401a5f19f6905f2fb2f7dee",
+  "licenseName": "Apache License 2.0",
+  "licenseUrl": "https://ai.google.dev/gemma/docs/gemma_4_license",
+  "errorMessage": null,
+  "updatedAt": "2026-10-30T22:10:00Z"
+}
+```
+
+`state` is `not_installed`, `downloading`, `verifying`, `installed`, `enabled` or `failed`; a model
+that was never touched is `not_installed` with `downloadedBytes: 0` and `updatedAt: null`. The
+license name and link are in every entry, so the interface can show them before the download.
+`errorMessage` is the readable English reason of a `failed` state and null otherwise; it names a
+file and the cause, never a path.
+
+`POST /api/v1/models/{modelId}/download` answers `202` with the entry. The transfer runs in the API
+process, requests only the revision-pinned files of the repository (and the storage hosts it
+redirects to), stores progress in SQLite and then verifies each file's SHA-256. Poll
+`GET /models/{modelId}` for the progress. It works from `not_installed` and from `failed`; after a
+failure the partial files are kept and the retry resumes them with an HTTP range request. After a
+restart of the API a model left `downloading` or `verifying` continues by itself. `POST
+/models/{modelId}/cancel` answers `202` with the entry, usually already `not_installed`, because
+the download is stopped, its files are deleted and the state is reset.
+
+Errors, all with the standard envelope: `404 MODEL_NOT_FOUND` for an identifier outside the
+catalog; `403 LOCAL_GENERATION_DISABLED` for a download while the kill switch is set (checked before
+any network access; cancel stays possible); `409 MODEL_STATE_CONFLICT` for a download of a model
+that is already downloading, verifying, installed or enabled, and for a cancel when nothing is in
+progress; `507 INSUFFICIENT_DISK_SPACE` when the model would cross the free-space reserve.
+Enable, delete and import are not in the API yet (P06.2c, P06.2d).
+
 ## Planned changes
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- Model manager and generation endpoints ([Local generation](LOCAL_GENERATION.md)).
+- Enable, disable and delete of a model, import from disk and the generation endpoints
+  ([Local generation](LOCAL_GENERATION.md)).
 
 ## Progress events
 
@@ -298,4 +353,7 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `RECORDING_NOT_FOUND` | 404 | The recording session does not exist or was discarded. |
 | `RECORDING_CHUNK_CONFLICT` | 409 | A stored chunk sequence was sent with different bytes, or a track with a different start offset. |
 | `RECORDING_INCOMPLETE` | 409 | A recording cannot be saved: a chunk is missing (the first screen chunk, or a gap without `stopAtGap`), or chunks arrived while it was being saved. |
+| `MODEL_NOT_FOUND` | 404 | The generation model is not in the pinned catalog (P06.2b). |
+| `LOCAL_GENERATION_DISABLED` | 403 | `NARRASTEP_LOCAL_GENERATION=disabled` refuses model downloads (P06.2b). |
+| `MODEL_STATE_CONFLICT` | 409 | The model's state does not allow the action: a download of a model that is not `not_installed` or `failed`, or a cancel with nothing in progress (P06.2b). |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

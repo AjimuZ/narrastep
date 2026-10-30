@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.errors import ApiError
 from app.models import GenerationModel, ModelInstallState, utc_now
-from app.services.model_catalog import MODEL_CATALOG, ModelOption, get_model_option
+from app.services.model_catalog import (
+    MODEL_CATALOG,
+    MODEL_LICENSE_NAME,
+    MODEL_LICENSE_URL,
+    ModelOption,
+    get_model_option,
+)
 
 State = ModelInstallState
 
@@ -57,6 +63,29 @@ def read_model_state(session: Session, model_id: str) -> ModelInstallState:
     """Return the stored state of `model_id`; a model without a row is `not_installed`."""
     row = session.get(GenerationModel, model_id)
     return row.state if row is not None else State.NOT_INSTALLED
+
+
+def model_payload(session: Session, option: ModelOption) -> dict[str, object]:
+    """Describe one catalog model for the API: stored state, progress, files and license.
+
+    A model without a row reports `not_installed` with no progress. The license name and link
+    always come with the state so the interface can show them before the download.
+    """
+    row = session.get(GenerationModel, option.model_id)
+    return {
+        "id": option.model_id,
+        "label": option.label,
+        "state": row.state if row is not None else State.NOT_INSTALLED,
+        "downloaded_bytes": row.downloaded_bytes if row is not None else 0,
+        "total_bytes": option.total_bytes,
+        "files": [{"name": item.name, "size_bytes": item.size_bytes} for item in option.files],
+        "repository": option.repository,
+        "revision": option.revision,
+        "license_name": MODEL_LICENSE_NAME,
+        "license_url": MODEL_LICENSE_URL,
+        "error_message": row.error_message if row is not None else None,
+        "updated_at": row.updated_at if row is not None else None,
+    }
 
 
 def transition_model(

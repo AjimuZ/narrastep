@@ -14,6 +14,12 @@ All notable changes to Narrastep are documented in this file.
   turn the feature off), `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and
   `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`. Nothing is installed or downloaded by default, and the
   model manager screens and downloads follow in later changes.
+- API to download the optional local generation models: `GET /api/v1/models`, `GET
+  /api/v1/models/{modelId}`, `POST .../download` and `POST .../cancel`. The download checks every
+  file's SHA-256 (a wrong file is deleted and the model shows a readable failure), resumes after a
+  failure or a restart of the API with an HTTP range request, shows the license name and link with
+  the state and keeps the license text beside the files in `/data/models`.
+  `NARRASTEP_LOCAL_GENERATION=disabled` refuses downloads. The Settings screen for it follows.
 - Project, upload, processing, review, split/merge, screenshot association, and export workflows.
 - Docker Compose development stack, automated tests, CI, and project documentation.
 - Opt-in full-stack Playwright coverage using generated legal media, the real local stack, and ZIP content verification.

@@ -2,7 +2,8 @@
 
 Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binaries, which the
 backend image contains since P06.1 and which nothing starts yet, and the pinned file catalog, the
-four settings and the stored model state, which exist since P06.2a. Version 0.2 exports evidence and
+four settings and the stored model state, which exist since P06.2a, and the model download, resume,
+verification and cancel API, which exists since P06.2b. Version 0.2 exports evidence and
 prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
@@ -129,11 +130,35 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
   revision and the failure message) and `services/model_manager.py` allows only the transitions of
   the diagram. A model with no row is `not installed`, so a fresh stack has nothing installed.
   Deleting goes straight from `installed` or `enabled` to `not installed`, and a `failed` model
-  returns to `not installed` before a new download. Nothing downloads, verifies or deletes files
-  yet (P06.2b).
+  returns to `not installed` before a new download.
+- Implemented in P06.2b (`backend/app/services/model_download.py`): downloading and verifying, the
+  license copy and the endpoints of [API](API.md#local-generation-models-p062b). Enabling and
+  deleting stay for P06.2c.
 - Download progress is persisted in SQLite and survives an API restart; a restart resumes with
-  HTTP range requests.
+  HTTP range requests. The download runs in a thread of the API process, which is the only
+  service with an Internet route; the worker never downloads. It fetches the files one after the
+  other into `/data/models/<model>/<file>.part`, flushes each chunk and stores the byte count about
+  once a second. At API start every model left `downloading` or `verifying` continues: the next
+  request carries `Range: bytes=<size of the .part file>-`. A server that answers `200` instead
+  of `206` makes the file start again, and a `Content-Range` that does not start at the requested
+  byte removes the partial file and fails the download.
+- A connection that ends early, an HTTP error or a write error moves the model to `failed` with a
+  readable message and keeps the partial files; starting the download again from `failed` resumes
+  them. Cancelling stops the transfer, deletes every file of the model and returns it to
+  `not installed` (through a short `failed` step that records the cancel).
 - A file with a wrong SHA-256 is deleted and the state becomes `failed` with a readable message.
+- The only requests go to `huggingface.co/<repository>/resolve/<pinned revision>/<file>`. The
+  redirect that Hugging Face answers with is followed only to `*.huggingface.co` and `*.hf.co`
+  over `https`; any other host is refused and fails the download with "redirected away from the
+  pinned repository". The download uses the standard library's HTTP client, which honors proxy
+  variables in the API's environment; Compose sets none. The base address is a module constant
+  that only the tests replace.
+- The license text of Gemma 4 is shipped with the application (`app/resources/gemma-license.txt`,
+  Apache License 2.0 with the license and model card links) and copied to
+  `/data/models/<model>/LICENSE.txt` when a download starts. The license name and link are part of
+  every model entry the API returns.
+- Failure messages are English only; the interface (P06.2c) shows them as sent, while the stable
+  error codes of the endpoints are translated.
 - `NARRASTEP_LOCAL_GENERATION=disabled` hides every control and the API refuses downloads. In
   the model manager the switch refuses a move into `downloading` or `enabled` with
   `403 LOCAL_GENERATION_DISABLED`; deleting a model stays possible so the disk space can be freed.

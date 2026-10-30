@@ -34,6 +34,7 @@ def clean_database() -> Generator[None]:
     trash = TEST_DATA_ROOT / ".trash"
     shutil.rmtree(projects, ignore_errors=True)
     shutil.rmtree(trash, ignore_errors=True)
+    shutil.rmtree(TEST_DATA_ROOT / "models", ignore_errors=True)
     yield
 
 

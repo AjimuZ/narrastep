@@ -28,6 +28,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Test that every setting key appears in docker-compose.yml with the same default as the Settings class and in the README and spec, so documentation and Compose cannot drift.
 - Generate a config file to a temporary name in the target directory and mv it into place only on success, so a failed run leaves nothing a later run would treat as existing.
 - Test shell scripts in a temporary copy of the project with stub tools on a restricted PATH, so tests never touch the owner's real files.
+- Background work that needs the Internet runs in a daemon thread of the API process (the only service on the `local` network), with a stop control, a registry and a startup resume hook, never in the Celery worker.
+- Tests that need HTTP use a local `ThreadingHTTPServer` with scripted behaviors and a monkeypatched module-level base URL. No production setting or request can change that URL.
+- Redirects are checked in a custom `HTTPRedirectHandler`, so the host allowlist applies to every hop and the `Range` header survives.
 
 ---
 
@@ -200,4 +203,26 @@ Backend setting NARRASTEP_WHISPER_CPU_THREADS and its Compose entry; the owner's
   - The test PATH for start.sh now links sh, mv and rm besides cat, dirname and sleep. A new external command in start.sh needs a link in runStart.
   - The generator's stderr is discarded by start.sh, which prints its own message pointing to .env.example. There is a P08.9 sibling task for the other start script, which can reuse this pattern.
   - A .env.example gap may remain: the generator emits only the ADR table keys plus NARRASTEP_ENV and NARRASTEP_LOG_LEVEL, and Compose defaults cover the rest.
+---
+
+## 2026-10-30T23:03:10Z - P06.2b
+- Models can now be downloaded through the API: `GET /models`, `GET /models/{id}`, `POST /models/{id}/download` and `POST /models/{id}/cancel`. A background thread in the API process downloads only the revision-pinned files and follows redirects only to `*.huggingface.co` and `*.hf.co` over https. It resumes a partial `.part` file with an HTTP Range request, stores progress in SQLite, and checks each file's SHA-256. A wrong file is deleted and the model becomes `failed` with a readable message. API startup resumes any model left `downloading` or `verifying`. The Apache 2.0 text is copied to `/data/models/<model>/LICENSE.txt`, and the license name and link are in every state response. `NARRASTEP_LOCAL_GENERATION=disabled` returns 403 `LOCAL_GENERATION_DISABLED` before any network access. The new codes `MODEL_NOT_FOUND`, `LOCAL_GENERATION_DISABLED` and `MODEL_STATE_CONFLICT` have English and Italian web catalog entries. `docs/API.md`, `docs/openapi.json`, `LOCAL_GENERATION.md`, `ARCHITECTURE.md`, `STATUS.md`, the `ROADMAP.md` progress note and `CHANGELOG.md` are updated. `check.sh docs`, `backend` and `web` all passed. The new `test_model_download.py` runs against a local HTTP server with generated files and covers the criteria on resume, checksum, license, kill switch and requests only to the pinned repository.
+
+Not verified: no real Hugging Face download or multi-GB hash check was run, `check.sh stack` and `e2e` were not run, and no Docker run proved that the worker has no Internet route. That last criterion holds by the existing Compose layout (the worker is only on the internal `processing` network), which I did not change. The model manager screen and the delete/enable endpoints are not part of this task.
+
+Choices and limits:
+- Cancel goes `downloading`/`verifying` → `failed` → `not_installed` (files deleted) so the documented state diagram is unchanged.
+- A network failure leaves the model `failed` with its partial file kept, and `POST download` from `failed` resumes it.
+- Failure messages are English only, because the `generation_models` table stores only the message and I added no migration.
+- No other `.env` key is needed.
+- I did not write `scripts/ralph/.state/result.json` or run `verify.sh`, because the session rules say only the orchestrator edits `scripts/ralph/`. Sonnet was enough for this task.
+- Files changed: backend/app/services/model_download.py, backend/app/services/model_manager.py, backend/app/services/model_catalog.py, backend/app/routes/api.py, backend/app/schemas.py, backend/app/main.py, backend/app/resources/gemma-license.txt, backend/tests/test_model_download.py, backend/tests/conftest.py, apps/web/src/app/core/i18n/error-text.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, apps/web/src/app/core/i18n/catalogs.spec.ts, apps/web/src/app/core/i18n/italian.spec.ts, docs/API.md, docs/openapi.json, docs/LOCAL_GENERATION.md, docs/ARCHITECTURE.md, docs/STATUS.md, docs/ROADMAP.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - Download logic is in `services/model_download.py`: `begin_download`, `request_cancel`, `run_download`, `resume_interrupted_downloads` and `stop_download_workers`. Model files live in `<data root>/models/<modelId>/` as `<name>`, `<name>.part` and `LICENSE.txt`. The disk is the truth for where a resume starts; SQLite progress is for display.
+  - Enable, disable and delete (P06.2c) can reuse `transition_model`, `remove_model_files` and `model_payload`. A model moves `failed` -> `not_installed` before a new download, but `begin_download` does this by itself and keeps partial files so the retry resumes them.
+  - Tests point at a local HTTP server through `monkeypatch.setattr(model_download, 'DOWNLOAD_BASE_URL', url)` and replace the catalog entry with `monkeypatch.setitem(MODEL_CATALOG, 'gemma-4-e2b', tiny_option())`. Reuse the `FakeHub` class and `hub` fixture in `test_model_download.py`, which supports range, redirects, held and truncated responses.
+  - The sandbox allows `ruff format .` (it rewrites files in the repo) and `python scripts/export_openapi.py` (it regenerates `docs/openapi.json`). Run both after changing routes or schemas.
+  - Model failure messages are stored only in English in `generation_models.error_message`. If the UI (P06.2c) needs them in Italian it needs a stable error code column, which means a migration.
+  - `read1` is used for streaming so progress and stop requests are seen without waiting for a full 1 MiB chunk. A held server response blocks the worker until the server releases it, so tests that stop or cancel must release the server (a `threading.Timer`) first.
+  - The P06.2d import must write into the same `<data root>/models/<modelId>/` layout and reuse `write_license_file` and the hash check (`_verify_file`) so imported and downloaded models are identical.
 ---

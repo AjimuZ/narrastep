@@ -83,6 +83,12 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.RECORDING_CHUNK_CONFLICT:A part of this recording was already saved with different content. Stop the recording and save what was recorded.`;
     case 'RECORDING_INCOMPLETE':
       return $localize`:@@error.RECORDING_INCOMPLETE:Some parts of this recording were not uploaded yet. Wait for the upload to finish, or save what was recorded before the missing part.`;
+    case 'MODEL_NOT_FOUND':
+      return $localize`:@@error.MODEL_NOT_FOUND:This generation model is not available.`;
+    case 'LOCAL_GENERATION_DISABLED':
+      return $localize`:@@error.LOCAL_GENERATION_DISABLED:Local generation is turned off on this computer, so models cannot be downloaded.`;
+    case 'MODEL_STATE_CONFLICT':
+      return $localize`:@@error.MODEL_STATE_CONFLICT:This action is not available in the model's current state. Reload the page and try again.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

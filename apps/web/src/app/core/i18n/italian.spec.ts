@@ -61,6 +61,12 @@ describe('Italian interface', () => {
     expect(localizedError('SOURCE_VIDEO_REMOVED', null, 'x')).toContain('rimosso');
   });
 
+  it('translates the model download errors', () => {
+    expect(localizedError('LOCAL_GENERATION_DISABLED', null, 'x')).toContain('disattivata');
+    expect(localizedError('MODEL_NOT_FOUND', null, 'x')).toContain('modello');
+    expect(localizedError('MODEL_STATE_CONFLICT', null, 'x')).toContain('Ricarica');
+  });
+
   it('renders the shell, the language switch and the health word in Italian', async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],

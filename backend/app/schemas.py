@@ -17,6 +17,7 @@ from pydantic import (
 from app.models import (
     ExportStatus,
     JobStatus,
+    ModelInstallState,
     OutputMode,
     ProjectState,
     RecordingState,
@@ -702,3 +703,38 @@ class RecordingChunkResponse(ApiModel):
     sequence: int
     size_bytes: int
     duplicate: bool
+
+
+class ModelFileResponse(ApiModel):
+    """Name one pinned file of a generation model with its size; the path is never exposed."""
+
+    name: str
+    size_bytes: int
+
+
+class ModelResponse(ApiModel):
+    """Expose the install state, download progress and license of one local generation model.
+
+    `error_message` is the readable English reason of a `failed` state and null otherwise;
+    `downloaded_bytes` of a model without a stored row is 0.
+    """
+
+    id: str
+    label: str
+    state: ModelInstallState
+    downloaded_bytes: int
+    total_bytes: int
+    files: list[ModelFileResponse]
+    repository: str
+    revision: str
+    license_name: str
+    license_url: str
+    error_message: str | None
+    updated_at: datetime | None
+
+
+class ModelListResponse(ApiModel):
+    """List the catalog models and say whether the kill switch allows downloads."""
+
+    local_generation: str
+    items: list[ModelResponse]
