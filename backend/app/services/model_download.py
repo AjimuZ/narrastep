@@ -33,6 +33,7 @@ from app.services.model_catalog import (
 )
 from app.services.model_manager import (
     InvalidModelTransition,
+    generation_is_running,
     read_model_state,
     record_download_progress,
     require_generation_available,
@@ -480,6 +481,34 @@ def request_cancel(session: Session, settings: Settings, model_id: str) -> None:
         )
     cancel_download(settings, model_id)
     session.expire_all()
+
+
+def delete_model(session: Session, settings: Settings, model_id: str) -> None:
+    """Delete an `installed` or `enabled` model's files and return it to `not_installed`.
+
+    Raises 404 `MODEL_NOT_FOUND`, 409 `MODEL_STATE_CONFLICT` from any other state, and 409
+    `MODEL_IN_USE` while a generation runs. Works under the kill switch. The files go first, then
+    the state, so a failed removal never reports a model as gone while its files remain.
+    """
+    require_known_model(model_id)
+    state = read_model_state(session, model_id)
+    if state not in (State.INSTALLED, State.ENABLED):
+        raise ApiError(
+            "MODEL_STATE_CONFLICT",
+            f"The model is {state.value.replace('_', ' ')}, so it cannot be deleted now.",
+            409,
+        )
+    if generation_is_running(session):
+        raise ApiError(
+            "MODEL_IN_USE",
+            "A generation is running, so the model cannot be deleted now.",
+            409,
+        )
+    directory = model_directory(settings, model_id)
+    shutil.rmtree(directory, ignore_errors=True)
+    if directory.exists():
+        raise ApiError("MODEL_DELETE_FAILED", "The model files could not be deleted.", 500)
+    transition_model(session, settings, model_id, State.NOT_INSTALLED)
 
 
 def run_download(settings: Settings, model_id: str, control: DownloadControl) -> None:

@@ -137,6 +137,49 @@ def transition_model(
     return row
 
 
+def generation_is_running(session: Session) -> bool:
+    """Tell whether a text generation is running; always False until P06.3 adds generation jobs.
+
+    Deleting a model asks this first, so P06.3 only has to answer it from its job table.
+    """
+    return False
+
+
+def _refuse_state(model_id: str, state: ModelInstallState, action: str) -> ApiError:
+    """Build the 409 `MODEL_STATE_CONFLICT` error for an action the current state forbids."""
+    return ApiError(
+        "MODEL_STATE_CONFLICT",
+        f"The model is {state.value.replace('_', ' ')}, so it cannot be {action} now.",
+        409,
+    )
+
+
+def enable_model(session: Session, settings: Settings, model_id: str) -> None:
+    """Move an `installed` model to `enabled`.
+
+    Raises 404 `MODEL_NOT_FOUND`, 403 `LOCAL_GENERATION_DISABLED` (kill switch) and 409
+    `MODEL_STATE_CONFLICT` from any other state.
+    """
+    require_known_model(model_id)
+    require_generation_available(settings)
+    state = read_model_state(session, model_id)
+    if state is not State.INSTALLED:
+        raise _refuse_state(model_id, state, "enabled")
+    transition_model(session, settings, model_id, State.ENABLED)
+
+
+def disable_model(session: Session, settings: Settings, model_id: str) -> None:
+    """Move an `enabled` model back to `installed`; allowed under the kill switch.
+
+    Raises 404 `MODEL_NOT_FOUND` and 409 `MODEL_STATE_CONFLICT` from any other state.
+    """
+    require_known_model(model_id)
+    state = read_model_state(session, model_id)
+    if state is not State.ENABLED:
+        raise _refuse_state(model_id, state, "disabled")
+    transition_model(session, settings, model_id, State.INSTALLED)
+
+
 def record_download_progress(session: Session, model_id: str, downloaded_bytes: int) -> None:
     """Persist the bytes on disk for a `downloading` model so a restart can resume.
 

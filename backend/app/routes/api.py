@@ -79,8 +79,13 @@ from app.services.export_names import stored_export_zip_file_name
 from app.services.exporting import ExportRequest, estimate_export_package
 from app.services.media import MediaServiceError, validate_video
 from app.services.model_catalog import MODEL_CATALOG
-from app.services.model_download import begin_download, request_cancel
-from app.services.model_manager import model_payload, require_known_model
+from app.services.model_download import begin_download, delete_model, request_cancel
+from app.services.model_manager import (
+    disable_model,
+    enable_model,
+    model_payload,
+    require_known_model,
+)
 from app.services.pipeline import (
     PipelineServiceError,
     calculate_exposure_penalty,
@@ -394,6 +399,51 @@ def cancel_model_download(
     `409 MODEL_STATE_CONFLICT` when nothing is in progress.
     """
     request_cancel(session, settings, model_id)
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.post("/models/{model_id}/enable", response_model=ModelResponse)
+def enable_installed_model(
+    model_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Enable an installed model and answer its `enabled` state.
+
+    Refused with `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED` (kill switch) and
+    `409 MODEL_STATE_CONFLICT` unless the model is `installed`.
+    """
+    enable_model(session, settings, model_id)
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.post("/models/{model_id}/disable", response_model=ModelResponse)
+def disable_enabled_model(
+    model_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Disable an enabled model, keeping its files, and answer its `installed` state.
+
+    Refused with `404 MODEL_NOT_FOUND` and `409 MODEL_STATE_CONFLICT` unless it is `enabled`.
+    Works under the kill switch.
+    """
+    disable_model(session, settings, model_id)
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.delete("/models/{model_id}", response_model=ModelResponse)
+def delete_installed_model(
+    model_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Delete an installed or enabled model's files and answer its `not_installed` state.
+
+    Refused with `404 MODEL_NOT_FOUND`, `409 MODEL_STATE_CONFLICT` from any other state and
+    `409 MODEL_IN_USE` while a generation runs. Works under the kill switch.
+    """
+    delete_model(session, settings, model_id)
     return model_payload(session, require_known_model(model_id))
 
 

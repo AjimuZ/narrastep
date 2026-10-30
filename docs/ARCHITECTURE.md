@@ -251,7 +251,7 @@ flowchart LR
   SQLite, hashes each file, deletes one that differs and keeps `LICENSE.txt` beside the files in
   `/data/models/<model>/`. The API start-up resumes models left `downloading` or `verifying`. The
   routes are `GET /models`, `GET /models/{id}`, `POST /models/{id}/download` and
-  `POST /models/{id}/cancel`. Enabling, deleting and importing are still to come (P06.2c, P06.2d).
+  `POST /models/{id}/cancel`. `POST /models/{id}/enable`, `POST /models/{id}/disable` and `DELETE /models/{id}` follow in P06.2c; importing is still to come (P06.2d).
 - **Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)).** A host Electron shell,
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It

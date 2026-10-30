@@ -1590,6 +1590,44 @@
       }
     },
     "/api/v1/models/{model_id}": {
+      "delete": {
+        "description": "Delete an installed or enabled model's files and answer its `not_installed` state.\n\nRefused with `404 MODEL_NOT_FOUND`, `409 MODEL_STATE_CONFLICT` from any other state and\n`409 MODEL_IN_USE` while a generation runs. Works under the kill switch.",
+        "operationId": "delete_installed_model_api_v1_models__model_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Delete Installed Model"
+      },
       "get": {
         "description": "Read one model's state and download progress; `404 MODEL_NOT_FOUND` for an unknown id.",
         "operationId": "read_model_api_v1_models__model_id__get",
@@ -1669,6 +1707,46 @@
         "summary": "Cancel Model Download"
       }
     },
+    "/api/v1/models/{model_id}/disable": {
+      "post": {
+        "description": "Disable an enabled model, keeping its files, and answer its `installed` state.\n\nRefused with `404 MODEL_NOT_FOUND` and `409 MODEL_STATE_CONFLICT` unless it is `enabled`.\nWorks under the kill switch.",
+        "operationId": "disable_enabled_model_api_v1_models__model_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Disable Enabled Model"
+      }
+    },
     "/api/v1/models/{model_id}/download": {
       "post": {
         "description": "Start or resume the download of a pinned model and answer its `downloading` state.\n\nRefused with `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED` (kill switch),\n`409 MODEL_STATE_CONFLICT` unless the model is not installed or failed, and\n`507 INSUFFICIENT_DISK_SPACE`. The transfer runs in the background; poll `GET /models/{id}`.",
@@ -1707,6 +1785,46 @@
           }
         },
         "summary": "Download Model"
+      }
+    },
+    "/api/v1/models/{model_id}/enable": {
+      "post": {
+        "description": "Enable an installed model and answer its `enabled` state.\n\nRefused with `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED` (kill switch) and\n`409 MODEL_STATE_CONFLICT` unless the model is `installed`.",
+        "operationId": "enable_installed_model_api_v1_models__model_id__enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Enable Installed Model"
       }
     },
     "/api/v1/projects": {

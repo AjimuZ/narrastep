@@ -132,8 +132,11 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
   Deleting goes straight from `installed` or `enabled` to `not installed`, and a `failed` model
   returns to `not installed` before a new download.
 - Implemented in P06.2b (`backend/app/services/model_download.py`): downloading and verifying, the
-  license copy and the endpoints of [API](API.md#local-generation-models-p062b). Enabling and
-  deleting stay for P06.2c.
+  license copy and the endpoints of [API](API.md#local-generation-models-p062b).
+- Implemented in P06.2c: enable, disable and delete endpoints. Delete removes the model folder
+  first, then resets the row. It is refused with `MODEL_IN_USE` while `generation_is_running()` in
+  `services/model_manager.py` is true; that function returns false until P06.3 answers it from its
+  generation jobs.
 - Download progress is persisted in SQLite and survives an API restart; a restart resumes with
   HTTP range requests. The download runs in a thread of the API process, which is the only
   service with an Internet route; the worker never downloads. It fetches the files one after the

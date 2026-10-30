@@ -298,7 +298,15 @@ catalog; `403 LOCAL_GENERATION_DISABLED` for a download while the kill switch is
 any network access; cancel stays possible); `409 MODEL_STATE_CONFLICT` for a download of a model
 that is already downloading, verifying, installed or enabled, and for a cancel when nothing is in
 progress; `507 INSUFFICIENT_DISK_SPACE` when the model would cross the free-space reserve.
-Enable, delete and import are not in the API yet (P06.2c, P06.2d).
+
+`POST /models/{modelId}/enable` answers `200` with the entry in the `enabled` state; it works only
+from `installed` and is refused with `403 LOCAL_GENERATION_DISABLED` under the kill switch.
+`POST /models/{modelId}/disable` answers `200` with the `installed` entry and keeps the files; it
+works only from `enabled`. `DELETE /models/{modelId}` removes the model's files and answers `200`
+with the `not_installed` entry; it works only from `installed` or `enabled`. Disable and delete
+stay possible under the kill switch. A wrong state gives `409 MODEL_STATE_CONFLICT`, and delete
+gives `409 MODEL_IN_USE` while a generation runs (P06.3 feeds that check). Import is not in the
+API yet (P06.2d).
 
 ## Planned changes
 
@@ -355,5 +363,7 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `RECORDING_INCOMPLETE` | 409 | A recording cannot be saved: a chunk is missing (the first screen chunk, or a gap without `stopAtGap`), or chunks arrived while it was being saved. |
 | `MODEL_NOT_FOUND` | 404 | The generation model is not in the pinned catalog (P06.2b). |
 | `LOCAL_GENERATION_DISABLED` | 403 | `NARRASTEP_LOCAL_GENERATION=disabled` refuses model downloads (P06.2b). |
-| `MODEL_STATE_CONFLICT` | 409 | The model's state does not allow the action: a download of a model that is not `not_installed` or `failed`, or a cancel with nothing in progress (P06.2b). |
+| `MODEL_STATE_CONFLICT` | 409 | The model's state does not allow the action: a download of a model that is not `not_installed` or `failed`, or a cancel with nothing in progress (P06.2b); enable, disable or delete from a state the diagram does not allow (P06.2c). |
+| `MODEL_IN_USE` | 409 | A generation is running, so the model cannot be deleted (P06.2c). |
+| `MODEL_DELETE_FAILED` | 500 | The model files could not be removed, so the state is unchanged (P06.2c). |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

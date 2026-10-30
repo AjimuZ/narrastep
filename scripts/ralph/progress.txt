@@ -31,6 +31,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Background work that needs the Internet runs in a daemon thread of the API process (the only service on the `local` network), with a stop control, a registry and a startup resume hook, never in the Celery worker.
 - Tests that need HTTP use a local `ThreadingHTTPServer` with scripted behaviors and a monkeypatched module-level base URL. No production setting or request can change that URL.
 - Redirects are checked in a custom `HTTPRedirectHandler`, so the host allowlist applies to every hop and the `Range` header survives.
+- Check order in model state actions: known model (404), then kill switch where it applies (403), then state (409), then side effects. Do the destructive file removal before the state change.
+- Run ruff format after editing and export_openapi.py after changing routes, then check.sh backend.
 
 ---
 
@@ -225,4 +227,15 @@ Choices and limits:
   - Model failure messages are stored only in English in `generation_models.error_message`. If the UI (P06.2c) needs them in Italian it needs a stable error code column, which means a migration.
   - `read1` is used for streaming so progress and stop requests are seen without waiting for a full 1 MiB chunk. A held server response blocks the worker until the server releases it, so tests that stop or cancel must release the server (a `threading.Timer`) first.
   - The P06.2d import must write into the same `<data root>/models/<modelId>/` layout and reuse `write_license_file` and the hash check (`_verify_file`) so imported and downloaded models are identical.
+---
+
+## 2026-10-30T23:50:18Z - P06.2c
+- Added POST /models/{id}/enable, POST /models/{id}/disable and DELETE /models/{id}. Wrong states give 409 MODEL_STATE_CONFLICT. Enable gives 403 under the kill switch, while disable and delete still work. Delete removes the model folder first, then resets the row to not_installed, and gives 409 MODEL_IN_USE while generation_is_running() is true. That function always returns False until P06.3 wires it to its jobs, so the refusal is tested by monkeypatching it. check.sh backend passed (lint, types, tests, OpenAPI is current) and check.sh docs passed. Sonnet was enough. No env key beyond the five the owner listed is needed. I did not run web, e2e or stack checks, and I did not tick the roadmap box or write the task state, which the orchestrator does.
+- Files changed: backend/app/services/model_manager.py, backend/app/services/model_download.py, backend/app/routes/api.py, backend/tests/test_model_lifecycle.py, docs/API.md, docs/openapi.json, docs/LOCAL_GENERATION.md, docs/ARCHITECTURE.md, docs/STATUS.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - enable_model and disable_model live in services/model_manager.py. delete_model lives in services/model_download.py because it needs the model directory helpers, and importing it into model_manager would be circular.
+  - P06.3 must make generation_is_running(session) in model_manager.py answer from its job table. delete_model calls it through the model_download module namespace, so tests patch model_download.generation_is_running.
+  - New error codes MODEL_IN_USE (409) and MODEL_DELETE_FAILED (500) have no web catalog entries yet. The model manager screen (P06.2e) must add English and Italian text for them.
+  - Delete is allowed only from installed or enabled. A failed model leaves through the next download or cancel, not through delete.
+  - backend/tests/test_model_lifecycle.py overrides get_settings with a tmp data root and has a put_in_state helper that walks a model to any state and writes a generated file.
 ---

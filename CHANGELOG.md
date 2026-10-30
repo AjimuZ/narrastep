@@ -14,6 +14,10 @@ All notable changes to Narrastep are documented in this file.
   turn the feature off), `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and
   `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`. Nothing is installed or downloaded by default, and the
   model manager screens and downloads follow in later changes.
+- API to enable, disable and delete an installed local generation model: `POST
+  /api/v1/models/{modelId}/enable`, `POST .../disable` and `DELETE /api/v1/models/{modelId}`.
+  Delete removes the files and is refused while a generation runs; disable and delete work even
+  when local generation is turned off.
 - API to download the optional local generation models: `GET /api/v1/models`, `GET
   /api/v1/models/{modelId}`, `POST .../download` and `POST .../cancel`. The download checks every
   file's SHA-256 (a wrong file is deleted and the model shows a readable failure), resumes after a
