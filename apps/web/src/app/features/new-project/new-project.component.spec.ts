@@ -334,7 +334,8 @@ describe('NewProjectComponent', () => {
       await TestBed.configureTestingModule({
         imports: [NewProjectComponent],
         providers: [
-          provideRouter([]),
+          // A started job navigates here; without the route that navigation rejects after the test.
+          provideRouter([{ path: 'projects/:id', children: [] }]),
           {
             provide: ApiService,
             useValue: { getProject: () => of(SAVED_RECORDING), startProcessing },

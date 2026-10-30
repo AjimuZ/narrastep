@@ -121,6 +121,10 @@ All notable changes to Narrastep are documented in this file.
   server moves to nginx 1.30.6, and every container image is now pinned to an exact version and
   digest, so each build uses the same base images. Node.js stays at 22.23.1 until the npm
   package refresh.
+
+- The web application is built with the newest Angular 22.2 and its tools (Vite 8, Vitest 5,
+  Playwright 1.64). No screen changes. TypeScript stays at 6.0.3, the newest version Angular 22.2
+  accepts.
 - The backend image now contains the CPU `llama.cpp` server (release v0.5.0, MIT) for the coming
   optional local document generation. It is copied from the official image pinned by digest, only
   the server and its libraries are kept, and the build fails when they cannot run. Nothing starts

@@ -8,7 +8,8 @@ licenses, paid services and paid certificates are not used.
 Licenses below are those declared by each upstream project, checked on 2026-10-28; the backend
 Python packages and their licenses were checked again on 2026-10-29 against the installed package
 metadata of the lock (P08.2), and the container images, their digests and the Debian package
-versions on 2026-10-29 against the registries and the Debian 13 package index (P08.3). An automated
+versions on 2026-10-29 against the registries and the Debian 13 package index (P08.3), and the
+Angular application's npm packages on 2026-10-30 against the npm registry (P08.4). An automated
 inventory inside the containers is roadmap item I-15.
 
 ## Runtime components (built locally, not redistributed as images)
@@ -36,10 +37,10 @@ inventory inside the containers is roadmap item I-15.
 | OpenMP runtime `libgomp1` (Debian package) | 14.2.0-19 (Debian 13) | GPL-3.0-or-later with the GCC Runtime Library Exception | Needed by `llama.cpp`; already installed for FFmpeg and Tesseract |
 | Nginx | 1.30.6 | BSD-2-Clause | Newest stable line |
 | Node.js (build only) | 22.23.1 | MIT | [Kept behind](#container-images) 26.13.0 until P08.4 |
-| Angular, Angular CDK | 22.0.x | MIT | |
-| `@angular/localize` | 22.0.6 | MIT | Runtime `$localize` and `loadTranslations`; its Babel tooling (`@babel/core`, MIT) is a build-time dependency of the Angular tools and is not shipped in the web image |
+| Angular, Angular CDK | 22.2.4, 22.2.5 | MIT | Every package in [Angular application packages](#angular-application-packages) |
+| `@angular/localize` | 22.2.4 | MIT | Runtime `$localize` and `loadTranslations`; its Babel tooling (`@babel/core`, MIT) is a build-time dependency of the Angular tools and is not shipped in the web image |
 | RxJS | 7.8.2 | Apache-2.0 | |
-| zone.js, tslib | 0.16.2, 2.8.1 | MIT, 0BSD | |
+| zone.js, tslib | 0.16.3, 2.8.1 | MIT, 0BSD | |
 
 The Debian package versions are those the backend image build resolved against the Debian 13
 (`trixie`, `trixie-updates`, `trixie-security`) index on 2026-10-29. The Dockerfile does not pin
@@ -194,6 +195,55 @@ False}` to `FastAPI()` (`backend/app/main.py`), so nothing is instrumented or ex
 environment says, and no OpenTelemetry SDK or exporter is installed. The API package alone does
 no network I/O. `tests/test_dependencies.py` checks both (CLAUDE.md rule 11).
 
+## Angular application packages
+
+`apps/web/package.json` pins these exactly, and `apps/web/package-lock.json` holds the packages they
+pull in. Checked on 2026-10-30 against the npm registry and the lock's `license` fields (P08.4).
+
+| Package | Version | License | Group |
+| --- | --- | --- | --- |
+| `@angular/animations` | 22.2.4 | MIT | Application; deprecated, [see below](#angular-packages-kept-behind-or-deprecated) |
+| `@angular/cdk` | 22.2.5 | MIT | Application |
+| `@angular/common` | 22.2.4 | MIT | Application |
+| `@angular/compiler` | 22.2.4 | MIT | Application |
+| `@angular/core` | 22.2.4 | MIT | Application |
+| `@angular/forms` | 22.2.4 | MIT | Application |
+| `@angular/localize` | 22.2.4 | MIT | Application |
+| `@angular/platform-browser` | 22.2.4 | MIT | Application |
+| `@angular/platform-browser-dynamic` | 22.2.4 | MIT | Application; deprecated, [see below](#angular-packages-kept-behind-or-deprecated) |
+| `@angular/router` | 22.2.4 | MIT | Application |
+| `rxjs` | 7.8.2 | Apache-2.0 | Application |
+| `tslib` | 2.8.1 | 0BSD | Application |
+| `zone.js` | 0.16.3 | MIT | Application |
+| `@angular-eslint/builder` | 22.6.0 | MIT | Development |
+| `@angular/build` | 22.2.5 | MIT | Development |
+| `@angular/cli` | 22.2.5 | MIT | Development |
+| `@angular/compiler-cli` | 22.2.4 | MIT | Development |
+| `@eslint/js` | 10.0.1 | MIT | Development |
+| `@playwright/test` | 1.64.1 | Apache-2.0 | Development |
+| `@types/node` | 26.6.6 | MIT | Development |
+| `angular-eslint` | 22.6.0 | MIT | Development |
+| `eslint` | 10.14.0 | MIT | Development |
+| `jsdom` | 30.1.3 | MIT | Development |
+| `prettier` | 3.9.10 | MIT | Development |
+| `typescript` | 6.0.3 | Apache-2.0 | Development; [kept behind](#angular-packages-kept-behind-or-deprecated) 7.0.2 |
+| `typescript-eslint` | 8.72.1 | MIT | Development |
+| `vitest` | 5.0.5 | MIT | Development |
+
+The packages these pull in declare MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, MPL-2.0, MIT-0,
+BlueOak-1.0.0, CC0-1.0, CC-BY-4.0 or `Apache-2.0 AND BSD-3-Clause`. MPL-2.0 is new with this update
+(`lightningcss`, used by Vite 8), and so is `Apache-2.0 AND BSD-3-Clause` (`@bufbuild/protobuf`, used by
+`sass-embedded`); `caniuse-lite`, browser-support data, is the only CC-BY-4.0 package, as before.
+`@angular/cli` now pulls in `@modelcontextprotocol/server` (Apache-2.0), which the CLI loads only for its
+`ng mcp` command; no Narrastep script runs that command.
+
+### Angular packages kept behind or deprecated
+
+| Package | Pinned | Newest | Reason |
+| --- | --- | --- | --- |
+| `typescript` | 6.0.3 | 7.0.2 | `@angular/build` and `@angular/compiler-cli` 22.2 require `>=6.0 <6.1` and `typescript-eslint` 8.72.1 requires `<6.1.0`, so 6.0.3 is the newest release they accept. Move when both accept 7 |
+| `@angular/animations`, `@angular/platform-browser-dynamic` | 22.2.4 | 22.2.4 (`latest`) | Current, but deprecated upstream: `npm outdated` names 20.1.8 and 20.0.7 as latest, the newest releases not marked deprecated, while the registry's `latest` tag is 22.2.4. Angular 22.2 does not require them (`@angular/platform-browser` declares animations as an optional peer) and nothing in `apps/web/src` imports them, so no replacement is needed |
+
 ## Desktop window (host, downloaded into `desktop/node_modules`)
 
 Installed by `npm ci` in `desktop/` from `desktop/package-lock.json` (P07.1), never committed and
@@ -230,9 +280,9 @@ Files copied into the repository and shipped unmodified are recorded in
 
 | Tool | License |
 | --- | --- |
-| TypeScript | Apache-2.0 |
-| Vitest, ESLint, typescript-eslint, angular-eslint, Prettier, jsdom | MIT |
-| Playwright | Apache-2.0 |
+| TypeScript | Apache-2.0; versions in [Angular application packages](#angular-application-packages) |
+| Vitest, ESLint, typescript-eslint, angular-eslint, Prettier, jsdom | MIT; versions in [Angular application packages](#angular-application-packages) |
+| Playwright | Apache-2.0; version in [Angular application packages](#angular-application-packages) |
 | Pytest, Ruff, mypy, uv | MIT (uv: MIT OR Apache-2.0); versions in [Backend Python packages](#backend-python-packages) |
 
 ## Autonomous runner (development only)
