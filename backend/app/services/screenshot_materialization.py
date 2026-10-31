@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.models import Screenshot
+from app.services.frame_reader import VideoOpenError, read_frame_at
 from app.services.pipeline import PipelineServiceError
 from app.services.workspaces import create_project_workspace, ensure_within_root
 
@@ -21,24 +22,25 @@ type Frame = NDArray[np.uint8]
 
 
 def decode_exact_frame(video_path: Path, timestamp_seconds: float) -> Frame:
-    """Decode one exact non-negative source timestamp through an isolated video capture."""
+    """Return the frame on screen at a non-negative source time.
+
+    Raises ValueError for a negative time and FRAME_EXTRACTION_FAILED when the video cannot be
+    opened or the time is past its end. On a variable-rate recording this decodes from the start up
+    to the time; on a constant-rate video it seeks.
+    """
     if timestamp_seconds < 0:
         raise ValueError("A screenshot timestamp cannot be negative.")
-    capture = cv2.VideoCapture(str(video_path))
     try:
-        if not capture.isOpened():
-            raise PipelineServiceError(
-                "FRAME_EXTRACTION_FAILED", "The source video could not be opened."
-            )
-        capture.set(cv2.CAP_PROP_POS_MSEC, timestamp_seconds * 1_000)
-        success, frame = capture.read()
-        if not success or frame is None or not frame.size:
-            raise PipelineServiceError(
-                "FRAME_EXTRACTION_FAILED", "The requested source frame is unavailable."
-            )
-        return cast(Frame, frame)
-    finally:
-        capture.release()
+        frame = read_frame_at(video_path, timestamp_seconds)
+    except VideoOpenError as error:
+        raise PipelineServiceError(
+            "FRAME_EXTRACTION_FAILED", "The source video could not be opened."
+        ) from error
+    if frame is None:
+        raise PipelineServiceError(
+            "FRAME_EXTRACTION_FAILED", "The requested source frame is unavailable."
+        )
+    return frame
 
 
 def write_png_atomic(frame: Frame, destination: Path) -> Path:

@@ -666,6 +666,17 @@ The JSON report contains only aggregate numeric results and sets `promoteAdaptiv
 only when every recall, missed-state, redundancy, persisted-PNG, batch-copy, CPU-time, and RAM gate
 passes. Do not commit private videos, transcripts, OCR output, or machine-specific benchmark paths.
 
+## Frame reading benchmark
+
+`backend/scripts/benchmark_frame_reading.py` generates a variable-rate VP9 WebM and a constant-rate
+H.264 MP4 at 2560×1440 with FFmpeg, keeps them in the folder you name so later runs time the same
+files, and prints a JSON report with the rates FFprobe reports and the time and decoded samples of
+extraction, the adaptive scan and one late exact read. Generating takes a few minutes.
+
+```bash
+./scripts/ralph/sandbox.sh 'cd backend && PYTHONPATH=. python scripts/benchmark_frame_reading.py /cache/frame-benchmark'
+```
+
 ## Full-stack browser journey
 
 The normal `npm run e2e` command is a deterministic UI contract suite with intercepted API

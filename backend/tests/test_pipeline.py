@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import wave
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -276,9 +277,10 @@ def test_frame_extraction_stages_metadata_without_retaining_decoded_arrays(
 
     monkeypatch.setattr(pipeline.cv2, "VideoCapture", lambda _: FakeCapture())
 
-    def samples(_: object, timestamp: float, __: float) -> list[SampledFrame]:
+    def samples(_: object, timestamps: list[float], __: float) -> Iterator[list[SampledFrame]]:
         """Create one short-lived decoded array for each requested timestamp."""
-        return [SampledFrame(timestamp, np.full((4, 4, 3), int(timestamp) % 255, np.uint8))]
+        for timestamp in timestamps:
+            yield [SampledFrame(timestamp, np.full((4, 4, 3), int(timestamp) % 255, np.uint8))]
 
     def candidate(index: int, sampled: list[SampledFrame]) -> FrameCandidate:
         """Create alternating clusters so each representative is staged immediately."""
@@ -293,7 +295,7 @@ def test_frame_extraction_stages_metadata_without_retaining_decoded_arrays(
             source_index=index,
         )
 
-    monkeypatch.setattr(pipeline, "_sample_frames_with_capture", samples)
+    monkeypatch.setattr(pipeline, "read_frame_bursts", samples)
     monkeypatch.setattr(pipeline, "_build_frame_candidate", candidate)
     progress: list[int] = []
     retained = extract_deduplicated_frames_to_directory(

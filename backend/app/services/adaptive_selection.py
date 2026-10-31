@@ -16,13 +16,13 @@ import numpy as np
 from numpy.typing import NDArray
 
 from app.services.diagnostics import MetricsCollector
+from app.services.frame_reader import ForwardFrameReader, SampledFrame, read_frame_bursts
 from app.services.ocr import TesseractOcrEngine, token_jaccard
 from app.services.pipeline import (
     FrameCandidate,
     PersistedFrameCandidate,
     PipelineConfig,
     PipelineServiceError,
-    SampledFrame,
     TranscriptSegment,
     calculate_exposure_penalty,
     calculate_laplacian_sharpness,
@@ -72,6 +72,7 @@ PROFILES = {
     "meeting": AdaptiveProfile(0.5, 0.4, 1.0),
 }
 BUDGET_MULTIPLIERS = {"compact": 0.75, "balanced": 1.0, "detailed": 1.25}
+FINE_NEIGHBOR_SECONDS = 0.2
 
 
 @dataclass(frozen=True, slots=True)
@@ -277,16 +278,16 @@ def scan_interest_windows(
     windows: list[InterestWindow] = []
     decoded = 0
     try:
+        reader = ForwardFrameReader(capture)
         for index in range(sample_count):
             if cancellation_check is not None:
                 cancellation_check()
             timestamp = min(duration_seconds, index / scan_fps)
-            capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1_000)
-            success, frame = capture.read()
-            if not success or frame is None or not frame.size:
+            frame = reader.frame_at(timestamp)
+            if frame is None:
                 continue
             decoded += 1
-            current = _resize_grayscale(cast(Frame, frame), 320)
+            current = _resize_grayscale(frame, 320)
             timestamp_buffer.append(timestamp)
             while timestamp_buffer and timestamp - timestamp_buffer[0] > 3.0:
                 timestamp_buffer.popleft()
@@ -495,11 +496,12 @@ def extract_fine_candidates(
             "FRAME_EXTRACTION_FAILED", "The source video could not be opened."
         )
     candidates: list[_AdaptiveCandidate] = []
+    ordered_times = sorted(candidate_times)
     try:
-        for index, timestamp in enumerate(candidate_times):
+        bursts = read_frame_bursts(capture, ordered_times, FINE_NEIGHBOR_SECONDS)
+        for index, (timestamp, samples) in enumerate(zip(ordered_times, bursts, strict=True)):
             if cancellation_check is not None:
                 cancellation_check()
-            samples = _sample_neighbors(capture, timestamp)
             if samples:
                 frame_candidate = _build_adaptive_frame_candidate(index, samples)
                 window = min(windows, key=lambda item: abs(item.peak_seconds - timestamp))
@@ -838,17 +840,6 @@ def _distance_to_unit(timestamp: float, unit: DocumentUnit) -> float:
     if unit.start_seconds <= timestamp <= unit.end_seconds:
         return 0.0
     return min(abs(timestamp - unit.start_seconds), abs(timestamp - unit.end_seconds))
-
-
-def _sample_neighbors(capture: cv2.VideoCapture, timestamp: float) -> list[SampledFrame]:
-    """Decode the unique minus, exact, and plus 0.2-second fine samples."""
-    samples: list[SampledFrame] = []
-    for sample_time in sorted({max(0.0, timestamp - 0.2), timestamp, timestamp + 0.2}):
-        capture.set(cv2.CAP_PROP_POS_MSEC, sample_time * 1_000)
-        success, frame = capture.read()
-        if success and frame is not None and frame.size:
-            samples.append(SampledFrame(sample_time, cast(Frame, frame)))
-    return samples
 
 
 def _build_adaptive_frame_candidate(index: int, samples: Sequence[SampledFrame]) -> FrameCandidate:

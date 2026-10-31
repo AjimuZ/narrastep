@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
+from app.services.frame_reader import SampledFrame, read_frame_bursts
 from app.services.glossary import build_transcription_hint
 
 type Frame = NDArray[np.uint8]
@@ -207,14 +208,6 @@ class TranscriptionResult:
             "mock": self.mock,
             "segments": [segment.to_dict() for segment in self.segments],
         }
-
-
-@dataclass(frozen=True, slots=True)
-class SampledFrame:
-    """Pair a decoded video frame with its actual requested timestamp."""
-
-    timestamp_seconds: float
-    frame: Frame = field(repr=False, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -498,7 +491,7 @@ def sample_neighboring_frames(
             "FRAME_EXTRACTION_FAILED", "Screenshots could not be extracted from the video."
         )
     try:
-        return tuple(_sample_frames_with_capture(capture, timestamp_seconds, neighbor_offset))
+        return tuple(next(read_frame_bursts(capture, [timestamp_seconds], neighbor_offset)))
     finally:
         capture.release()
 
@@ -535,8 +528,8 @@ def extract_frame_candidates(
 
     candidates: list[FrameCandidate] = []
     try:
-        for source_index, timestamp in enumerate(requested_times):
-            samples = _sample_frames_with_capture(capture, timestamp, neighbor_offset)
+        bursts = read_frame_bursts(capture, requested_times, neighbor_offset)
+        for source_index, samples in enumerate(bursts):
             if samples:
                 candidates.append(_build_frame_candidate(source_index, samples))
     finally:
@@ -587,10 +580,10 @@ def extract_deduplicated_frames_to_directory(
     cluster_best: FrameCandidate | None = None
     previous_hash: str | None = None
     try:
-        for source_index, timestamp in enumerate(requested_times):
+        bursts = read_frame_bursts(capture, requested_times, neighbor_offset)
+        for source_index, samples in enumerate(bursts):
             if cancellation_check is not None:
                 cancellation_check()
-            samples = _sample_frames_with_capture(capture, timestamp, neighbor_offset)
             if decoded_frame_callback is not None:
                 decoded_frame_callback(len(samples))
             if samples:
@@ -965,27 +958,6 @@ def _segments_duration(segments: Sequence[TranscriptSegment]) -> float | None:
     if not segments:
         return None
     return max(segment.end_seconds for segment in segments)
-
-
-def _sample_frames_with_capture(
-    capture: Any, timestamp_seconds: float, neighbor_offset_seconds: float
-) -> list[SampledFrame]:
-    """Decode unique neighboring timestamps through an already-open capture."""
-
-    sample_times = sorted(
-        {
-            max(0.0, timestamp_seconds - neighbor_offset_seconds),
-            timestamp_seconds,
-            timestamp_seconds + neighbor_offset_seconds,
-        }
-    )
-    samples: list[SampledFrame] = []
-    for sample_time in sample_times:
-        capture.set(cv2.CAP_PROP_POS_MSEC, sample_time * 1_000.0)
-        success, frame = capture.read()
-        if success and frame is not None and frame.size:
-            samples.append(SampledFrame(sample_time, frame))
-    return samples
 
 
 def _build_frame_candidate(source_index: int, samples: Sequence[SampledFrame]) -> FrameCandidate:

@@ -306,6 +306,13 @@ All notable changes to Narrastep are documented in this file.
 
 ### Fixed
 
+- Fixed screenshots from recordings: they could come from the wrong moment, and most of the requested
+  frames were not read at all. Processing now reads each frame at the time it belongs to, every
+  requested frame inside the video is read, and frame extraction is much faster: 81.5 s became 10.3 s
+  on a generated 65-second recording at 2560×1440. Constant-rate videos got faster too. Projects
+  already processed keep their screenshots until they are processed again; an `adaptive_v1` project
+  that rebuilds a full image from an old thumbnail now gets the frame of the stored time, which can
+  differ from the thumbnail.
 - Fixed **Choose screen** in the desktop window, which was refused at once with "No screen was
   shared" (Italian "Nessuno schermo condiviso") and never opened the picker. Choosing a screen or a
   window now shares it, with the system audio on Windows; camera and other permissions stay denied.

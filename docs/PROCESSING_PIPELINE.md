@@ -65,6 +65,60 @@ metrics carry `speakerLabelFailed: 1`; otherwise they carry the counts `speakerL
 The step runs inside the transcription progress range and is checked for cancellation after it.
 Details and measurements: [Recording](RECORDING.md#speaker-labels).
 
+### Reading frames by time (P05.8)
+
+Every read of a frame by time goes through `backend/app/services/frame_reader.py`: legacy
+extraction, the adaptive scan, adaptive fine candidates and `decode_exact_frame`, which also serves
+exact-frame recovery, late PNGs, export and generation.
+
+**What the time means.** The frame at a time is the frame on screen at that time: the last one whose
+timestamp is at or before it, identified by the timestamp OpenCV reports after `grab()`. A still
+moment of a recording therefore resolves to the frame that started it. A time after the last frame
+gets the last frame while it is inside the duration; a time more than 0.05 s past the end has no
+frame, so a `+0.2` neighbor past the end is left out of its burst.
+
+**Why not a seek.** OpenCV turns a time into a frame number with the nominal rate, seeks to the
+keyframe before it, and then grabs the difference in real frames. A recording has a variable rate
+and FFprobe reports `r_frame_rate` 1000/1 for it, so a seek to 20 s grabs up to 20 000 real frames:
+it overshoots or fails, after decoding most of the file. `CAP_PROP_POS_MSEC` is never set on such a
+file.
+
+**One forward pass.** `ForwardFrameReader` walks the capture forward and converts each decoded frame
+to BGR, because the frame on screen at a time is only known once the next frame's timestamp has been
+seen, and by then OpenCV has overwritten the picture. Times must not go backward; a lower time raises
+`ValueError`.
+
+**Overlapping bursts.** The `-0.2`, exact and `+0.2` samples of neighboring anchors interleave.
+`read_frame_bursts` reads the union of all their times in one ascending pass and keeps a frame only
+until the last burst that uses it has been yielded, so a burst never needs a step back. Times that
+fall on the same frame share one array.
+
+**Memory.** The reader holds one decoded frame. Bursts hold at most the frames inside one window of
+twice the neighbor offset (0.4 s by default) plus the reader's own, and only when anchors are that
+close together: anchors at the default three-second interval hold the current burst alone. Each
+caller holds its current candidate on top.
+
+**One read on its own.** `decode_exact_frame` must not decode a long constant-rate video from the
+start for one picture, so `read_frame_at` still seeks when the time is at least 10 s in and the
+first 8 frames follow the nominal rate (within 25%, or 2 ms). It seeks to 1 s before the time and
+checks the landing by the frame's timestamp. When the first frames do not match, or the seek landed
+after the time, it walks from the start. The result is the same on every path; only the cost differs.
+
+**Limit.** A single read on a recording decodes from the start up to the time: 1.4 s for a time 58 s
+into the generated 2560×1440 recording in [Status](STATUS.md). An export or generation that rebuilds
+many thumbnail-only screenshots of a long recording pays this once per screenshot, because each read
+opens the video again. Legacy projects are not affected: they save full PNGs while processing.
+
+**Projects processed before this change.** They keep the screenshots they have until they are
+processed again, including any taken from the wrong moment. A full PNG rebuilt later from such a
+project's thumbnail comes from the right moment of the stored time, so it can differ from the old
+thumbnail; this applies only to `adaptive_v1` projects.
+
+Measured figures are in [Status](STATUS.md); `backend/scripts/benchmark_frame_reading.py` repeats
+them. `backend/tests/test_frame_reader.py` generates a variable-rate VP9 WebM with one keyframe and
+a constant-rate H.264 MP4 whose frames show their number as a barcode, and identifies every frame by
+those pixels.
+
 ### 4. Legacy candidate extraction and quality
 
 Candidate timestamps are the union of:
@@ -72,8 +126,8 @@ Candidate timestamps are the union of:
 - regular `NARRASTEP_FRAME_INTERVAL_SECONDS` samples;
 - 10%, 50%, and 90% timestamps inside every transcript segment.
 
-Near-identical timestamps are collapsed. OpenCV samples the target plus the available frames at
-`-0.2` and `+0.2` seconds by default. The clearest neighbor is chosen with 60% normalized Laplacian
+Near-identical timestamps are collapsed. The target plus the available frames at `-0.2` and `+0.2`
+seconds by default are [read by time](#reading-frames-by-time-p058). The clearest neighbor is chosen with 60% normalized Laplacian
 sharpness and 40% inverse exposure penalty. Exposure treats pixels at or below 10 as clipped black,
 pixels at or above 245 as clipped white, and also penalizes severe mean-brightness imbalance.
 
@@ -91,8 +145,10 @@ threshold form a cluster, and the highest-quality member is retained with timest
 A later return to the same screen starts a new cluster, preserving temporal context.
 
 The production extractor compares each candidate with the immediately preceding candidate and
-writes only a completed cluster representative. It therefore keeps only the current candidate and
-cluster representative in decoded image memory; retained screenshots are staged as PNG files.
+writes only a completed cluster representative. Besides the frames the
+[burst reading](#reading-frames-by-time-p058) still needs, it therefore keeps only the current
+candidate and cluster representative in decoded image memory; retained screenshots are staged as PNG
+files.
 
 ### 6. Segment association
 
@@ -111,7 +167,8 @@ the merged midpoint. Remaining associations are ranked again.
 The adaptive service is selected only when the queued job snapshot contains `adaptive_v1`.
 `legacy` remains the default and its extraction behavior is unchanged.
 
-The scan streams grayscale frames downscaled to a 320-pixel long edge. Sampling is 1 fps for
+The scan [reads frames by time](#reading-frames-by-time-p058) in one forward pass, as grayscale
+pictures downscaled to a 320-pixel long edge. Sampling is 1 fps for
 `tutorial` and `task_briefing`, 0.75 fps for `general`, and 0.5 fps for `meeting`. It
 combines structural, histogram, edge, and localized deltas with weights 35%, 25%, 25%, and 15%.
 Connected difference regions covering at most 0.15% of the frame are suppressed only in the
@@ -293,4 +350,4 @@ failure.
 
 ## Performance and limitations
 
-CPU transcription is typically the dominant cost. Candidate count scales with video duration and segment count; the default three-second interval is deliberately conservative. Visual hashing detects appearance, not business meaning, and can retain an unhelpful stable screen or discard a subtle but important change. Human review remains required.
+CPU transcription is typically the dominant cost. Candidate count scales with video duration and segment count; the default three-second interval is deliberately conservative. Frame reading decodes the video once from the start, so its cost follows the number of frames in the video and not the number of samples. Visual hashing detects appearance, not business meaning, and can retain an unhelpful stable screen or discard a subtle but important change. Human review remains required.
