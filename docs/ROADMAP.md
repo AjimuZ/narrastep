@@ -445,9 +445,60 @@ development tool, not part of the product.
   Evidence (2026-10-30): `scripts/ralph/` adapts upstream commit `6c53cb0`; `prd.json` holds 44 tasks (39 for an agent, 5 owner checks) and `node scripts/ralph/prd.cjs validate` passes against this roadmap. `node --test 'scripts/ralph/test/*.test.cjs'`: 53 passed on Windows in Git Bash with Node.js 24.22.1 and in the Linux check container with 22.23.1; the tests run the real `ralph.sh`, `verify.sh`, `stop.sh` and `status.sh` with a stand-in agent. Real Claude Code 2.1.314, model `haiku`, in a throwaway clone: the permission probe gave the expected result for all items, with `git push`, `git commit`, `rm`, `curl`, `docker volume`, `docker compose`, `python -c`, `bash -c`, reading `.env`, `data/` and `~/.gitconfig`, writing outside the repository and `check.sh docs && git push` denied; `.env` and `data/` stayed byte-identical. `ralph.sh` then ran two tasks in two separate processes, in dependency order, verified and committed each with its `Task:` trailer and ended from the verified state with status 0; before that, an agent reported a contradictory task as blocked instead of ticking its item. Those runs and the Linux test run found and fixed three runner defects: an unignored state folder was removed with its logs, the blocked state failed to commit without `archive/`, and `--resume` refused a task whose item was already ticked in the working tree. Baseline in the check container: `check.sh` docs, backend (281 passed, 17 skipped), web (183 passed, build, 525 messages), desktop (127 passed), e2e (408 passed; a first run on empty caches failed all 408 with `ERR_CONNECTION_REFUSED` and the next run passed unchanged, cause not established), stack (all images built, health `ok`). Found: `.github/workflows/ci.yml` is invalid YAML since `85adb65` (P08.13), the microphone is still denied by `nginx.conf` (P05.7), `.python-version` is out of date (P08.4c). Not run: a long run with real tasks, a real usage limit (classified from the documented result fields, tested only with a stand-in), `Ctrl+C` with the real binary, the new `runner` CI job on GitHub.
 - [x] P10.3 Remove what stops an unattended run, and push verified commits automatically.
   Evidence (2026-10-30): the runner now pushes `main` after each verified commit, never with force, after checking every waiting commit for forbidden paths, secrets and authorship words; waits up to 7 days on a usage limit and repeats failed sessions; limits verification time; removes containers left behind; finds the binary again each iteration; stops when `origin` moved; refuses deleted tests and added `.only`, `.skip`, `fixme` and `xfail`; refuses a Compose file that reaches the host; runs a task's `job` before its agent. The browser failure of P10.1 had two causes, both fixed: esbuild could not write its cache on the Windows mount (`apps/web/.angular` is now a volume; 408 passed twice from an empty cache), and other containers on the computer exhausted Docker's memory (`ENOMEM`, 45 of 408 failed), so the suites use 4 workers and `check.sh` repeats a step only after a lack of resources (408 and 183 passed twice while those containers ran, with no repeat needed). `node --test 'scripts/ralph/test/*.test.cjs'`: 78 passed on Windows and in the Linux check container. In the check container, `check.sh` docs, backend, web, e2e, desktop, ralph, compose and stack passed. `scripts/ralph/desktop-smoke.sh` passed all 11 steps on Windows with the real `start.sh`, launcher and Electron 45.1.0 on the real images (docker 29.9.2, Compose 5.6.1, Node.js 24.22.1), including stopping the stack closing the window; this ran the check of P07.2, which stays open for its own task. Real Podman 5.4.2 inside a privileged Docker container ran a container, a published port and `podman compose`. Real Claude Code 2.1.314, model `haiku`, in a throwaway clone: 25 permission probes gave the expected result, after one found that a folder-wide deny rule also blocked the agent's report folder, which now has a test; `ralph.sh` then ran two tasks, one with a job whose output reached the agent, and pushed each commit to a local bare remote, with no tag and `.env` and `data/` unchanged. Not run: a real usage limit (the wait for failed sessions covers a message the runner does not recognise), `Ctrl+C` from a real terminal (a killed run and `stop.sh --now` are tested), a push to GitHub, `open-run.sh` from another terminal, `owner-check.cjs` with the real stack (tested against a stand-in API), and `podman-smoke.sh` as a whole, because `start-podman.sh` does not exist before P08.10. First real run, later on 2026-10-30: `open-run.sh 3` opened a separate window, and P08.13, P08.3 and P06.1 each passed on the first attempt and were pushed to GitHub (`572217e`, `6e759c3`, `3b5d818`), in 44 minutes, with no container left. The first launch of `open-run.sh` failed because a Git Bash setting of the call reached the window; that is fixed. GitHub's public API answers 404 for this repository, so it is private for now: `status.sh` says so, and the CI result must be read on GitHub.
-- [ ] P10.2 Verify the finished roadmap as a whole, with no new features.
+- [x] P10.2 Verify the finished roadmap as a whole, with no new features.
   Exit: every suite and the opt-in full-stack journey pass together; `README.md`, Status and the
   specifications agree with the code; every open item left is an owner check, with what to do.
+  Evidence (2026-10-31, P10.2, checkbox left to the orchestrator; no feature was added):
+  - Checks on the finished code, one `./scripts/ralph/check.sh <area>` call each, in the check
+    container with Docker: `docs` (links valid), `backend` (format, lint, types, OpenAPI document
+    current; 653 tests collected, 636 passed and 17 opt-in tests skipped, counted from the progress
+    dots because the quiet output prints no summary line), `web` (264 unit tests by
+    `npm run test`, build, message check "653 messages in en and it", message extraction, browser
+    test types), `e2e` (956 Playwright tests passed), `desktop` (242 passed, 0 failed), `ralph` (78
+    passed), `compose` (configuration renders), `stack` (images built, health `{'status': 'ok',
+    'version': '0.2.0', 'database': 'ok', 'redis': 'ok', 'worker': 'ok'}`) and `fullstack`
+    (`tests/fullstack/local-workflow.spec.ts`, 1 passed against the isolated stack, which checks the
+    ZIP of schema 0.4.0 with `04-batches/`). The opt-in real-model tests were not run in this task.
+  - Documents brought in line with the code: `README.md` no longer lists delivered work as planned
+    (it now names the three owner checks that are not verified, the optional model download as the
+    one outbound request, and the Whisper thread setting); `docs/LOCAL_GENERATION.md` status
+    (was "planned"); `docs/UI.md` (Storage in the menu list, the Settings row, the current browser
+    run); `docs/RECORDING.md` status and the P05.6 procedure note; ADR 0014 (permissions granted);
+    `docs/STATUS.md` (test row, full-stack row, runner row, the planned table and the stale "not
+    part of the export package yet").
+  - Diff since `ca5a33b` (175 files, 26,862 insertions, 6,680 deletions) reviewed against the rules
+    of `CLAUDE.md`. Searches over the current source for added remote addresses, telemetry or
+    analytics names, `shell=True`, `os.system`, Electron security switches turned off, logged
+    transcript text, skipped or focused tests, and ADRs missing from the index. Findings: no
+    telemetry or analytics (FastAPI telemetry is switched off and a test keeps it off;
+    `HF_HUB_DISABLE_TELEMETRY` is set); the only remote addresses in the application are the model
+    download from `huggingface.co` that the user starts in Settings (pinned revision and hash,
+    kill switch `NARRASTEP_LOCAL_GENERATION=disabled`), the license links the user clicks, and the
+    `registry.npmjs.org` address of the desktop launcher's first-launch install; no required CDN
+    asset; the one shell use is the fixed `npm` command line on Windows. Test edits in the diff only
+    add cases or follow the schema 0.4.0 and `04-batches/` rename; none was skipped, narrowed or
+    deleted, and the `skipif` and `pytest.skip` cases are the FFmpeg, opt-in and POSIX-only ones.
+    Fixed in this change: the stale documents listed above. Not fixed, named here: the Settings
+    screen has no import control (the API exists and is tested), P06.4 was ticked with that part
+    open, and no roadmap item tracks it, because adding one also needs a task in
+    `scripts/ralph/prd.json`, which this session may not edit. The review was by searches and
+    reading of the changed files; it was not a line-by-line read of the 22,000 added lines.
+  - Open items left, with what must happen:
+    - **P05.6** (owner session): run `node scripts/ralph/owner-check.cjs`, the guided session for
+      P05.6 and P07-CHECK, on Windows with a headset and a second person or device in a real Teams
+      call; follow the steps in [Recording](RECORDING.md#manual-test-teams-call-on-windows-with-a-headset-p056),
+      record counts of You, Others and unlabelled segments and the Windows and browser versions in
+      [Status](STATUS.md), and only then tick the item. The 2026-10-31 recordings used a YouTube
+      video as system sound and do not close it.
+    - **P06.5** (owner's computer): run `backend/scripts/benchmark_generation.py --model e2b` and
+      `--model e4b` against a stack as in [Development](DEVELOPMENT.md#generation-benchmark), record
+      the 10-minute and 60-minute figures in [Status](STATUS.md), and apply the
+      [default model rule](LOCAL_GENERATION.md#default-model-rule). The tool has never been run.
+    - **P08.12** (needs real Podman): on a computer that has Podman, run
+      `scripts/ralph/podman-smoke.sh`; record the versions and generated `.env` values in
+      [Status](STATUS.md). Podman cannot be installed on the owner's computer, so this may stay
+      open; `podman machine` on Windows is unverified.
+    - **Untracked:** a Settings control for importing model files from `data/models-import`.
 
 ## Improvement candidates
 

@@ -3,9 +3,13 @@
 Status: **in progress** (P05 in the [roadmap](ROADMAP.md)). The recording session API with
 per-track chunk storage, resume and discard (P05.1), the completion into a validated source video
 with the kept microphone track (P05.2), the recorder screen (P05.3) and the You / Others speaker
-labels (P05.5) are implemented; the manual test with a real call (P05.6) is planned. The desktop window's own
-source picker (P07.3a) and Windows loopback audio (P07.3b) are implemented and tested with
-stand-ins; a real capture on Windows is an owner check that has not been run.
+labels (P05.5), the microphone permission in the web container (P05.7) and frame reading by
+timestamp for recordings (P05.8) are implemented; the manual test with a real Teams call (P05.6) is
+the only open part and needs the owner. The desktop window's own source picker (P07.3a) and
+Windows loopback audio (P07.3b) are implemented and tested with stand-ins. On 2026-10-31 the owner
+recorded one window with system audio on Windows; the saved tracks held sound, but the system
+sound was a YouTube video and not a Teams call, so the check is recorded in
+[Status](STATUS.md#last-documentation-check) and does not close P05.6.
 Decision: [ADR 0010](decisions/0010-in-browser-recording.md).
 
 ## Goal
@@ -340,8 +344,9 @@ recorder can upload what is missing and save again, or discard.
 
 ### Manual test: Teams call on Windows with a headset (P05.6)
 
-Not yet run. It needs Windows, a headset, a browser (Chrome or Edge) and a second person or a
-second device to talk in the call. Record each step as passed or failed with the browser version.
+Not yet run with a Teams call (an owner recording of a window with a YouTube video as the system
+sound does not count). It needs Windows, a headset, a browser (Chrome or Edge) or the desktop
+window, and a second person or a second device to talk in the call. Record each step as passed or failed with the browser version.
 
 1. Start the stack, open `/record`, choose **Entire screen**, tick **Share system audio** in the
    browser picker and check that the recorder shows system audio as **Included**. Select the

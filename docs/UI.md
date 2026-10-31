@@ -236,7 +236,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - **Window:** the app opens in the Electron desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md));
   the same pages also work in a browser with `./start.sh --headless`.
 - **Shell:** compact header (product name, health pill, language switch) and a vertical menu on
-  the left: Projects, Record, New project, Settings. Below 768 px the menu becomes a top bar with the same
+  the left: Projects, Record, New project, Storage, Settings. Below 768 px the menu becomes a top bar with the same
   entries.
   - Implemented (P04.3, P04.4, P05.3, P09.2, P06.4a, `apps/web/src/app/app.component.ts`): the header
     shows the product name, the health pill and the language switch; the menu holds **Projects**,
@@ -265,7 +265,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every time reference (the segment start and end beside the video, in the transcript header, and each screenshot time) is a button, named "Go to HH:MM:SS.mmm in the video" (Italian "Vai a … nel video"), that moves the video to that time (P06.6a). Enter and Space work as on any button; a time past the end stops at the end, a negative time goes to 0, and once the source video was removed the buttons are disabled. The times in the segment rail stay plain text, because they sit inside the button that selects the segment. Action: Save |
 | Export | `/projects/:id/export` | Package options (original video; generated document, P06.4c), size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
 | Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled. Implemented in P06.4b, copy (P06.4d) and the citations (P06.6b); the package option is on the Export screen (P06.4c) ([Document](#document-p064b)) |
-| Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project. The language switch is here too. Implemented in P06.4a except the import and the storage use ([Settings](#settings-p064a)) |
+| Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license. The language switch is here too. Implemented in P06.4a except the import, which only the API offers; storage use per project is on the [Storage](#screens) screen, not here ([Settings](#settings-p064a)) |
 
 ### Implemented screens (P04.3)
 
@@ -317,8 +317,9 @@ activity line, notice, pixel icons, confirmation dialog):
   - With `localGeneration: "disabled"` (`NARRASTEP_LOCAL_GENERATION=disabled`) the window shows
     one notice that names the setting and no model, button or link. The API would still allow
     disable and delete then, but the screen offers none of them.
-- **Not in the screen yet:** the import from `data/models-import` (`GET` and `POST
-  /models/{id}/import`) and the storage use per project listed in the screen table above. The
+- **Not in the screen:** the import from `data/models-import` (`GET` and `POST
+  /models/{id}/import`), which only the API offers, and the storage use per project, which the
+  Storage screen shows instead (P09.2). The
   license link opens a new tab in a browser; the desktop window cancels every popup, so there it
   does nothing, and only the license panel of **Install** prints the address for the user to read.
 
@@ -410,8 +411,8 @@ before the app has loaded:
 
 The browser checks live in `apps/web/tests/e2e/accessibility.spec.ts` (with `support/fake-api.ts` and
 `support/contrast.ts`) and run with `npx playwright test`, in desktop and mobile Chromium. They
-open all nine screens (Projects, New project, Recorder, Processing, Processing failed, Review,
-Export, Storage, Not found) in English and Italian against a deterministic fake API, and run the
+open the screens (Projects, New project, Recorder, Processing, Processing failed, Review,
+Export, Storage, Settings, Document, Not found) in English and Italian against a deterministic fake API, and run the
 confirm, Storage removal, split and screenshot-preview dialogs on top of them. The Recorder is checked in its first state
 (the source checks); `tests/e2e/recorder.spec.ts` adds contrast and 320 px reflow of the checks,
 recording and save windows with fake devices in both languages. `tests/e2e/process.spec.ts` covers the Process dialog on a saved recording (journey, refusal
@@ -422,9 +423,11 @@ of New project (terms sent, limits, keyboard, contrast, 320 px, 200% and 400% zo
 The fake API's first segment carries an automatic You label, so every Review check covers the
 speaker select, and `tests/e2e/speaker-labels.spec.ts` changes and clears it with the keyboard,
 reports a refused save and checks contrast, 320 px and 200% zoom in both languages (P05.5). The
-last full run (2026-10-30, P09.3) passed 592 tests: 214 accessibility checks, 30 Process dialog
-tests, 18 glossary tests, 12 Storage tests, 10 speaker-label tests, 5 recorder tests and 4
-permissions-policy tests per Chromium project, plus the 6 contract tests. Since P06.4b the Document
+last full run (2026-10-31, P10.2, `check.sh e2e` in the check container) passed all 956 tests of
+the browser suite in 2.9 minutes, against the fake API. An earlier run (2026-10-30, P09.3) passed
+592 tests: 214 accessibility checks, 30 Process dialog tests, 18 glossary tests, 12 Storage tests,
+10 speaker-label tests, 5 recorder tests and 4 permissions-policy tests per Chromium project, plus
+the 6 contract tests. Since P06.4b the Document
 screen (before the first generation, with a result, and Review with the **Document** link) is in
 every contrast, keyboard, reduced-motion and reflow check, plus its progress, cancelled and failed
 states, in both languages; `tests/e2e/document.spec.ts` covers the journeys against the fake API

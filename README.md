@@ -15,33 +15,40 @@ entirely on your computer inside Docker.
 
 ## Status
 
-Version 0.2 provides the full local workflow: create a project, upload a video, transcribe and
-select screenshots locally, review and edit, and export a ZIP package for an AI writing tool.
-
-The next versions are **planned** and documented, not implemented:
+Version 0.2 provides the full local workflow: create a project, upload a video or record one in the
+app, transcribe and select screenshots locally, review and edit, and export a ZIP package for the
+writing tool of your choice. These parts are delivered and tested with generated media:
 
 - four project types matching the table above ([ADR 0009](docs/decisions/0009-project-types.md));
 - descriptive export file and folder names ([ADR 0013](docs/decisions/0013-descriptive-export-names.md));
-- a redesigned pixel-style interface in English and Italian ([UI](docs/UI.md));
-- screen, system-audio and microphone recording in the browser ([Recording](docs/RECORDING.md));
-- optional local document generation with Gemma 4, installed from the interface
-  ([Local generation](docs/LOCAL_GENERATION.md));
+- a pixel-style interface in English and Italian ([UI](docs/UI.md));
+- screen, system-audio and microphone recording ([Recording](docs/RECORDING.md)), with You and
+  Others speaker labels;
+- optional local document generation with Gemma 4, installed from Settings
+  ([Local generation](docs/LOCAL_GENERATION.md)); it is not installed by default;
 - a desktop window opened by `start.sh`, as an Electron shell over the same local app
-  ([ADR 0014](docs/decisions/0014-desktop-app-shell.md)).
+  ([ADR 0014](docs/decisions/0014-desktop-app-shell.md));
+- Podman support through `./start-podman.sh` and a `.env` generated for this computer.
 
-The exact state of each capability is in [Status](docs/STATUS.md); the plan is in the
+Not yet verified by the owner: recording a real Teams call with a headset, the generation
+benchmark on the owner's computer, and `start-podman.sh` on real Podman. The exact state of each
+capability is in [Status](docs/STATUS.md); the remaining open items are in the
 [Roadmap](docs/ROADMAP.md).
 
 ## Requirements
 
 - Docker with the `docker compose` command, or Podman with `podman compose` or `podman-compose`.
   Nothing else is installed on the computer. Podman support (`./start-podman.sh`) is delivered but
-  has not yet run on real Podman (planned smoke test P08.12).
-- For the planned desktop window: host Node.js 22.12 or newer with npm (Electron is then
-  downloaded into the project's `desktop/` folder on first launch).
+  has not yet run on real Podman (open smoke test P08.12).
+- For the desktop window: host Node.js 22.12 or newer with npm (Electron is then downloaded into
+  the project's `desktop/` folder on first launch). Without them, use `./start.sh --headless` and a
+  browser.
 - At least 8 GB of free memory and about 5 GB of disk for images, the Whisper model and a small
   project.
-- Internet access during the first build only.
+- Internet access during the first build, and again only if you choose to download a local
+  generation model from Settings (3.4 or 5.2 GB from `huggingface.co`; without access, import the
+  files from `data/models-import` through the API, see
+  [Local generation](docs/LOCAL_GENERATION.md#import-from-disk)).
 
 ## Start
 
@@ -115,6 +122,7 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | `NARRASTEP_RECORDING_VIDEO_BITS_PER_SECOND` | `2500000` | Video bitrate of the recorder (about 1.1 GB per hour) |
 | `NARRASTEP_RECORDING_MAX_FRAME_RATE` | `15` | Highest frame rate the recorder asks for |
 | `NARRASTEP_WHISPER_MODEL` | `small` | Whisper model baked into the image at build |
+| `NARRASTEP_WHISPER_CPU_THREADS` | empty | CPU threads for transcription (1 to 64); empty lets the library decide, and a generated `.env` sets it |
 | `NARRASTEP_LOCAL_GENERATION` | `available` | `disabled` turns the optional local generation off; nothing is installed by default |
 | `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | Model the user installs from Settings: `gemma-4-e2b` or `gemma-4-e4b` |
 | `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Host folder the API reads read-only to import the model files when `huggingface.co` is blocked; both start scripts create it |
@@ -130,7 +138,9 @@ Invalid values stop startup with a readable error.
 
 - Videos, transcripts and screenshots stay in the `narrastep-data` Docker volume.
 - No account, telemetry, analytics, CDN, cloud storage or remote AI.
-- The worker has no Internet route; the Whisper model is opened offline.
+- The worker has no Internet route; the Whisper model is opened offline. The only outbound request
+  the application makes is the API downloading a generation model when you press the button in
+  Settings.
 - Delete one project from the interface, or everything with `docker compose down -v`
   (irreversible).
 

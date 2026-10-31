@@ -1,17 +1,20 @@
 # Local generation
 
-Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binaries, which the
-backend image contains since P06.1, and the pinned file catalog, the four settings and the stored
-model state, which exist since P06.2a, and the model download, resume, verification and cancel API,
-which exists since P06.2b, the enable, disable and delete API (P06.2c) and the import from disk
-(P06.2d), and the generation job, which starts the server, and its endpoints, which exist since
-P06.3d and which ran with the real server and E2B files in an opt-in test in P06.3e (see
-[Verification](#verification)). Since P06.4a the Settings screen installs, enables, disables and
-deletes the models ([UI](UI.md#settings-p064a)), and since P06.4b the Document screen generates,
-follows, cancels and shows a document ([UI](UI.md#document-p064b)); it was tested only against a
-fake API.
-Version 0.2 exports evidence and prompts only and never calls a model. Decision:
-[ADR 0011](decisions/0011-optional-local-generation.md).
+Status: **implemented, partly verified** (P06 in the [roadmap](ROADMAP.md)). The server binaries
+are in the backend image since P06.1; the pinned file catalog, the four settings and the stored
+model state exist since P06.2a; the model download, resume, verification and cancel API since
+P06.2b, the enable, disable and delete API since P06.2c and the import from disk since P06.2d; the
+generation job, which starts the server, and its endpoints since P06.3d, which ran with the real
+server and E2B files in an opt-in test in P06.3e (see [Verification](#verification)). The Settings
+screen installs, enables, disables and deletes the models (P06.4a, [UI](UI.md#settings-p064a)); the
+Document screen generates, follows, cancels and shows a document (P06.4b,
+[UI](UI.md#document-p064b)), copies it as Markdown and downloads it with images (P06.4d), and every
+`[mm:ss]` citation in it plays the video from that time (P06.6b); the Export screen can include the
+document in the package (P06.4c). The screens were tested only against a fake API. Still open: the
+benchmark on the owner's computer and the default-model decision (P06.5), and the Settings
+controls for import from disk and storage use per project. Without a model installed, or with
+`NARRASTEP_LOCAL_GENERATION=disabled`, Narrastep exports evidence and prompts only and never calls
+a model. Decision: [ADR 0011](decisions/0011-optional-local-generation.md).
 
 ## Goal
 
@@ -210,7 +213,7 @@ Implemented as follows (P06.2d):
 - **License before the import.** `GET /models/{id}/import` returns the license name, link and
   full text next to the list of files, and `POST /models/{id}/import` needs `licenseAccepted:
   true` (otherwise `422 LICENSE_NOT_ACCEPTED`). The Settings screen (P06.4a) does not offer the
-  import yet and shows the license name and link of the download only. The
+  import and shows the license name and link of the download only. The
   license text is copied to `/data/models/<model>/LICENSE.txt` when the copy starts.
 - **What the folder may hold.** For each pinned file the service looks for `<import
   folder>/<pinned name>`. The name always comes from the catalog; the request body holds no path

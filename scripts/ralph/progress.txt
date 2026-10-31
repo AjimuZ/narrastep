@@ -74,6 +74,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Resolve bundled asset paths from __dirname, never from the current directory, and keep the asset folder out of the packager ignore patterns.
 - When a rename must leave old data readable, keep an alias in the config and a test that serves an old-format archive byte for byte.
 - Test that user-facing text names no service by matching a regex over the rendered component and over every generated package file.
+- When a permission or capability changes, grep every document for the old denial wording (ADR, ARCHITECTURE, DEVELOPMENT, STATUS) and fix it in the same change.
+- In a final verification task, record exact counts per check area and say which counts were inferred instead of printed by the tool.
+- A review of a large diff by searches must say so in the evidence: list what was searched for and that it was not a line-by-line read.
 
 ---
 
@@ -654,4 +657,54 @@ Left alone: the P07.6 checkbox and the `scripts/ralph/prd.json` diff.
   - Remaining ChatGPT mentions are intentional: the config.py alias, the old-layout notes in exporting.py, DATA_MODEL.md and PROCESSING_PIPELINE.md, old-export tests, a no-service-named test, and dated roadmap evidence.
   - An earlier attempt had ticked the P09.4 checkbox in docs/ROADMAP.md; I put it back to unticked for the orchestrator.
   - The .env.example edit was made by the supervisor and never read by a session, so its content is unverified here.
+---
+
+## 2026-10-31T18:11:47Z - P10.2
+- I ran every check area on the finished code and they all passed. The opt-in `npm run e2e:fullstack` journey also passed, through `check.sh fullstack` against the isolated stack. I did not add or change any feature code. I corrected the documents that no longer matched the code and recorded the P10.2 evidence in `docs/ROADMAP.md`. I left the P10.2 checkbox alone.
+
+**Checks (2026-10-31)**
+- `docs`: links valid, and again after my edits.
+- `backend`: format, lint, types and the OpenAPI check passed. I counted the progress dots: 653 tests, 636 passed and 17 opt-in skipped. This count is inferred, because the quiet pytest output prints no summary line.
+- `web`: 264 unit tests, build and message check ("653 messages in en and it"), message extraction and browser test types.
+- `e2e`: 956 Playwright tests passed.
+- `desktop`: 242 passed, 0 failed.
+- `ralph`: 78 passed.
+- `compose`: the configuration renders.
+- `stack`: images built, health `ok`.
+- `fullstack`: 1 test passed.
+
+I did not run the opt-in real-model tests.
+
+**Diff review since `ca5a33b`**
+- I reviewed it by searching the current source and reading the changed files. It was not a line-by-line read of the roughly 22,000 added lines.
+- I found no telemetry, analytics or required CDN asset.
+- The only remote addresses are the user-started model download from `huggingface.co`, the license links the user clicks, and the npm registry used by the desktop launcher's first-launch install.
+- No test was skipped, narrowed or deleted. The edits only add cases or follow the schema 0.4.0 and `04-batches/` rename.
+- No rule of `CLAUDE.md` was broken.
+
+**Documents fixed**
+- `README.md`: delivered work is no longer listed as planned, and the Internet-access and privacy lines now mention the optional model download. I added the Whisper thread setting to the configuration table.
+- `docs/LOCAL_GENERATION.md`: the status said "planned".
+- `docs/UI.md`: Storage was missing from the menu list, the Settings row was wrong, and the browser-run figures were old.
+- `docs/RECORDING.md`: status and the P05.6 procedure note.
+- `docs/decisions/0014-desktop-app-shell.md`: it said `fullscreen` was the only permission granted, but the app origin also gets the microphone (audio only) and screen capture.
+- `docs/STATUS.md`: the test, full-stack and runner rows, the Planned table, and a stale "not part of the export package yet".
+
+**Open items, listed in the P10.2 evidence in `docs/ROADMAP.md` with what must happen**
+- **P05.6:** the owner runs the guided session `node scripts/ralph/owner-check.cjs` on Windows with a headset in a real Teams call. The earlier recordings used a YouTube video as system sound, so they do not close it.
+- **P06.5:** the owner runs the generation benchmark with E2B and E4B on their computer.
+- **P08.12:** needs real Podman, which cannot be installed on the owner's computer.
+
+**One gap with no roadmap item.** The Settings screen has no import control for model files, although the API for it exists and is tested. I named it in the evidence and did not add a roadmap item, because that also needs a task in `scripts/ralph/prd.json`, which I may not edit.
+
+I did not run a commit-message check and did not touch `CHANGELOG.md`, since no product behavior changed.
+- Files changed: README.md, docs/LOCAL_GENERATION.md, docs/RECORDING.md, docs/ROADMAP.md, docs/STATUS.md, docs/UI.md, docs/decisions/0014-desktop-app-shell.md
+- **Learnings for future iterations:**
+  - Piping check output into grep is denied in this session, but `| tail -N` is allowed; to get a count, read the tail of the output or run the area through ./scripts/ralph/sandbox.sh.
+  - The quiet backend pytest run prints only progress dots with no summary line. Count the characters: 653 tests, 17 skipped, 636 passed on 2026-10-31.
+  - Whole-roadmap check times on this computer: docs 4 s, backend 142 s, web about 30 s, e2e 178 s (956 tests), desktop 10 s, ralph 35 s, fullstack under a minute once the stack is up.
+  - The Grep tool does not accept nested braces in a glob; use separate calls or no glob.
+  - The Settings screen still has no import control for model files. P06.4 was ticked with that part open, and no roadmap item or prd.json task tracks it.
+  - Open items after P10.2: P05.6 (owner session `node scripts/ralph/owner-check.cjs`), P06.5 (benchmark on the owner's computer), P08.12 (real Podman).
+  - docs/STATUS.md rows are very long single lines; edit them with short unique old_string fragments.
 ---

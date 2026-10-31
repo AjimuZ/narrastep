@@ -67,9 +67,10 @@ The shell in `desktop/` applies this decision with these details:
   another server, another local port or `localhost`.
 - The page gets no host interface: no preload script and no IPC channel. P07.3 and P07.4 add the
   picker, the microphone and "Save as" in the main process.
-- `fullscreen` is the one permission granted, to the app origin only, so the native video controls
-  in Review can fill the screen; it exposes no host data. Every other permission is denied, and
-  HID, serial and USB devices are refused, until P07.4 opens what it needs.
+- Three permissions are granted, all to the app origin only: `fullscreen`, so the native video
+  controls in Review can fill the screen (it exposes no host data); `media` for audio-only requests,
+  the microphone (P07.4a), while a camera or mixed request stays denied; and `display-capture`,
+  described below. Every other permission is denied, and HID, serial and USB devices are refused.
 - Screen capture (P07.3a) is answered by `setDisplayMediaRequestHandler`: a request whose security
   origin and frame are the app origin opens the Narrastep picker, every other request is denied.
   Chromium asks for the `display-capture` permission before that handler and rejects the request
