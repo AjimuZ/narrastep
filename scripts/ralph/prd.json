@@ -1440,7 +1440,8 @@
         "P06.6b",
         "P07.5",
         "P08.11",
-        "P09.3"
+        "P09.3",
+        "P05.8"
       ],
       "source": {
         "path": "docs/ROADMAP.md",
@@ -1480,6 +1481,29 @@
         "path": "docs/ROADMAP.md",
         "section": "P05 — In-app recording",
         "line": "P05.6 Manual test with a real Teams call on Windows, with a headset."
+      }
+    },
+    {
+      "id": "P05.8",
+      "title": "Read the right frame, quickly, from a recording",
+      "description": "On the owner's real recording (variable-rate VP9 WebM, 2560x1440, 203 s, r_frame_rate 1000/1) OpenCV's CAP_PROP_POS_MSEC seek lands at the wrong time or fails: 1 s landed at 81 s, 20 s at 182 s, and seeks past about 120 s failed. Frame extraction took 868 of 892 processing seconds and decoded only 95 of 429 samples, so screenshots can come from the wrong moment. Reading the same file forward was far faster: 440 frames in 0.8 s.",
+      "acceptanceCriteria": [
+        "Every time-based frame read (legacy extraction in pipeline.py, the adaptive scan and fine candidates in adaptive_selection.py, and decode_exact_frame in screenshot_materialization.py) returns the frame at the requested time on a generated variable-rate VP9 WebM with sparse keyframes, proved by a test that identifies each frame by its own content, not by the reported position",
+        "All requested samples inside the video duration are decoded on that file, and a test fails if they are not",
+        "A generated constant-rate MP4 still returns the right frames, and image memory stays bounded during extraction",
+        "Extraction on a generated recording of at least 60 seconds at 2560x1440 is measured before and after the change and is at least 5 times faster; on a generated constant-rate MP4 it is not more than 2 times slower; the figures are in docs/STATUS.md",
+        "docs/PROCESSING_PIPELINE.md explains the frame reading, and CHANGELOG.md describes the change, including that projects already processed keep their screenshots until they are processed again"
+      ],
+      "priority": 74,
+      "passes": false,
+      "notes": "Generate media with FFmpeg only, never a real recording. Variable rate can be made with a setpts expression and -fps_mode vfr; check with ffprobe that r_frame_rate differs from avg_frame_rate. Use the frame's timestamp after grab() (CAP_PROP_POS_MSEC) and do not call set(CAP_PROP_POS_MSEC) on such a file; sample times of neighboring candidates can overlap, so times must not go backward without care. Investigate before choosing the design; a forward reader shared by the four call sites is the expected shape. Run commands as ./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py' and checks as ./scripts/ralph/check.sh backend.",
+      "dependsOn": [
+        "P05.7"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P05 — In-app recording",
+        "line": "P05.8 Read the right frame, quickly, from a recording. Added on 2026-10-31 after the owner's"
       }
     }
   ]
