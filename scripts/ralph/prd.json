@@ -999,8 +999,8 @@
         "The merge request receives the notes of every part in order"
       ],
       "priority": 52,
-      "passes": false,
-      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "Added a pure part planner and a merge request builder in backend/app/services/generation_parts.py, with 9 tests and a docs section. check.sh backend (format, lint, types, full tests, OpenAPI) and check.sh docs both passed. I did not run web, e2e or desktop, since nothing there changed. I did not call llama-server, so no model request was exercised.",
       "dependsOn": [
         "P06.3a"
       ],

@@ -280,6 +280,15 @@ starts after its timestamp, with its file name and `[mm:ss]` time, and is downsc
 `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` (never enlarged). A segment shows a `Speaker:` line only for
 a stored `you` or `others` label. The function logs counts only, never transcript text.
 
+Implemented in P06.3b (`backend/app/services/generation_parts.py`, pure functions):
+`plan_generation_parts(segments, screenshots, budget)` cuts the chronological items into parts, each
+segment and screenshot in exactly one part. The budget (`PartBudget`) is an estimate, not a setting:
+at most 6000 tokens (four characters of text plus 16 per item; 300 per image) and 8 images per part.
+An empty project gives no part, and one item larger than the budget forms a part of its own. The
+screenshots of a part are the ones that come right before its segments, as in P06.3a.
+`build_merge_input(output_mode, notes, language=None)` returns the type's system prompt and the notes
+of every part in order, marked as evidence; it logs counts only. No model is called yet.
+
 ## Package
 
 When a generation exists, the user can include it in the next export as

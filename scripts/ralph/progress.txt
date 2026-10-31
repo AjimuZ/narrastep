@@ -40,6 +40,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - A file selected by catalog name under a fixed root, refusing links and non-regular files, is how to read user-supplied files without taking any path from a request.
 - Read .env values in start scripts with shell built-ins (read, case, parameter expansion) so they work on the restricted PATH used by script tests.
 - Avoid names such as secret, token or password in test code, even for harmless sample strings.
+- Keep new generation logic as pure functions with explicit budget parameters, and log counts only, never transcript or notes text.
 
 ---
 
@@ -330,4 +331,15 @@ Notes for the orchestrator:
   - P06.3b should call build_generation_input(output_mode, segments, screenshots, image_max_edge=..., language=None) and build the job around it.
   - Variable names like `secret` in tests trip the secret scan; use neutral names such as `sentence`.
   - No STATUS.md or CHANGELOG.md change was made, since nothing user-visible exists until the job and routes land.
+---
+
+## 2026-10-31T02:59:29Z - P06.3b
+- Added a pure part planner and a merge request builder in backend/app/services/generation_parts.py, with 9 tests and a docs section. check.sh backend (format, lint, types, full tests, OpenAPI) and check.sh docs both passed. I did not run web, e2e or desktop, since nothing there changed. I did not call llama-server, so no model request was exercised.
+- Files changed: backend/app/services/generation_parts.py, backend/tests/test_generation_parts.py, docs/LOCAL_GENERATION.md
+- **Learnings for future iterations:**
+  - The job task should call plan_generation_parts(segments, screenshots, PartBudget(...)) and then build_generation_input on each part's segments and screenshots.
+  - build_merge_input(output_mode, notes, language=None) returns a GenerationInput that holds text parts only. The job passes it the notes returned for each part, in order.
+  - PartBudget is an estimate with defaults of 6000 tokens, 8 images and 300 tokens per image. It is not a Settings value, and no setting reads it yet. The job can map a real context size onto it.
+  - The planner never splits one oversized segment. It becomes a part of its own, so the job should tolerate a part that exceeds the context.
+  - I did not touch docs/PROCESSING_PIPELINE.md or the roadmap evidence. The orchestrator can add the dated P06.3b evidence.
 ---
