@@ -163,6 +163,20 @@ front and exits. A port that is not a number from 1 to 65535 exits with code 2. 
 `npm start` command downloads a missing binary by itself; running `install.js` first keeps that
 download an explicit step.
 
+An optional, unsigned portable build ([ADR 0014](decisions/0014-desktop-app-shell.md), P07.5) is
+made with:
+
+```bash
+npm --prefix desktop run package
+```
+
+The script runs `@electron/packager` 20.3.0 through `npx --yes`, so the packager is downloaded
+from the npm registry only when you run it; it is not in `package.json` or the lock, and the
+launcher's `npm ci` never installs it. The build for this system goes to `desktop/out/`
+(Git-ignored), for example `desktop/out/Narrastep-win32-x64/`. It is not signed or notarized and is
+never published as an installer. It still shows only the web app on `127.0.0.1`, so the containers
+must be started separately.
+
 | Module | Responsibility |
 | --- | --- |
 | `launch.cjs`, `src/launcher.cjs` | Host command started by `start.sh`: health wait, pinned first-launch install, runs the shell |

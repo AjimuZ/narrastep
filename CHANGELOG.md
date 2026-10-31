@@ -6,6 +6,9 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Optional portable desktop build: `npm --prefix desktop run package` makes an unsigned build of the
+  desktop window for this system in `desktop/out/`. It downloads the packager only when you run
+  it; the default install does not need it, and the build is not published as an installer.
 - Review times move the video. The segment start and end beside the video and the time of each
   screenshot are now buttons ("Go to 00:00:07.000 in the video", Italian "Vai a 00:00:07.000 nel
   video"). The segment times in the transcript header are buttons too. A time past the end of the

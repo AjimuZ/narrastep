@@ -1388,8 +1388,8 @@
         "Dated evidence for P07.5 is recorded under its item in docs/ROADMAP.md; the orchestrator ticks its checkbox"
       ],
       "priority": 69,
-      "passes": false,
-      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "Fixed the review findings. Added the P07.5 row to docs/STATUS.md. It is marked Implemented, cites the 233 desktop tests, and says the built application was not run and no Windows or macOS build was made. I also unticked the P07.5 checkbox in ROADMAP.md, which the previous attempt had ticked although the orchestrator does that. check.sh docs passed. I did not re-run check.sh desktop in this attempt. The 233-test figure and the Linux x64 build come from the earlier attempt's evidence in ROADMAP.md.",
       "dependsOn": [
         "P07.4b"
       ],

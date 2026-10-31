@@ -283,6 +283,7 @@ not redistributed.
 | `undici`, `undici-types`, `debug`, `ms`, `env-paths`, `progress` | 7.30.1, 7.24.6, 4.4.3, 2.1.3, 3.0.0, 2.0.3 | MIT | Dependencies of `@electron/get` |
 | `graceful-fs`, `semver` | 4.2.11, 7.8.5 | ISC | Dependencies of `@electron/get` |
 | `@types/node` | 24.19.2 | MIT | Type declarations required by the `electron` package |
+| `@electron/packager` | 20.3.0 | BSD-2-Clause (checked 2026-10-31 on the npm registry) | Optional unsigned portable build, `npm --prefix desktop run package` (P07.5). Fetched by `npx` only when run; not in `package.json` or the lock. Its own dependencies were not individually reviewed |
 
 ## Bundled files
 
@@ -300,7 +301,6 @@ Files copied into the repository and shipped unmodified are recorded in
 | --- | --- | --- | --- |
 | Gemma 4 E2B and E4B weights | Apache-2.0 | P06 | Downloaded by the user; license shown before download and stored with the files |
 | `@angular/localize` | MIT | P04 | English and Italian interface |
-| `@electron/packager` | BSD-2-Clause | P07 | Optional local portable build |
 
 ## Development tools
 

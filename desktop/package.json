@@ -11,6 +11,7 @@
   },
   "scripts": {
     "start": "electron .",
+    "package": "npx --yes --package=@electron/packager@20.3.0 -- electron-packager . Narrastep --out=out --overwrite --prune=true --ignore=^/out --ignore=^/test",
     "test": "node --test \"test/*.test.cjs\""
   },
   "devDependencies": {

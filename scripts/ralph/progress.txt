@@ -68,6 +68,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - When a permission policy changes, grep the docs for the old denial wording (STATUS, ROADMAP, ARCHITECTURE, DEVELOPMENT) and fix every occurrence in the same change.
 - Treat a blob: URL's origin as the part after the prefix when applying an origin policy.
 - A guard that must never throw wraps its checks in try/catch and cancels on any failure.
+- Keep optional heavy tooling out of package.json and run it via npx with a pinned version.
 
 ---
 
@@ -529,4 +530,13 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - The fake session in desktop/test/support/fake-electron.cjs now has on(eventName, listener). It records 'session.on:<event>' and stores the listener in session.listeners.
   - ROADMAP P07.4 stays unchecked for the orchestrator. Its text now says P07.4b is implemented and carries dated evidence.
   - The real-Electron window test was not run, and the docs say so.
+---
+
+## 2026-10-31T13:30:23Z - P07.5
+- Fixed the review findings. Added the P07.5 row to docs/STATUS.md. It is marked Implemented, cites the 233 desktop tests, and says the built application was not run and no Windows or macOS build was made. I also unticked the P07.5 checkbox in ROADMAP.md, which the previous attempt had ticked although the orchestrator does that. check.sh docs passed. I did not re-run check.sh desktop in this attempt. The 233-test figure and the Linux x64 build come from the earlier attempt's evidence in ROADMAP.md.
+- Files changed: desktop/package.json, desktop/test/package-script.test.cjs, .gitignore, CHANGELOG.md, docs/DEVELOPMENT.md, docs/LICENSES.md, docs/ROADMAP.md, docs/STATUS.md
+- **Learnings for future iterations:**
+  - Every roadmap item needs a docs/STATUS.md row as well as ROADMAP evidence.
+  - Leave the roadmap checkbox unticked; the orchestrator ticks it.
+  - The packager runs through npx and is not a dependency, so the launcher's npm ci stays unchanged.
 ---

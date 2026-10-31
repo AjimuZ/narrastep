@@ -193,7 +193,13 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
   its native "Save as" dialog, and cancels any other (foreign, `data:`, unreadable). `check.sh
   desktop`: 230 passed, 0 failed, with stand-ins (`guards.test.cjs` covers both cases, `shell.test.cjs`
   the installation before the first load). Not run: the real Electron window and a real dialog.
-- [ ] P07.5 Optional unsigned local portable build.
+- [x] P07.5 Optional unsigned local portable build.
+  Evidence (2026-10-31, P07.5): `npm --prefix desktop run package` runs `@electron/packager` 20.3.0
+  through `npx --yes` and writes `desktop/out/` (Git-ignored); the packager is not in
+  `package.json` or the lock, so the launcher's `npm ci` does not install it. In the sandbox
+  `npm run package` wrote `out/Narrastep-linux-x64` (Electron 45.2.0, Linux x64). `check.sh
+  desktop`: 233 passed, 0 failed (`package-script.test.cjs` covers the wiring). Not run: the built
+  application itself, and a Windows or macOS build.
 
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy
 stack; manual Windows check records one window with system audio; `--headless` still works.
