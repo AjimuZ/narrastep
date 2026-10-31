@@ -88,7 +88,8 @@ The interface is available in English and Italian
   "Lingua"; each button is named by the language in its own language and has `lang`). The current
   language has the pixel cursor and `aria-current="true"`. Below 768 px the header may wrap to two
   rows and then scrolls away with the page instead of staying fixed, so it never covers content. The
-  switch also belongs in Settings (P06.4), which does not exist yet.
+  switch is also in [Settings](#settings-p064a) (P06.4a), with the same behavior and the languages
+  named in full ("English", "Italiano").
 - **Switching** stores the choice in local storage (`narrastep.language`) and reloads the page. A
   screen with unsaved edits registers a leave check with `LanguageService`; the review screen asks
   "Discard unsaved edits?" before the reload and the reload does not happen when the user keeps the
@@ -237,11 +238,12 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 - **Shell:** compact header (product name, health pill, language switch) and a vertical menu on
   the left: Projects, Record, New project, Settings. Below 768 px the menu becomes a top bar with the same
   entries.
-  - Implemented (P04.3, P04.4, P05.3, P09.2, `apps/web/src/app/app.component.ts`): the header shows
-    the product name, the health pill and the language switch; the menu holds **Projects**,
-    **Record**, **New project** and **Storage** (Italian Spazio; it reuses the `copy` icon because
-    a new icon would be an asset task). Settings joins with its screen (P06.4), because planned screens must not
-    appear as enabled entries.
+  - Implemented (P04.3, P04.4, P05.3, P09.2, P06.4a, `apps/web/src/app/app.component.ts`): the header
+    shows the product name, the health pill and the language switch; the menu holds **Projects**,
+    **Record**, **New project**, **Storage** (Italian Spazio; it reuses the `copy` icon because
+    a new icon would be an asset task) and **Settings** (Italian Impostazioni; the `settings` icon).
+    A planned screen never appears as an enabled entry: the Document screen has none, because it
+    is reached from a project.
   - The current entry has `aria-current="page"`; every project screen counts as Projects except the
     new-project form.
   - The health pill asks `GET /api/v1/health` (same origin, no other request) at start and every
@@ -262,7 +264,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every `[mm:ss]` is a button that moves the video to that time. Action: Save |
 | Export | `/projects/:id/export` | Package options, size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
 | Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled |
-| Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project |
+| Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project. The language switch is here too. Implemented in P06.4a except the import and the storage use ([Settings](#settings-p064a)) |
 
 ### Implemented screens (P04.3)
 
@@ -279,6 +281,45 @@ The table above is the target. What the English interface does today:
 | Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen. The Transcript window has a **Speaker** select (No label, You, Others; Italian Chi parla: Nessuna etichetta, Tu, Altri) beside the confidence, saved immediately without touching unsaved text; an automatic label adds "Set from the audio levels", a labelled segment shows its speaker in the Segments row, and the result is announced in the polite live region ("Speaker of segment 1: Others."). The select stays enabled while saving so focus never jumps; a choice made meanwhile is sent after the first, and a refused save puts the stored label back and shows the error (P05.5) |
 | Export | Title "Export" with the project name; New package (primary: contents, original-video option, **Create package**, the current package with an activity line, because the worker writes fixed stage values rather than a measured percentage), Size estimate, and Packages titled with each stored ZIP name and **Download package** |
 | Not found | "Page not found" with **Open projects** |
+
+### Settings (P06.4a)
+
+`/settings` (`apps/web/src/app/features/settings/`) has two windows and uses only existing tokens
+and primitives (window, menu entry for the language buttons, button, status pill, segmented gauge,
+activity line, notice, pixel icons, confirmation dialog):
+
+- **Language:** one button per language ("English", "Italiano") with `lang`, the pixel cursor and
+  `aria-current="true"` on the current one. A click behaves like the header switch: it stores the
+  choice, runs the leave checks and reloads on the same route.
+- **Local generation** (primary window): a list with one row per model from `GET /models`: name
+  ("Light" / Leggero, "Quality" / Qualità; the identifier is not shown), one help line, state pill
+  (Not installed, Downloading, Verifying, Installed, Enabled, Failed), download **Size** and
+  **License** as a link to `licenseUrl` (new tab, `rel="noopener noreferrer"`).
+  - **Install** (not installed) opens a panel inside the row, with nothing requested yet: the
+    license name and link and the address printed beside it, the download size and the source
+    (`huggingface.co/{repository}`). **Accept the license and download** calls `POST
+    /models/{id}/download`; **Cancel** closes the panel and puts focus on the model's name. Focus
+    also moves to the model's name after an action removes the button that had it; the name is
+    not a Tab stop.
+  - **Downloading** shows a segmented gauge from `downloadedBytes` / `totalBytes` (rounded down,
+    named "Download of the Light model, 40%") and "1.2 GB of 3.4 GB"; **Verifying** shows an
+    activity line, because verification reports no percentage. **Cancel download** calls `POST
+    /models/{id}/cancel`. The screen polls `GET /models/{id}` every 2 seconds only while a model
+    is in one of these two states, also for a download that was already running when the screen
+    opened, and stops when the screen is left.
+  - **Failed** shows the API's `errorMessage` in English and a general sentence in other
+    languages (the reason has no translation), with **Try again**, which resumes the download.
+  - **Installed** offers **Enable** and **Delete**; **Enabled** offers **Disable** and **Delete**.
+    Delete opens the confirmation dialog (danger button, Escape and Cancel keep the model) that
+    names the model and the space freed. A polite status line says what happened; a refusal (for
+    example `MODEL_IN_USE`) appears in an alert with **Try again**.
+  - With `localGeneration: "disabled"` (`NARRASTEP_LOCAL_GENERATION=disabled`) the window shows
+    one notice that names the setting and no model, button or link. The API would still allow
+    disable and delete then, but the screen offers none of them.
+- **Not in the screen yet:** the import from `data/models-import` (`GET` and `POST
+  /models/{id}/import`) and the storage use per project listed in the screen table above. The
+  license link opens a new tab in a browser; the desktop window cancels every popup, so there it
+  does nothing, and only the license panel of **Install** prints the address for the user to read.
 
 ### Desktop window (P07.1)
 

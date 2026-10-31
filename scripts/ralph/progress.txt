@@ -50,6 +50,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - When a value is pinned in a catalog (here the model file hashes), store it on the result row and in the output file header. Check only cheap invariants such as file size on each run, instead of re-hashing multi-gigabyte files.
 - When a claim about verification changes, search CHANGELOG.md, docs/STATUS.md and every other document for the old wording, because the same claim is often repeated in several places.
 - An opt-in test that needs heavy files should be deselected at collection in a conftest.py and fail when opted in without its files, so a proof that did not happen never reads as a pass.
+- A screen that polls the API should get a stoppable polling observable from ApiService (timer + switchMap + takeWhile inclusive) and keep one subscription per item, unsubscribed in DestroyRef.onDestroy. Test it with fake timers.
+- When a click removes the button that had focus, move focus to a non-tabbable heading (tabindex=-1) of the same item with afterNextRender, so keyboard users are not sent to the top of the page.
+- Show license name, link and size inside an inline panel before any request that installs third-party files, and send the request only from the explicit accept button.
 
 ---
 
@@ -413,4 +416,20 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - Run times vary between runs of the same scenario: 44 s and 143 s in this attempt, 58 s and 163 s recorded earlier. P06.5 should not treat a single run as a measurement.
   - E2B writes section titles as bold lines such as `**1. Summary**` rather than Markdown headings, and it cites ranges such as `[00:20-00:31]`. P06.4 rendering and P06.6 citation buttons must handle both forms.
   - The job has not yet run with the real model through the API, Celery or the backend image, and no model has been installed through the model manager for a real run; the test walks the stored states and links the folder.
+---
+
+## 2026-10-31T05:08:17Z - P06.4a
+- Added the Settings screen (/settings) with the language switch and the local-generation model manager: install behind a license panel, real polled progress, cancel, retry, enable, disable and delete with confirmation. NARRASTEP_LOCAL_GENERATION=disabled shows one notice and no model or control. A Settings menu entry, model API client calls, 66 English/Italian messages and Playwright coverage in both languages are included. Import from data/models-import and storage use per project are not in the screen; UI.md and the roadmap note say so. Checks run: check.sh web passed (213 unit tests, 599 messages in en and it), check.sh e2e passed (724 tests), check.sh docs passed. Backend and desktop were not run (no files changed there). The screen was tested only against a fake API; no real model was downloaded or installed through it.
+- Files changed: CHANGELOG.md, apps/web/src/app/app.component.spec.ts, apps/web/src/app/app.component.ts, apps/web/src/app/app.routes.ts, apps/web/src/app/core/api.models.ts, apps/web/src/app/core/i18n/catalogs.spec.ts, apps/web/src/app/core/i18n/error-text.ts, apps/web/src/app/core/i18n/italian.spec.ts, apps/web/src/app/core/services/api.service.spec.ts, apps/web/src/app/core/services/api.service.ts, apps/web/src/app/features/settings/settings.component.html, apps/web/src/app/features/settings/settings.component.scss, apps/web/src/app/features/settings/settings.component.spec.ts, apps/web/src/app/features/settings/settings.component.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, apps/web/tests/e2e/accessibility.spec.ts, apps/web/tests/e2e/settings.spec.ts, apps/web/tests/e2e/support/fake-api.ts, docs/LOCAL_GENERATION.md, docs/ROADMAP.md, docs/STATUS.md, docs/UI.md
+- **Learnings for future iterations:**
+  - The model manager UI lives in apps/web/src/app/features/settings/. ApiService has listModels, getModel, downloadModel, cancelModelDownload, enableModel, disableModel, deleteModel and monitorModel. monitorModel polls every 2 s, skips failed polls and completes after the first state that is not downloading or verifying.
+  - Settings does not offer the import from data/models-import (GET and POST /models/{id}/import, license text from GET) or storage use per project. Both are still listed in the docs/UI.md screen table; a later task can add them to the Local generation window.
+  - The kill switch is read from GET /models (localGeneration). The screen hides every model control under 'disabled', even though the API still allows disable and delete then.
+  - The electron desktop window cancels every popup (setWindowOpenHandler deny), so the license link (target=_blank) does nothing there. Only the Install panel prints the license address as text.
+  - Errors on a failed model: English shows model.errorMessage as sent; other languages show a generic Italian sentence because the reason has no translation.
+  - The browser fake (apps/web/tests/e2e/support/fake-api.ts) now has stateful /models endpoints. Scenario options: localGeneration ('available'|'disabled') and modelDownload ('stalled' stays at 40% | 'advancing' steps 40% per poll, then verifying, then installed). Light starts installed and Quality starts not installed.
+  - Plain links (--color-accent) fail contrast at 4.21:1 on the row surface; the license link uses --color-accent-soft. Check any new link on a raised surface in the accessibility suite.
+  - In Playwright, wait until the confirm dialog's Cancel button is focused before pressing Escape: Escape sent before CDK moves focus into the dialog is lost and the dialog stays open.
+  - Prettier cannot be run with --write from the shell here. To fix formatting, run ./scripts/ralph/sandbox.sh 'cd apps/web && npx prettier FILE | diff FILE -' and apply the differences with Edit.
+  - The Document screen (P06.4b) can reuse the same pattern: ConfirmDialogComponent, afterNextRender focus after an action removes the focused button, and ApiService polling observables that complete on a terminal state.
 ---

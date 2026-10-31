@@ -27,6 +27,8 @@ import {
   CreateProjectRequest,
   CreateRecordingRequest,
   ExportEstimate,
+  GenerationModel,
+  GenerationModelList,
   HealthResponse,
   MediaAsset,
   MergeSegmentsRequest,
@@ -422,6 +424,53 @@ export class ApiService {
   /** Returns the download route consumed by a normal browser anchor. */
   exportDownloadUrl(exportId: string): string {
     return `${API_ROOT}/exports/${exportId}/download`;
+  }
+
+  /** Lists the local generation models and whether the kill switch allows them. */
+  listModels(): Observable<GenerationModelList> {
+    return this.http.get<GenerationModelList>(`${API_ROOT}/models`);
+  }
+
+  /** Reads one model's state and download progress. */
+  getModel(modelId: string): Observable<GenerationModel> {
+    return this.http.get<GenerationModel>(`${API_ROOT}/models/${modelId}`);
+  }
+
+  /** Starts, or resumes after a failure, the download; answers the entry, usually `downloading`. */
+  downloadModel(modelId: string): Observable<GenerationModel> {
+    return this.http.post<GenerationModel>(`${API_ROOT}/models/${modelId}/download`, {});
+  }
+
+  /** Cancels a download or its verification and deletes the partial files. */
+  cancelModelDownload(modelId: string): Observable<GenerationModel> {
+    return this.http.post<GenerationModel>(`${API_ROOT}/models/${modelId}/cancel`, {});
+  }
+
+  /** Enables an installed model; refused under the kill switch. */
+  enableModel(modelId: string): Observable<GenerationModel> {
+    return this.http.post<GenerationModel>(`${API_ROOT}/models/${modelId}/enable`, {});
+  }
+
+  /** Disables an enabled model and keeps its files. */
+  disableModel(modelId: string): Observable<GenerationModel> {
+    return this.http.post<GenerationModel>(`${API_ROOT}/models/${modelId}/disable`, {});
+  }
+
+  /** Deletes the files of an installed or enabled model; answers the `not_installed` entry. */
+  deleteModel(modelId: string): Observable<GenerationModel> {
+    return this.http.delete<GenerationModel>(`${API_ROOT}/models/${modelId}`);
+  }
+
+  /**
+   * Polls a model every two seconds and completes after the first answer that is neither
+   * `downloading` nor `verifying`, which it still emits. A failed poll is skipped, so an API
+   * restart does not end the watch; unsubscribing stops the timer.
+   */
+  monitorModel(modelId: string): Observable<GenerationModel> {
+    return timer(0, 2_000).pipe(
+      switchMap(() => this.getModel(modelId).pipe(catchError(() => EMPTY))),
+      takeWhile((model) => model.state === 'downloading' || model.state === 'verifying', true),
+    );
   }
 }
 

@@ -6,6 +6,16 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Settings screen (`/settings`, menu entry **Settings** / **Impostazioni**, English and Italian). It
+  has the interface language switch (also kept in the header) and the model manager for the
+  optional local generation: each model shows its state, download size and license name and link;
+  **Install** first shows the license, its link, the size and where the files come from, and only
+  **Accept the license and download** starts the download, which then shows the real byte progress
+  and can be cancelled. An installed model can be enabled, disabled and deleted (deleting asks first
+  and names the space freed). With `NARRASTEP_LOCAL_GENERATION=disabled` the screen shows no model
+  and no model control. Importing from `data/models-import` and storage use per project are not in
+  the screen yet. Two API error codes that had no text, `MODEL_IN_USE` and `MODEL_DELETE_FAILED`,
+  are now translated.
 - Local document generation in the API (no screen yet): `POST /api/v1/projects/{id}/generations`
   queues a job on the same worker as processing and export, which sends the reviewed transcript and
   screenshots to the enabled local model in chronological parts and stores

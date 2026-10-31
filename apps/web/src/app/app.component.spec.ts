@@ -29,6 +29,7 @@ async function setup(health: () => Observable<HealthResponse>) {
         { path: 'projects/new', component: BlankComponent },
         { path: 'projects/:id', component: BlankComponent },
         { path: 'record', component: BlankComponent },
+        { path: 'settings', component: BlankComponent },
       ]),
       { provide: ApiService, useValue: { health: vi.fn(health) } },
     ],
@@ -57,13 +58,25 @@ describe('AppComponent shell', () => {
       'Record',
       'New project',
       'Storage',
+      'Settings',
     ]);
     expect(MENU_ENTRIES.map((entry) => entry.path)).toEqual([
       '/projects',
       '/record',
       '/projects/new',
       '/storage',
+      '/settings',
     ]);
+  });
+
+  it('marks Settings as the current entry on its screen only', async () => {
+    const { fixture, element, router } = await setup(() => of(HEALTHY));
+    await router.navigateByUrl('/settings');
+    fixture.detectChanges();
+    expect(currentEntries(element)).toEqual(['Settings']);
+    await router.navigateByUrl('/record');
+    fixture.detectChanges();
+    expect(currentEntries(element)).toEqual(['Record']);
   });
 
   it('marks the current menu entry with aria-current', async () => {

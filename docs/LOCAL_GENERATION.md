@@ -6,7 +6,8 @@ model state, which exist since P06.2a, and the model download, resume, verificat
 which exists since P06.2b, the enable, disable and delete API (P06.2c) and the import from disk
 (P06.2d), and the generation job, which starts the server, and its endpoints, which exist since
 P06.3d and which ran with the real server and E2B files in an opt-in test in P06.3e (see
-[Verification](#verification)). No screen offers generation yet (P06.4).
+[Verification](#verification)). Since P06.4a the Settings screen installs, enables, disables and
+deletes the models ([UI](UI.md#settings-p064a)); no screen offers generation itself yet (P06.4b).
 Version 0.2 exports evidence and prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
@@ -206,7 +207,8 @@ Implemented as follows (P06.2d):
   a warning. `data/` is Git-ignored, so the files are never committed.
 - **License before the import.** `GET /models/{id}/import` returns the license name, link and
   full text next to the list of files, and `POST /models/{id}/import` needs `licenseAccepted:
-  true` (otherwise `422 LICENSE_NOT_ACCEPTED`). The Settings screen that shows it is P06.2e. The
+  true` (otherwise `422 LICENSE_NOT_ACCEPTED`). The Settings screen (P06.4a) does not offer the
+  import yet and shows the license name and link of the download only. The
   license text is copied to `/data/models/<model>/LICENSE.txt` when the copy starts.
 - **What the folder may hold.** For each pinned file the service looks for `<import
   folder>/<pinned name>`. The name always comes from the catalog; the request body holds no path
@@ -376,8 +378,8 @@ itself also ran with the real server and model in the [opt-in integration test](
   worker owns with `GENERATION_INTERRUPTED` and removes its folder. For the same project the API
   refuses processing, deletion and removal of the original video while a generation is active, and
   generating while the project is queued, processing or exporting.
-- **Not done.** The Settings and Document screens, including the document in an export package
-  (P06.4), the clickable citations (P06.6) and the benchmark (P06.5). The context size (8192) and
+- **Not done.** The Document screen, the document in an export package and the import control in
+  Settings (P06.4b to P06.4d), the clickable citations (P06.6) and the benchmark (P06.5). The context size (8192) and
   the part budget are estimates until the benchmark measures them. A worker killed outright can
   leave its `llama-server` child running until the container stops.
 

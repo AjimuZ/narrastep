@@ -2,6 +2,7 @@
 import type { BrowserContext } from '@playwright/test';
 
 const timestamp = '2026-07-15T10:00:00Z';
+const MB = 1024 * 1024;
 const projectName = 'Contract search and customer onboarding workflow for operations';
 
 /** Project and job states a scenario puts the fake API in. */
@@ -10,6 +11,36 @@ export interface FakeScenario {
   status: 'processing' | 'review' | 'failed';
   /** State of the job `job-1` (used when the project is processing or failed). */
   jobStatus?: 'processing' | 'failed';
+  /** Kill switch of local generation as `GET /models` reports it; `available` by default. */
+  localGeneration?: 'available' | 'disabled';
+  /**
+   * How a started model download behaves: `stalled` (default) stays at 40% so a screen can be
+   * checked in that state; `advancing` moves on at every poll until the model is installed.
+   */
+  modelDownload?: 'stalled' | 'advancing';
+}
+
+/** Install states of a generation model, as `GET /models` reports them. */
+export type FakeModelState =
+  'not_installed' | 'downloading' | 'verifying' | 'installed' | 'enabled' | 'failed';
+
+/** Builds a generation model entry; `sizeGb` is the total download in GB (binary). */
+function modelRow(id: string, label: string, state: FakeModelState, sizeGb: number, done = 0) {
+  const totalBytes = Math.round(sizeGb * 1024 * MB);
+  return {
+    id,
+    label,
+    state,
+    downloadedBytes: state === 'not_installed' ? 0 : Math.round(totalBytes * done),
+    totalBytes,
+    files: [{ name: `${id}.gguf`, sizeBytes: totalBytes }],
+    repository: `ggml-org/${id}-GGUF`,
+    revision: '6938c58e698502037401a5f19f6905f2fb2f7dee',
+    licenseName: 'Apache License 2.0',
+    licenseUrl: 'https://ai.google.dev/gemma/docs/gemma_4_license',
+    errorMessage: null,
+    updatedAt: null,
+  };
 }
 
 /** Builds one project payload with the fields the screens read. */
@@ -99,8 +130,6 @@ function job(status: 'processing' | 'failed') {
   };
 }
 
-const MB = 1024 * 1024;
-
 /** Name of the only project in the Storage list whose original video can be removed. */
 export const REMOVABLE_PROJECT = 'Weekly operations meeting';
 
@@ -153,6 +182,17 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
     storageRow('project-6', 'Queued tutorial', 'queued', 'busy', { source: 1 }),
     storageRow('project-3', 'New hire briefing', 'draft', 'no_video', {}),
   ];
+  // Light is installed and Quality is not, so Settings shows both an Enable and an Install control.
+  let models = [
+    modelRow('gemma-4-e2b', 'Light', 'installed', 3.2, 1),
+    modelRow('gemma-4-e4b', 'Quality', 'not_installed', 5.2),
+  ];
+  /** Returns the model with another state and the given share of the download received. */
+  const withState = (model: (typeof models)[number], state: FakeModelState, done = 0) => ({
+    ...model,
+    state,
+    downloadedBytes: state === 'not_installed' ? 0 : Math.round(model.totalBytes * done),
+  });
   // The first segment carries an automatic speaker label, so every screen check also covers the
   // Review speaker select with its hint; the second is unlabelled.
   const segments = [
@@ -289,6 +329,67 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
       };
       storageRows = storageRows.map((item) => (item === row ? updated : item));
       await route.fulfill({ json: updated });
+    } else if (path === '/api/v1/models' && method === 'GET') {
+      await route.fulfill({
+        json: { localGeneration: scenario.localGeneration ?? 'available', items: models },
+      });
+    } else if (/^\/api\/v1\/models\/[^/]+(\/[a-z]+)?$/.test(path)) {
+      // Like the API: each action moves a model along its documented transitions and anything else
+      // is a 409; the kill switch refuses a download and an enable.
+      const [, modelId, action] = /^\/api\/v1\/models\/([^/]+)(?:\/([a-z]+))?$/.exec(path)!;
+      const model = models.find((item) => item.id === modelId);
+      const refuse = (status: number, code: string, message: string) =>
+        route.fulfill({ status, json: { error: { code, message, details: {} } } });
+      if (!model) {
+        await refuse(404, 'MODEL_NOT_FOUND', 'The model does not exist.');
+        return;
+      }
+      let next = model;
+      if (method === 'GET') {
+        // An advancing download moves on at every poll: 40% steps, then verifying, then installed.
+        const done = model.downloadedBytes / model.totalBytes;
+        if (scenario.modelDownload === 'advancing' && model.state === 'downloading') {
+          next =
+            done + 0.4 >= 1
+              ? withState(model, 'verifying', 1)
+              : withState(model, 'downloading', done + 0.4);
+        } else if (scenario.modelDownload === 'advancing' && model.state === 'verifying') {
+          next = withState(model, 'installed', 1);
+        }
+      } else if (
+        scenario.localGeneration === 'disabled' &&
+        (action === 'download' || action === 'enable')
+      ) {
+        await refuse(403, 'LOCAL_GENERATION_DISABLED', 'Local generation is turned off.');
+        return;
+      } else if (
+        (action === 'download' && (model.state === 'not_installed' || model.state === 'failed')) ||
+        (action === 'cancel' && (model.state === 'downloading' || model.state === 'verifying')) ||
+        (action === 'enable' && model.state === 'installed') ||
+        (action === 'disable' && model.state === 'enabled') ||
+        (action === undefined &&
+          method === 'DELETE' &&
+          ['installed', 'enabled'].includes(model.state))
+      ) {
+        const states: Record<string, FakeModelState> = {
+          download: 'downloading',
+          cancel: 'not_installed',
+          enable: 'enabled',
+          disable: 'installed',
+          delete: 'not_installed',
+        };
+        const state = states[action ?? 'delete']!;
+        next = withState(model, state, state === 'downloading' ? 0.4 : 1);
+      } else {
+        await refuse(
+          409,
+          'MODEL_STATE_CONFLICT',
+          'This action is not available in the model state.',
+        );
+        return;
+      }
+      models = models.map((item) => (item === model ? next : item));
+      await route.fulfill({ json: next });
     } else {
       await route.fulfill({
         status: 404,

@@ -65,6 +65,8 @@ describe('Italian interface', () => {
     expect(localizedError('LOCAL_GENERATION_DISABLED', null, 'x')).toContain('disattivata');
     expect(localizedError('MODEL_NOT_FOUND', null, 'x')).toContain('modello');
     expect(localizedError('MODEL_STATE_CONFLICT', null, 'x')).toContain('Ricarica');
+    expect(localizedError('MODEL_IN_USE', null, 'x')).toContain('Si sta generando');
+    expect(localizedError('MODEL_DELETE_FAILED', null, 'x')).toContain('non è stato cambiato');
   });
 
   it('translates the model import errors', () => {
@@ -116,6 +118,7 @@ describe('Italian interface', () => {
       'Registra',
       'Nuovo progetto',
       'Spazio',
+      'Impostazioni',
     ]);
     expect(element.querySelector('.skip-link')?.textContent?.trim()).toBe(
       'Vai al contenuto principale',

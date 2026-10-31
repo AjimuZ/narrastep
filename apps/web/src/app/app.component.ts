@@ -39,10 +39,7 @@ interface MenuEntry {
   matches: (url: string) => boolean;
 }
 
-/**
- * Menu entries of the shell. Settings (P06) is added by its package: the roadmap forbids enabled
- * entries for screens that do not exist yet.
- */
+/** Menu entries of the shell; the roadmap forbids enabled entries for screens that do not exist yet. */
 export const MENU_ENTRIES: readonly MenuEntry[] = [
   {
     label: () => $localize`:@@shell.menu.projects:Projects`,
@@ -68,6 +65,12 @@ export const MENU_ENTRIES: readonly MenuEntry[] = [
     path: '/storage',
     icon: 'copy',
     matches: (url) => url === '/storage',
+  },
+  {
+    label: () => $localize`:@@shell.menu.settings:Settings`,
+    path: '/settings',
+    icon: 'settings',
+    matches: (url) => url === '/settings',
   },
 ];
 

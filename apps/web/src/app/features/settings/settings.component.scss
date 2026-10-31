@@ -1,0 +1,142 @@
+// Settings screen layout: a language window above the model list. Rows stack on narrow columns and
+// place the facts beside the actions when the content column is wide, following the container.
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+ns-window + ns-window {
+  display: block;
+  margin-top: var(--space-4);
+}
+
+.language-help,
+.generation-help {
+  margin: 0 0 var(--space-3);
+}
+
+.language-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.language-option {
+  min-height: 2.5rem;
+  font: 600 var(--text-sm) / 1.2 var(--font-ui);
+}
+
+.notice-row {
+  margin-bottom: var(--space-4);
+}
+
+.notice-row:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.notice-row[hidden] {
+  display: none;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.model-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model-row {
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) 1.25rem;
+}
+
+.model-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.model-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-md);
+  outline: none;
+}
+
+.model-help {
+  margin: 0;
+}
+
+.model-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+
+.model-facts dt {
+  font-size: var(--text-xs);
+}
+
+.model-facts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+// The default link color reaches only 4.2:1 on the raised row surface; the soft accent reaches 4.5:1.
+.model-license a {
+  color: var(--color-accent-soft);
+}
+
+.license-url {
+  display: block;
+  font-size: var(--text-xs);
+}
+
+.model-progress {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.model-progress__text {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.model-install {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+}
+
+.model-install p {
+  margin: 0;
+}
+
+.model-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+p.ns-notice {
+  margin: 0;
+}

@@ -60,6 +60,12 @@ export const routes: Routes = [
     title: 'Storage · Narrastep',
   },
   {
+    path: 'settings',
+    loadComponent: () =>
+      import('./features/settings/settings.component').then((module) => module.SettingsComponent),
+    title: 'Settings · Narrastep',
+  },
+  {
     path: '**',
     loadComponent: () =>
       import('./features/not-found.component').then((module) => module.NotFoundComponent),

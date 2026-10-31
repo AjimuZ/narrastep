@@ -65,6 +65,22 @@ const SCREENS: Screen[] = [
     ready: { en: 'Used by projects', it: 'Usato dai progetti' },
   },
   {
+    name: 'settings',
+    path: '/settings',
+    scenario: { status: 'review' },
+    // Light is installed and Quality is not, so the word appears once the models have loaded.
+    ready: { en: 'Not installed', it: 'Non installato' },
+  },
+  {
+    name: 'settings with local generation off',
+    path: '/settings',
+    scenario: { status: 'review', localGeneration: 'disabled' },
+    ready: {
+      en: 'NARRASTEP_LOCAL_GENERATION=disabled',
+      it: 'NARRASTEP_LOCAL_GENERATION=disabled',
+    },
+  },
+  {
     name: 'not found',
     path: '/does-not-exist',
     scenario: { status: 'review' },
@@ -106,6 +122,33 @@ async function openRemovalDialog(page: Page, language: 'en' | 'it'): Promise<Loc
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   return dialog;
+}
+
+/** Accessible names of the Settings controls the tests use, per interface language. */
+const SETTINGS_NAMES = {
+  en: {
+    install: 'Install the Quality model',
+    accept: 'Accept the license and download',
+    cancel: 'Cancel',
+    delete: 'Delete the Light model',
+    confirmDelete: 'Delete model',
+  },
+  it: {
+    install: 'Installa il modello Qualità',
+    accept: 'Accetta la licenza e scarica',
+    cancel: 'Annulla',
+    delete: 'Elimina il modello Leggero',
+    confirmDelete: 'Elimina modello',
+  },
+} as const;
+
+/** Opens Settings and the license panel of the model that is not installed; returns the panel. */
+async function openLicensePanel(page: Page, language: 'en' | 'it'): Promise<Locator> {
+  await openScreen(page, screenNamed('settings'), language);
+  await page.getByRole('button', { name: SETTINGS_NAMES[language].install }).click();
+  const panel = page.locator('.model-install');
+  await expect(panel).toBeVisible();
+  return panel;
 }
 
 /** Horizontal page scroll in pixels (zero when the page fits). */
@@ -219,6 +262,32 @@ for (const { code, locale } of LANGUAGES) {
       expect(afterwards.controlFailures).toEqual([]);
     });
 
+    test('settings license panel, download progress and delete confirmation', async ({
+      context,
+      page,
+    }) => {
+      await useFakeApi(context, { status: 'review' });
+      const names = SETTINGS_NAMES[code];
+      const panel = await openLicensePanel(page, code);
+      const withPanel = await scanContrast(page);
+      expect(withPanel.textFailures).toEqual([]);
+      expect(withPanel.controlFailures).toEqual([]);
+
+      await panel.getByRole('button', { name: names.accept }).click();
+      const gauge = page.locator('.model-progress [role="img"]');
+      await expect(gauge).toBeVisible();
+      await expect(gauge).toHaveAttribute('aria-label', /40%/);
+      const downloading = await scanContrast(page);
+      expect(downloading.textFailures).toEqual([]);
+      expect(downloading.controlFailures).toEqual([]);
+
+      await page.getByRole('button', { name: names.delete }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      const confirming = await scanContrast(page);
+      expect(confirming.textFailures).toEqual([]);
+      expect(confirming.controlFailures).toEqual([]);
+    });
+
     test('hovered buttons, rows and menu entries keep their contrast', async ({
       context,
       page,
@@ -229,6 +298,7 @@ for (const { code, locale } of LANGUAGES) {
         screenNamed('review'),
         screenNamed('export'),
         screenNamed('storage'),
+        screenNamed('settings'),
       ]) {
         await openScreen(page, screen, code);
         const targets = page.locator(
@@ -485,6 +555,37 @@ for (const { code, locale } of LANGUAGES) {
       await expect(trigger).toBeFocused();
     });
 
+    test('settings license panel opens and closes with the keyboard and keeps focus on the model', async ({
+      context,
+      page,
+    }) => {
+      await useFakeApi(context, { status: 'review' });
+      const names = SETTINGS_NAMES[code];
+      await openScreen(page, screenNamed('settings'), code);
+      const trigger = page.getByRole('button', { name: names.install });
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      const panel = page.locator('.model-install');
+      await expect(panel).toBeVisible();
+      await expect(panel.getByRole('link')).toHaveAttribute('href', /gemma_4_license/);
+
+      await panel.getByRole('button', { name: names.cancel }).focus();
+      await page.keyboard.press('Enter');
+      await expect(panel).toBeHidden();
+      // The button that had the focus is gone, so the model name takes it: the keyboard user is not
+      // sent back to the top of the page.
+      await expect(page.locator('#model-title-gemma-4-e4b')).toBeFocused();
+
+      await page.getByRole('button', { name: names.delete }).focus();
+      await page.keyboard.press('Enter');
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('button', { name: names.cancel })).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
+      await expect(page.getByRole('button', { name: names.delete })).toBeFocused();
+    });
+
     test('split dialog and screenshot preview close with Escape', async ({ context, page }) => {
       await useFakeApi(context, { status: 'review' });
       await openScreen(page, screenNamed('review'), code);
@@ -703,6 +804,24 @@ for (const { code, locale } of LANGUAGES) {
           }
         });
       }
+
+      test('settings license panel fits and keeps its actions reachable', async ({
+        context,
+        page,
+      }) => {
+        await useFakeApi(context, { status: 'review' });
+        const panel = await openLicensePanel(page, code);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        expect(await clippedControls(page)).toEqual([]);
+        expect(await clippedText(page)).toEqual([]);
+        if (viewport.width <= 390) {
+          expect(await smallTargets(page)).toEqual([]);
+        }
+        for (const action of await panel.getByRole('button').all()) {
+          await action.scrollIntoViewIfNeeded();
+          await expect(action).toBeInViewport();
+        }
+      });
 
       test('storage removal confirmation fits and keeps its actions reachable', async ({
         context,

@@ -89,6 +89,10 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.LOCAL_GENERATION_DISABLED:Local generation is turned off on this computer, so models cannot be downloaded.`;
     case 'MODEL_STATE_CONFLICT':
       return $localize`:@@error.MODEL_STATE_CONFLICT:This action is not available in the model's current state. Reload the page and try again.`;
+    case 'MODEL_IN_USE':
+      return $localize`:@@error.MODEL_IN_USE:A document is being generated with this model. Wait until it finishes or cancel it, then try again.`;
+    case 'MODEL_DELETE_FAILED':
+      return $localize`:@@error.MODEL_DELETE_FAILED:The model files could not be deleted, so nothing changed. Try again.`;
     case 'LICENSE_NOT_ACCEPTED':
       return $localize`:@@error.LICENSE_NOT_ACCEPTED:Read the license before importing the model files.`;
     case 'MODEL_IMPORT_FILES_MISSING':

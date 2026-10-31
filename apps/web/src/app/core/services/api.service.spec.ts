@@ -1,9 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ProcessingJob } from '../api.models';
+import { GenerationModel, ProcessingJob } from '../api.models';
 import { ApiService } from './api.service';
 
 const POLLED_JOB: ProcessingJob = {
@@ -64,6 +65,85 @@ describe('ApiService job monitoring', () => {
     expect(firstStream.close).toHaveBeenCalled();
     subscription.unsubscribe();
     expect(retryStream.close).toHaveBeenCalled();
+  });
+});
+
+const MODEL: GenerationModel = {
+  id: 'gemma-4-e2b',
+  label: 'Light',
+  state: 'not_installed',
+  downloadedBytes: 0,
+  totalBytes: 3_398_849_248,
+  files: [{ name: 'gemma-4-E2B-it-Q4_0.gguf', sizeBytes: 2_841_481_184 }],
+  repository: 'ggml-org/gemma-4-E2B-it-GGUF',
+  revision: '6938c58e698502037401a5f19f6905f2fb2f7dee',
+  licenseName: 'Apache License 2.0',
+  licenseUrl: 'https://ai.google.dev/gemma/docs/gemma_4_license',
+  errorMessage: null,
+  updatedAt: null,
+};
+
+describe('ApiService model calls', () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function setup() {
+    await TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    return { api: TestBed.inject(ApiService), http: TestBed.inject(HttpTestingController) };
+  }
+
+  it('sends each lifecycle action to its documented endpoint', async () => {
+    const { api, http } = await setup();
+    const calls: [() => unknown, string, string][] = [
+      [() => api.listModels(), 'GET', '/api/v1/models'],
+      [() => api.getModel('gemma-4-e2b'), 'GET', '/api/v1/models/gemma-4-e2b'],
+      [() => api.downloadModel('gemma-4-e2b'), 'POST', '/api/v1/models/gemma-4-e2b/download'],
+      [() => api.cancelModelDownload('gemma-4-e2b'), 'POST', '/api/v1/models/gemma-4-e2b/cancel'],
+      [() => api.enableModel('gemma-4-e2b'), 'POST', '/api/v1/models/gemma-4-e2b/enable'],
+      [() => api.disableModel('gemma-4-e2b'), 'POST', '/api/v1/models/gemma-4-e2b/disable'],
+      [() => api.deleteModel('gemma-4-e2b'), 'DELETE', '/api/v1/models/gemma-4-e2b'],
+    ];
+
+    for (const [call, method, url] of calls) {
+      (call() as { subscribe: () => void }).subscribe();
+      const request = http.expectOne(url);
+      expect(request.request.method).toBe(method);
+      request.flush(MODEL);
+    }
+    http.verify();
+  });
+
+  it('polls every two seconds and ends with the first state that is not in progress', async () => {
+    vi.useFakeTimers();
+    const { api } = await setup();
+    const getModel = vi
+      .spyOn(api, 'getModel')
+      .mockReturnValueOnce(of({ ...MODEL, state: 'downloading', downloadedBytes: 10 }))
+      .mockReturnValueOnce(throwError(() => new Error('API restarting')))
+      .mockReturnValueOnce(of({ ...MODEL, state: 'verifying', downloadedBytes: 20 }))
+      .mockReturnValue(of({ ...MODEL, state: 'installed', downloadedBytes: 20 }));
+    const states: string[] = [];
+    let completed = false;
+
+    api.monitorModel('gemma-4-e2b').subscribe({
+      next: (model) => states.push(model.state),
+      complete: () => (completed = true),
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(states).toEqual(['downloading']);
+
+    // The failed poll is skipped and the next one still happens.
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(states).toEqual(['downloading', 'verifying']);
+    expect(completed).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(states).toEqual(['downloading', 'verifying', 'installed']);
+    expect(completed).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(getModel).toHaveBeenCalledTimes(4);
   });
 });
 

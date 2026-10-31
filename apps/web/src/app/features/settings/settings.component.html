@@ -1,0 +1,270 @@
+<section class="page">
+  <header class="page-header">
+    <h1 i18n="@@settings.title">Settings</h1>
+    <p class="muted" i18n="@@settings.intro">
+      The interface language and the optional local generation, which writes a document from a
+      transcript on this computer.
+    </p>
+  </header>
+
+  <ns-window title="Language" i18n-title="@@settings.language_title">
+    <p class="muted language-help" i18n="@@settings.language_help">
+      Changing the language reloads the page. Your projects are not changed.
+    </p>
+    <div
+      class="language-options"
+      role="group"
+      aria-label="Interface language"
+      i18n-aria-label="@@settings.language_group"
+    >
+      @for (option of languages; track option.code) {
+        <button
+          type="button"
+          class="ns-menu-entry language-option"
+          [attr.lang]="option.code"
+          [attr.aria-current]="option.code === language.current ? 'true' : null"
+          (click)="switchLanguage(option.code)"
+        >
+          {{ option.name }}
+        </button>
+      }
+    </div>
+  </ns-window>
+
+  <ns-window
+    class="generation-window"
+    title="Local generation"
+    i18n-title="@@settings.generation_title"
+    [primary]="true"
+  >
+    @if (errorMessage(); as message) {
+      <div class="ns-notice ns-notice--error notice-row" role="alert">
+        <span>{{ message }}</span>
+        <button class="ns-button ns-button--small" type="button" (click)="load()">
+          <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again">Try again</span>
+        </button>
+      </div>
+    }
+
+    <div class="ns-notice ns-notice--ok notice-row" role="status" [hidden]="!notice()">
+      {{ notice() }}
+    </div>
+
+    @if (loading()) {
+      <div
+        class="loading"
+        aria-label="Loading models"
+        i18n-aria-label="@@settings.loading"
+        aria-busy="true"
+      >
+        <span class="visually-hidden" i18n="@@settings.loading_text">Loading models…</span>
+        <ns-activity-line label="Loading models" i18n-label="@@settings.loading" />
+        <div class="ns-placeholder"></div>
+      </div>
+    } @else if (list(); as data) {
+      @if (isDisabled(data)) {
+        <p class="ns-notice ns-notice--wait" i18n="@@settings.disabled">
+          Local generation is turned off on this computer (NARRASTEP_LOCAL_GENERATION=disabled), so
+          no model can be installed or used. To turn it on, set NARRASTEP_LOCAL_GENERATION to
+          available and start Narrastep again.
+        </p>
+      } @else {
+        <p class="muted generation-help" i18n="@@settings.generation_help">
+          A model is installed only when you ask for it. Installing downloads its files once; after
+          that, documents are written on this computer and nothing is sent anywhere.
+        </p>
+        <ul class="model-list" aria-label="Models" i18n-aria-label="@@settings.models_label">
+          @for (model of data.items; track model.id) {
+            <li class="ns-row model-row">
+              <div class="model-head">
+                <h3 class="model-title" tabindex="-1" [id]="'model-title-' + model.id">
+                  {{ modelName(model) }}
+                </h3>
+                <ns-status-pill
+                  [label]="statusLabel(model).label"
+                  [tone]="statusLabel(model).tone"
+                />
+              </div>
+              @if (modelHelp(model); as help) {
+                <p class="ns-help model-help">{{ help }}</p>
+              }
+              <dl class="model-facts">
+                <div>
+                  <dt class="muted" i18n="@@settings.size">Size</dt>
+                  <dd class="mono">{{ size(model.totalBytes) }}</dd>
+                </div>
+                @if (installingModelId() !== model.id) {
+                  <div class="model-license">
+                    <dt class="muted" i18n="@@settings.license">License</dt>
+                    <dd>
+                      <a
+                        [href]="model.licenseUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        [attr.aria-label]="licenseLinkLabel(model)"
+                        >{{ model.licenseName }}</a
+                      >
+                    </dd>
+                  </div>
+                }
+              </dl>
+
+              @if (model.state === 'downloading') {
+                <div class="model-progress">
+                  <ns-segmented-gauge [percent]="percent(model)" [label]="gaugeLabel(model)" />
+                  <p class="mono model-progress__text">{{ progressText(model) }}</p>
+                </div>
+              } @else if (model.state === 'verifying') {
+                <div class="model-progress">
+                  <ns-activity-line
+                    label="Checking the downloaded files"
+                    i18n-label="@@settings.verifying"
+                  />
+                </div>
+              } @else if (model.state === 'failed') {
+                <p class="ns-notice ns-notice--error">{{ failureText(model) }}</p>
+              }
+
+              @if (installingModelId() === model.id && model.state === 'not_installed') {
+                <section class="model-install" [attr.aria-label]="installPanelLabel(model)">
+                  <p i18n="@@settings.install_intro">
+                    Read the license before you install. Installing downloads the model once, from
+                    the address below; you can delete it later.
+                  </p>
+                  <dl class="model-facts">
+                    <div class="model-license">
+                      <dt class="muted" i18n="@@settings.license">License</dt>
+                      <dd>
+                        <a
+                          [href]="model.licenseUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          [attr.aria-label]="licenseLinkLabel(model)"
+                          >{{ model.licenseName }}</a
+                        >
+                        <span class="mono license-url">{{ model.licenseUrl }}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="muted" i18n="@@settings.download">Download</dt>
+                      <dd class="mono">{{ size(model.totalBytes) }}</dd>
+                    </div>
+                    <div>
+                      <dt class="muted" i18n="@@settings.source">From</dt>
+                      <dd class="mono">huggingface.co/{{ model.repository }}</dd>
+                    </div>
+                  </dl>
+                  <div class="model-actions">
+                    <button
+                      class="ns-button ns-button--primary"
+                      type="button"
+                      [disabled]="busyModelId() === model.id"
+                      (click)="acceptAndDownload(model)"
+                    >
+                      <ns-pixel-icon name="download" /><span i18n="@@settings.accept_download"
+                        >Accept the license and download</span
+                      >
+                    </button>
+                    <button class="ns-button" type="button" (click)="cancelInstall(model)">
+                      <span i18n="@@dialog.cancel">Cancel</span>
+                    </button>
+                  </div>
+                </section>
+              } @else {
+                <div class="model-actions">
+                  @switch (model.state) {
+                    @case ('not_installed') {
+                      <button
+                        class="ns-button"
+                        type="button"
+                        [attr.aria-label]="installLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="openInstall(model)"
+                      >
+                        <ns-pixel-icon name="download" /><span i18n="@@settings.install"
+                          >Install</span
+                        >
+                      </button>
+                    }
+                    @case ('downloading') {
+                      <button
+                        class="ns-button"
+                        type="button"
+                        [attr.aria-label]="cancelDownloadLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="cancelDownload(model)"
+                      >
+                        <ns-pixel-icon name="close" /><span i18n="@@settings.cancel_download"
+                          >Cancel download</span
+                        >
+                      </button>
+                    }
+                    @case ('verifying') {
+                      <button
+                        class="ns-button"
+                        type="button"
+                        [attr.aria-label]="cancelDownloadLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="cancelDownload(model)"
+                      >
+                        <ns-pixel-icon name="close" /><span i18n="@@settings.cancel_download"
+                          >Cancel download</span
+                        >
+                      </button>
+                    }
+                    @case ('failed') {
+                      <button
+                        class="ns-button ns-button--primary"
+                        type="button"
+                        [attr.aria-label]="retryLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="retryDownload(model)"
+                      >
+                        <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again"
+                          >Try again</span
+                        >
+                      </button>
+                    }
+                    @case ('installed') {
+                      <button
+                        class="ns-button ns-button--primary"
+                        type="button"
+                        [attr.aria-label]="enableLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="enable(model)"
+                      >
+                        <ns-pixel-icon name="check" /><span i18n="@@settings.enable">Enable</span>
+                      </button>
+                    }
+                    @case ('enabled') {
+                      <button
+                        class="ns-button"
+                        type="button"
+                        [attr.aria-label]="disableLabel(model)"
+                        [disabled]="busyModelId() === model.id"
+                        (click)="disable(model)"
+                      >
+                        <ns-pixel-icon name="close" /><span i18n="@@settings.disable">Disable</span>
+                      </button>
+                    }
+                  }
+                  @if (model.state === 'installed' || model.state === 'enabled') {
+                    <button
+                      class="ns-button ns-button--danger"
+                      type="button"
+                      [attr.aria-label]="deleteLabel(model)"
+                      [disabled]="busyModelId() === model.id"
+                      (click)="confirmDelete(model)"
+                    >
+                      <ns-pixel-icon name="trash" /><span i18n="@@settings.delete">Delete</span>
+                    </button>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  </ns-window>
+</section>

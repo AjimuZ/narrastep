@@ -354,3 +354,38 @@ export interface RecordingChunkAck {
   sizeBytes: number;
   duplicate: boolean;
 }
+
+/** Install state of a local generation model; `downloading` and `verifying` are transient. */
+export type ModelInstallState =
+  'not_installed' | 'downloading' | 'verifying' | 'installed' | 'enabled' | 'failed';
+
+/** One pinned file of a generation model; the path is never exposed. */
+export interface GenerationModelFile {
+  name: string;
+  sizeBytes: number;
+}
+
+/**
+ * `GET /models/{id}`: state, download progress and license of one generation model. `errorMessage`
+ * is the readable English reason of a `failed` state and null otherwise.
+ */
+export interface GenerationModel {
+  id: string;
+  label: string;
+  state: ModelInstallState;
+  downloadedBytes: number;
+  totalBytes: number;
+  files: GenerationModelFile[];
+  repository: string;
+  revision: string;
+  licenseName: string;
+  licenseUrl: string;
+  errorMessage: string | null;
+  updatedAt: string | null;
+}
+
+/** `GET /models`: the catalog and whether the `NARRASTEP_LOCAL_GENERATION` kill switch is set. */
+export interface GenerationModelList {
+  localGeneration: 'available' | 'disabled';
+  items: GenerationModel[];
+}
