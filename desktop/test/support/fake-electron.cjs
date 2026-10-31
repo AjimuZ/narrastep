@@ -56,6 +56,7 @@ function createFakeElectron({
 
   const session = {
     handlers: {},
+    listeners: {},
     spellCheckerEnabled: true,
     webRequest: {
       onBeforeRequest(filter, listener) {
@@ -78,6 +79,10 @@ function createFakeElectron({
     setDisplayMediaRequestHandler(handler) {
       record('session.setDisplayMediaRequestHandler');
       session.handlers.displayMedia = handler;
+    },
+    on(eventName, listener) {
+      record(`session.on:${eventName}`);
+      session.listeners[eventName] = listener;
     },
     setSpellCheckerEnabled(enabled) {
       record('session.setSpellCheckerEnabled');

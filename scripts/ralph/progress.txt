@@ -66,6 +66,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - A report meant to hold numbers only can be tested by matching every output line against a strict character pattern and asserting that secret transcript text never appears.
 - Inline text buttons need `display: inline-flex` with `min-width` and `min-height` of 1.5rem to pass the WCAG 2.5.8 target-size check in the e2e accessibility spec.
 - When a permission policy changes, grep the docs for the old denial wording (STATUS, ROADMAP, ARCHITECTURE, DEVELOPMENT) and fix every occurrence in the same change.
+- Treat a blob: URL's origin as the part after the prefix when applying an origin policy.
+- A guard that must never throw wraps its checks in try/catch and cancels on any failure.
 
 ---
 
@@ -517,4 +519,14 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - The Electron media permission covers audio and video. The request handler checks details.mediaTypes and the check handler checks details.mediaType, so a camera request stays denied.
   - The real-Electron window test (opt-in) was not run in this attempt, and the docs say so.
   - Keep wrapped doc paragraphs at about 100 characters when editing ARCHITECTURE.md and DEVELOPMENT.md.
+---
+
+## 2026-10-31T13:10:55Z - P07.4b
+- The desktop session now handles `will-download`. A download whose URL and starting page are the app origin gets Electron's native "Save as" dialog, set to confirm before overwriting. Any other download is cancelled, including a foreign origin, a `data:` URL and an unreadable item. A `blob:` URL is judged by the origin after the prefix. `check.sh desktop` passed (230 tests, 0 failed) and `check.sh docs` found valid links. I did not run the real Electron window or a real dialog; the tests use stand-ins.
+- Files changed: desktop/src/guards.cjs, desktop/test/guards.test.cjs, desktop/test/shell.test.cjs, desktop/test/support/fake-electron.cjs, docs/decisions/0014-desktop-app-shell.md, docs/ROADMAP.md, docs/STATUS.md, docs/ARCHITECTURE.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - Electron opens the native Save as dialog when a will-download handler sets no save path. The handler only needs item.setSaveDialogOptions for the app origin and item.cancel() for the rest.
+  - The fake session in desktop/test/support/fake-electron.cjs now has on(eventName, listener). It records 'session.on:<event>' and stores the listener in session.listeners.
+  - ROADMAP P07.4 stays unchecked for the orchestrator. Its text now says P07.4b is implemented and carries dated evidence.
+  - The real-Electron window test was not run, and the docs say so.
 ---

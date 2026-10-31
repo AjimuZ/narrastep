@@ -1366,8 +1366,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 68,
-      "passes": false,
-      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "The desktop session now handles `will-download`. A download whose URL and starting page are the app origin gets Electron's native \"Save as\" dialog, set to confirm before overwriting. Any other download is cancelled, including a foreign origin, a `data:` URL and an unreadable item. A `blob:` URL is judged by the origin after the prefix. `check.sh desktop` passed (230 tests, 0 failed) and `check.sh docs` found valid links. I did not run the real Electron window or a real dialog; the tests use stand-ins.",
       "dependsOn": [
         "P07.4a"
       ],

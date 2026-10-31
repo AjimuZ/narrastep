@@ -15,6 +15,7 @@ const { isAllowedRequestUrl, isAppUrl, isPermissionAllowed } = require('./policy
  *   `createSourcePicker`); other origins, and every request when `pickSource` is omitted, are denied;
  *   when `platform` is `'win32'` the grant also carries the system audio (loopback) of the chosen
  *   source, and on any other platform it carries video only;
+ * - a download from the app origin gets a native "Save as" dialog and any other is cancelled;
  * - the spell checker is off, so Chromium never downloads dictionaries.
  * Throws only if the session object lacks one of these Electron methods.
  */
@@ -40,6 +41,42 @@ function installSessionGuards(session, appOrigin, pickSource, platform) {
     answerDisplayMediaRequest(request, callback, appOrigin, pickSource, platform);
   });
   session.setSpellCheckerEnabled(false);
+  session.on('will-download', (_event, item, contents) => {
+    guardDownload(item, contents, appOrigin);
+  });
+}
+
+/**
+ * Returns the origin-bearing URL of a download: a `blob:` URL carries the origin of its creator
+ * after the prefix, so it is unwrapped; any other URL is returned unchanged.
+ */
+function downloadOrigin(url) {
+  return typeof url === 'string' && url.startsWith('blob:') ? url.slice('blob:'.length) : url;
+}
+
+/**
+ * Decides one download. It is kept only when the file's URL and the page that started it are both
+ * the app origin; then no save path is set, so Electron opens its native "Save as" dialog, asked to
+ * confirm before overwriting. Any other download is cancelled before a dialog can open. A malformed
+ * item is cancelled too. Never throws.
+ */
+function guardDownload(item, contents, appOrigin) {
+  try {
+    const fromApp =
+      isAppUrl(downloadOrigin(item.getURL()), appOrigin) &&
+      (!contents || isAppUrl(contents.getURL(), appOrigin));
+    if (fromApp) {
+      item.setSaveDialogOptions({ properties: ['showOverwriteConfirmation'] });
+      return;
+    }
+  } catch {
+    // Fall through to the cancel below.
+  }
+  try {
+    item.cancel();
+  } catch {
+    // Nothing is left to cancel.
+  }
 }
 
 /**

@@ -185,9 +185,14 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
 - [x] P07.3 Screen and window source picker with Windows loopback system audio for P05.
   Progress (2026-10-30, P07.3a, not yet checked): `desktop/src/source-picker.cjs` and `guards.cjs` answer `getDisplayMedia()` from the app origin with a Narrastep picker over `desktopCapturer` (modal window, script-free page, English and Italian, choice read from cancelled link navigations, no IPC); other origins, cancelling and a failing picker answer `null`. `npm test` in `desktop` (`check.sh desktop`): 148 passed with the Electron stand-ins. Not run: the real Electron (opt-in window tests; whether Electron also consults the `display-capture` permission handler is unconfirmed), Windows loopback system audio and the manual check on Windows (P07.3b).
   Evidence (2026-10-30, P07.3b): `answerDisplayMediaRequest` in `desktop/src/guards.cjs` now grants `{ video: source, audio: 'loopback' }` when the shell platform (passed from `shell.cjs`) is `win32` and the page asked for audio, for a screen and for a single window, and `{ video: source }` on `darwin`, `linux` and any other platform; cancel, a picker failure, a foreign origin and a missing picker still answer `null`. The recorder tells the desktop window and its system apart from the user agent (`desktopWindowSystem` in `media-capture.ts`; the shell has no bridge): on Windows it shows the K12 notice about notification sounds, and on other systems it says the window shares no system audio; both texts exist in English and Italian, and the browser flow is unchanged. `check.sh desktop`: 152 passed with the Electron stand-ins (win32, darwin, linux and an unknown platform in `guards.test.cjs`; the shell passes `win32` and `darwin` through to the grant in `shell.test.cjs`). `check.sh web`: 189 passed, build and i18n check passed (527 messages in en and it). Not run: a real capture on Windows, with one window and with a whole screen, and the real Electron window tests. Both belong to the owner check named in the P07 exit, which stays open.
-- [ ] P07.4 Microphone permission and native "Save as" for downloads, loopback origin only.
+- [x] P07.4 Microphone permission and native "Save as" for downloads, loopback origin only.
   Split: P07.4a (microphone, audio only, app origin only) is implemented on 2026-10-31 and
-  unit-tested; the real-Electron window test was not run. P07.4b (native "Save as") remains.
+  unit-tested; the real-Electron window test was not run. P07.4b (native "Save as") is implemented.
+  Evidence (2026-10-31, P07.4b): the `will-download` handler in `desktop/src/guards.cjs` keeps a
+  download from the app origin (URL, with `blob:` unwrapped, and starting page) so Electron opens
+  its native "Save as" dialog, and cancels any other (foreign, `data:`, unreadable). `check.sh
+  desktop`: 230 passed, 0 failed, with stand-ins (`guards.test.cjs` covers both cases, `shell.test.cjs`
+  the installation before the first load). Not run: the real Electron window and a real dialog.
 - [ ] P07.5 Optional unsigned local portable build.
 
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy

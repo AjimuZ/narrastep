@@ -107,6 +107,9 @@ All notable changes to Narrastep are documented in this file.
 - Microphone in the desktop window: the Narrastep page can now record the microphone. Only the
   local Narrastep page may ask, only for audio; the camera, every other address and every other
   permission stay denied.
+- Saving files in the desktop window: exports and documents from the local Narrastep page open
+  the system "Save as" dialog, which asks before overwriting. Downloads from any other source are
+  cancelled. Not yet checked in a real window.
 
 - Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
   activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and

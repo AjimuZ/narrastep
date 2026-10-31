@@ -110,6 +110,64 @@ describe('installSessionGuards', () => {
   });
 });
 
+describe('downloads', () => {
+  /** Returns a download item stand-in for `url` that records the dialog options and cancellation. */
+  function downloadItem(url) {
+    const item = {
+      cancelled: false,
+      dialogOptions: undefined,
+      getURL: () => url,
+      cancel() {
+        item.cancelled = true;
+      },
+      setSaveDialogOptions(options) {
+        item.dialogOptions = options;
+      },
+    };
+    return item;
+  }
+
+  /** Fires `will-download` on a guarded session for `item` started by the page at `pageUrl`. */
+  function download(item, pageUrl = `${ORIGIN}/projects/1/export`) {
+    const session = guardedSession();
+    session.listeners['will-download']({}, item, { getURL: () => pageUrl });
+    return item;
+  }
+
+  it('keeps downloads from the app origin and leaves the native Save as dialog to open', () => {
+    for (const url of [`${ORIGIN}/api/v1/exports/1/file`, `blob:${ORIGIN}/0b1c-uuid`]) {
+      const item = download(downloadItem(url));
+      assert.equal(item.cancelled, false, url);
+      assert.deepEqual(item.dialogOptions, { properties: ['showOverwriteConfirmation'] }, url);
+    }
+  });
+
+  it('cancels downloads from another origin or page without a dialog', () => {
+    const foreign = [
+      'http://127.0.0.1:4300/file.zip',
+      'http://localhost:4200/file.zip',
+      'https://example.com/file.zip',
+      'blob:https://example.com/0b1c-uuid',
+      'data:text/plain;base64,AAAA',
+    ];
+    for (const url of foreign) {
+      const item = download(downloadItem(url));
+      assert.equal(item.cancelled, true, url);
+      assert.equal(item.dialogOptions, undefined, url);
+    }
+    const fromForeignPage = download(downloadItem(`${ORIGIN}/file.zip`), 'https://example.com/');
+    assert.equal(fromForeignPage.cancelled, true);
+  });
+
+  it('cancels a download whose item cannot be read', () => {
+    const item = downloadItem(undefined);
+    item.getURL = () => {
+      throw new Error('destroyed');
+    };
+    assert.equal(download(item).cancelled, true);
+  });
+});
+
 describe('screen capture requests', () => {
   const SOURCE = { id: 'screen:0:0', name: 'Screen 1' };
 

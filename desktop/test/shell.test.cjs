@@ -65,6 +65,7 @@ describe('startShell', () => {
       'session.setDevicePermissionHandler',
       'session.setDisplayMediaRequestHandler',
       'session.setSpellCheckerEnabled',
+      'session.on:will-download',
       'contents.setWindowOpenHandler',
     ]) {
       const index = calls.indexOf(guard);

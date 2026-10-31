@@ -194,7 +194,8 @@ flowchart LR
 - **No host bridge.** The page runs with context isolation, the renderer sandbox and no Node.js,
   without preload script or IPC. Only `fullscreen`, the microphone (audio only, P07.4a) and
   screen capture are granted, all to the app origin; the camera, notifications, devices and
-  external protocol links are denied until P07.4b adds "Save as" in the main process. Screen
+  external protocol links are denied. Downloads from the app origin open the native "Save as"
+  dialog and others are cancelled (P07.4b, unit-tested with stand-ins). Screen
   capture goes through the source picker (`src/source-picker.cjs`): `getDisplayMedia()` from the app origin, and only from it, opens a
   small modal window that lists the screens and windows of `desktopCapturer` and answers the
   session's `setDisplayMediaRequestHandler` with the chosen source (or denies on cancel). The

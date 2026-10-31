@@ -90,8 +90,12 @@ The shell in `desktop/` applies this decision with these details:
   dialog in English or Italian asks, because Electron would otherwise ignore the close silently.
 - When the app does not answer, the window shows a local page in English or Italian with a link
   that tries again; launching the shell again also tries again.
-- Downloads keep Electron's default native save dialog until P07.4 restricts them to the app
-  origin.
+- Downloads (P07.4b, 2026-10-31): the session's `will-download` handler keeps a download only when
+  its URL (a `blob:` URL is read through the origin after the prefix) and the page that started it
+  are the app origin. It sets no save path, so Electron opens the native "Save as" dialog, and asks
+  it to confirm before overwriting. Every other download, including a `data:` URL or an unreadable
+  item, is cancelled before a dialog opens. The request filter already cancels foreign requests, so
+  this is a second layer. Unit tests use stand-ins; the real dialog was not run.
 - On Linux, Chromium's sandbox needs unprivileged user namespaces or a root-owned `chrome-sandbox`
   helper. The window tests ran on a build worker without either, with `--no-sandbox` added by the
   test only; the shell never disables the sandbox.
