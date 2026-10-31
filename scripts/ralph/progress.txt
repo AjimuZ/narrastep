@@ -600,3 +600,12 @@ The `scripts/ralph/prd.json` diff in the tree (the task notes) was not made in t
   - The working tree can carry a ticked roadmap checkbox from an earlier attempt. Check `git diff docs/ROADMAP.md` and set it back to `[ ]` for the orchestrator.
   - `check.sh backend` printed no pytest summary line in this run, so the passed and skipped counts cannot be read from its output directly.
 ---
+
+## 2026-10-31T16:34:02Z - P06.6b
+- The feature code, specs, docs and CHANGELOG from the earlier attempt are unchanged. This attempt ran the missing disabled-feature stack check, and it passed. I recorded it as dated evidence under P06.6 in docs/ROADMAP.md. The P06.6 checkbox is left for the orchestrator. `NARRASTEP_LOCAL_GENERATION=disabled ./scripts/ralph/check.sh stack` built the images, and redis, api, worker and web became healthy. `/health` returned status ok, database ok, redis ok, worker ok. `./scripts/ralph/check.sh docs` passed with valid links. I did not re-run `check.sh web` or e2e in this attempt. The web check (261 unit tests) passed in the earlier attempt, and e2e was never run. I did not run `stack.sh down`; the check script may have cleaned up the stack itself, but I did not look.
+- Files changed: docs/ROADMAP.md
+- **Learnings for future iterations:**
+  - `NARRASTEP_LOCAL_GENERATION=disabled ./scripts/ralph/check.sh stack` is allowed and passes (checked 2026-10-31); use that exact form.
+  - The earlier attempt's P06.6b code, tests, docs and CHANGELOG were left in the working tree unchanged, so a commit of the tree includes them.
+  - e2e was not run for P06.6b; citation behavior rests on unit tests.
+---

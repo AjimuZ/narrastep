@@ -1274,8 +1274,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 64,
-      "passes": false,
-      "notes": "BLOCKED: I could not run the stack with NARRASTEP_LOCAL_GENERATION=disabled. Bash denied both `NARRASTEP_LOCAL_GENERATION=disabled ./scripts/ralph/check.sh stack` and `env NARRASTEP_LOCAL_GENERATION=disabled ./scripts/ralph/stack.sh up ...`. The plain check.sh stack does not set the variable, and scripts/ralph/ and stack.env are off limits to me. The orchestrator needs to run the stack with that variable set and check /health, or add it to the isolated stack's settings.\nIn a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "The feature code, specs, docs and CHANGELOG from the earlier attempt are unchanged. This attempt ran the missing disabled-feature stack check, and it passed. I recorded it as dated evidence under P06.6 in docs/ROADMAP.md. The P06.6 checkbox is left for the orchestrator. `NARRASTEP_LOCAL_GENERATION=disabled ./scripts/ralph/check.sh stack` built the images, and redis, api, worker and web became healthy. `/health` returned status ok, database ok, redis ok, worker ok. `./scripts/ralph/check.sh docs` passed with valid links. I did not re-run `check.sh web` or e2e in this attempt. The web check (261 unit tests) passed in the earlier attempt, and e2e was never run. I did not run `stack.sh down`; the check script may have cleaned up the stack itself, but I did not look.",
       "dependsOn": [
         "P06.6a"
       ],
@@ -1441,7 +1441,9 @@
         "P07.5",
         "P08.11",
         "P09.3",
-        "P05.8"
+        "P05.8",
+        "P07.6",
+        "P09.4"
       ],
       "source": {
         "path": "docs/ROADMAP.md",
@@ -1458,7 +1460,7 @@
       ],
       "priority": 72,
       "passes": false,
-      "notes": "BLOCKED: Only a person can do this check. It needs a real Teams call with a headset, so the agent cannot run or simulate it. The owner must run `node scripts/ralph/owner-check.cjs`, which records the result in docs/STATUS.md. I did not inspect the repository, so I did not verify the dependency state beyond the \"completed\" status given in the context.\nIn a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
+      "notes": "The owner did this check on 2026-10-31 and the result is in docs/STATUS.md under Last documentation check: read it, compare it with the criterion, and add one dated evidence line for the manual Windows check below the Exit line of P07 in docs/ROADMAP.md. Do not ask for another recording. It needs no Teams call: that is P05.6. In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label; with the label the whole attempt is rejected. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'` and checks as `./scripts/ralph/check.sh backend`. BLOCKED: Only a person can do this check. It needs a real Teams call with a headset, so the agent cannot run or simulate it. The owner must run `node scripts/ralph/owner-check.cjs`, which records the result in docs/STATUS.md. I did not inspect the repository, so I did not verify the dependency state beyond the \"completed\" status given in the context.\nIn a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Only a person can do this: it needs a real Teams call with a headset. Report blocked with that reason; do not try to simulate it. The owner runs `node scripts/ralph/owner-check.cjs` once P07.4b has passed: one guided session of about 15 minutes covers P05.6 and P07-CHECK, reads only numbers from the local API, records the evidence, commits and pushes.",
       "dependsOn": [
         "P07.4b"
       ]
@@ -1504,6 +1506,52 @@
         "path": "docs/ROADMAP.md",
         "section": "P05 — In-app recording",
         "line": "P05.8 Read the right frame, quickly, from a recording. Added on 2026-10-31 after the owner's"
+      }
+    },
+    {
+      "id": "P07.6",
+      "title": "Use the Narrastep logo instead of the default Electron icon",
+      "description": "The owner made a logo. The files are already committed in desktop/assets/: narrastep.ico (16 to 256 px) and narrastep-1024.png, -512.png, -256.png and -32.png. Neither the window options nor the package command name an icon today, so Electron's default is shown. The web favicon, apps/web/public/favicon.svg, is an older different drawing.",
+      "acceptanceCriteria": [
+        "The main window and the source picker window set the logo as their icon, narrastep.ico on Windows and the 512 px PNG elsewhere, resolved from the shell's own folder, and desktop tests cover the option",
+        "`npm --prefix desktop run package` passes the icon so the Windows executable uses narrastep.ico, the assets are kept in the packaged application, and package-script.test.cjs covers it",
+        "apps/web/public holds the logo as the favicon, apps/web/src/index.html links it, the older favicon.svg is gone, and no external request is added",
+        "docs/LICENSES.md lists the logo as the project's own generated image under the project license, docs/UI.md describes it, and CHANGELOG.md describes the change"
+      ],
+      "priority": 75,
+      "passes": false,
+      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label; with the label the whole attempt is rejected. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'` and checks as `./scripts/ralph/check.sh backend`. The real Electron test needs a display, so state plainly in the evidence that the icon was not seen on a real Windows taskbar if it was not. macOS has no .icns file: do not create one, and say that the macOS build keeps the default icon.",
+      "dependsOn": [
+        "P07.5"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P07 — Desktop window",
+        "line": "P07.6 Use the Narrastep logo instead of the default Electron icon. Added on 2026-10-31 at the"
+      }
+    },
+    {
+      "id": "P09.4",
+      "title": "Name no specific AI service in the product",
+      "description": "Owner request: do not write \"Lotti per ChatGPT\" and make no reference to specific AIs; the person chooses what to do with the package. The name appears in the Export screen, the package layout (04-chatgpt-batches/, paths.chatgptBatches), the guides inside the ZIP, the setting NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH, code names and current documents.",
+      "acceptanceCriteria": [
+        "The Export screen says \"Batches\" in English and \"Lotti\" in Italian, its help text explains the split in time order and the limits per batch without naming any service, and the message ids are neutral",
+        "New packages use `04-batches/` and a neutral manifest key, with the manifest schema version and docs/DATA_MODEL.md updated; the archive README and the batch guide name no AI service and leave the choice of tool to the person",
+        "Exports made earlier still list and download unchanged, and tests check both the new layout and an old export",
+        "The setting is `NARRASTEP_MAX_FILES_PER_BATCH`, the old name still works as an alias, and .env.example, docker-compose.yml and README.md show the new name",
+        "A search for ChatGPT finds nothing in apps/web/src, backend/app, README.md and the current sections of docs/, except the setting's alias and old-layout compatibility; existing CHANGELOG.md entries and dated roadmap evidence stay as written",
+        "docs/API.md and docs/openapi.json are updated if the API changes, and CHANGELOG.md describes the change"
+      ],
+      "priority": 76,
+      "passes": false,
+      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label; with the label the whole attempt is rejected. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'` and checks as `./scripts/ralph/check.sh backend`. Do not rename to another vendor's name, and do not invent new behavior: the batch sizes and the default limit stay the same. `OpenAI-style` in backend/app/services/llama_session.py describes the local server's API format and may stay.",
+      "dependsOn": [
+        "P06.4c"
+      ],
+      "source": {
+        "path": "docs/ROADMAP.md",
+        "section": "P09 — Owner-selected improvements",
+        "line": "P09.4 Name no specific AI service in the product. Added on 2026-10-31 at the owner's request:"
       }
     }
   ]

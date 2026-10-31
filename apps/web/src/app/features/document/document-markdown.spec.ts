@@ -71,6 +71,31 @@ describe('parseDocument', () => {
     });
   });
 
+  it('splits [mm:ss] citations into their own runs with the time in seconds', () => {
+    const [block] = parseDocument('Opens **Search [01:05]** then [00:02].');
+
+    expect(block).toEqual({
+      kind: 'paragraph',
+      inlines: [
+        { text: 'Opens ', bold: false },
+        { text: 'Search ', bold: true },
+        { text: '[01:05]', bold: true, seconds: 65 },
+        { text: ' then ', bold: false },
+        { text: '[00:02]', bold: false, seconds: 2 },
+        { text: '.', bold: false },
+      ],
+    });
+  });
+
+  it('keeps malformed times as text', () => {
+    const [block] = parseDocument('See [0:5], [00:75] and [aa:bb].');
+
+    expect(block).toEqual({
+      kind: 'paragraph',
+      inlines: [{ text: 'See [0:5], [00:75] and [aa:bb].', bold: false }],
+    });
+  });
+
   it('keeps markup-like text as plain text and an unmatched ** unchanged', () => {
     const [block] = parseDocument('<script>alert(1)</script> and **open');
 

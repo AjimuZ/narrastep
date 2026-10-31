@@ -14,6 +14,10 @@ All notable changes to Narrastep are documented in this file.
   video"). The segment times in the transcript header are buttons too. A time past the end of the
   video stops at the end; once the original video is removed the buttons are disabled. The times in
   the segment list stay plain text, because they sit inside the button that selects the segment.
+- Document citations move the video. Each `[mm:ss]` in a generated document is now a button ("Play
+  the video from 00:02", Italian "Riproduci il video da 00:02") that moves the video to that time
+  and starts playing it. A time past the end of the video, a range such as `[00:20-00:31]` and every
+  citation once the original video is removed stay plain text.
 - Take a generated document out of the Document screen in two ways. **Copy as Markdown** (Italian
   **Copia come Markdown**) puts the document on the clipboard and says "The document was copied as
   Markdown." (Italian "Il documento è stato copiato come Markdown."); if the browser or the desktop

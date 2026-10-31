@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   Injector,
   OnInit,
   afterNextRender,
@@ -11,6 +12,7 @@ import {
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -97,6 +99,8 @@ export class DocumentComponent implements OnInit {
   /** True once the original video was removed after export (P09.2), so there is nothing to play. */
   readonly sourceRemoved = computed(() => !!this.project()?.videoAsset?.sourceRemovedAt);
 
+  private readonly videoPlayer = viewChild<ElementRef<HTMLVideoElement>>('videoPlayer');
+
   protected readonly api = inject(ApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -170,6 +174,39 @@ export class DocumentComponent implements OnInit {
     }
     this.copyState.set(null);
     this.copyState.set((await copyText(text)) ? 'copied' : 'failed');
+  }
+
+  /**
+   * Whether a `[mm:ss]` citation can be a button: the source video is still there and the time lies
+   * within the known duration. Any other citation, including one with an unknown duration, is text.
+   */
+  canSeek(seconds: number | undefined): boolean {
+    const duration = this.project()?.videoAsset?.durationSeconds;
+    return (
+      seconds !== undefined &&
+      !this.sourceRemoved() &&
+      duration !== null &&
+      duration !== undefined &&
+      seconds <= duration
+    );
+  }
+
+  /** Moves the video to a citation's time and starts playing. Does nothing without a player. */
+  seekTo(seconds: number | undefined): void {
+    const video = this.videoPlayer()?.nativeElement;
+    if (!video || !this.canSeek(seconds)) {
+      return;
+    }
+    video.currentTime = seconds!;
+    // play() rejects when the browser blocks it or the source fails; the controls stay usable.
+    void video.play()?.catch(() => undefined);
+  }
+
+  /** Accessible name of a citation button, for example “Play the video from 00:02”. */
+  seekLabel(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const time = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+    return $localize`:@@document.seek_to:Play the video from ${time}:TIME:`;
   }
 
   /** Reads the finished document again after a failed read. */

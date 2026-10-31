@@ -148,6 +148,25 @@
   padding-left: var(--space-5);
 }
 
+.time-ref {
+  display: inline-flex;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.time-ref--bold {
+  font-weight: 700;
+}
+
 video {
   display: block;
   width: 100%;

@@ -385,8 +385,8 @@ itself also ran with the real server and model in the [opt-in integration test](
   the project's package selection also produces is embedded once as a downscaled PNG `data:`
   image. Names that match nothing stay text. Only generated documents were tried; no real model
   output has been fed to it.
-- **Not done.** The import control in Settings, the clickable
-  citations (P06.6) and the benchmark (P06.5). The
+- **Not done.** The import control in Settings and the benchmark (P06.5). The clickable
+  citations exist (P06.6b) but were tried only on generated text. The
   Document screen (P06.4b) has not run against the real API, Celery or a real model. The context size (8192) and
   the part budget are estimates until the benchmark measures them. A worker killed outright can
   leave its `llama-server` child running until the container stops.

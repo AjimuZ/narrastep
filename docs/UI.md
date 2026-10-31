@@ -264,7 +264,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Processing | `/projects/:id` | Stage list with segmented gauges and real percentages; cancel and retry. Action: Open review |
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every time reference (the segment start and end beside the video, in the transcript header, and each screenshot time) is a button, named "Go to HH:MM:SS.mmm in the video" (Italian "Vai a … nel video"), that moves the video to that time (P06.6a). Enter and Space work as on any button; a time past the end stops at the end, a negative time goes to 0, and once the source video was removed the buttons are disabled. The times in the segment rail stay plain text, because they sit inside the button that selects the segment. Action: Save |
 | Export | `/projects/:id/export` | Package options (original video; generated document, P06.4c), size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
-| Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled. Implemented in P06.4b except the clickable citations (P06.6) and copy (P06.4d); the package option is on the Export screen (P06.4c) ([Document](#document-p064b)) |
+| Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled. Implemented in P06.4b, copy (P06.4d) and the citations (P06.6b); the package option is on the Export screen (P06.4c) ([Document](#document-p064b)) |
 | Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project. The language switch is here too. Implemented in P06.4a except the import and the storage use ([Settings](#settings-p064a)) |
 
 ### Implemented screens (P04.3)
@@ -373,10 +373,12 @@ notice, pixel icons):
   denies the API's permission. **Download with images** is a link to
   `GET /generations/{id}/document/single-file`: one Markdown file with the screenshots the document
   cites embedded, described by a help line. Neither control is shown before there is a document.
-- **Not offered yet, and therefore not shown at all** (not as a disabled control): citations that
-  play the video from their time (P06.6; `[00:20-00:31]` stays plain text). Including the document
-  in a package is a checkbox on the Export screen (P06.4c). No language choice is offered; the
-  document follows the transcript language.
+- **Citations (P06.6b).** Each `[mm:ss]` in the text is a button ("Play the video from 00:02")
+  that moves the video to that time and starts playing. A time past the video's length, a range such
+  as `[00:20-00:31]` and every citation once the original video is removed stay plain text, not a
+  disabled button. The buttons keep the 24 px minimum target. Including the document in a package is
+  a checkbox on the Export screen (P06.4c). No language choice is offered; the document follows the
+  transcript language.
 - **Focus.** After **Generate document** or **Cancel generation** removes the button that had focus,
   focus moves to the **Status** heading (not a Tab stop). A polite status line says what happened.
 

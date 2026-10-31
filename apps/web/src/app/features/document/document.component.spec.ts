@@ -351,6 +351,78 @@ describe('DocumentComponent', () => {
     );
   });
 
+  describe('citations', () => {
+    const TIMED = {
+      ...PROJECT,
+      videoAsset: { id: 'asset-1', sourceRemovedAt: null, durationSeconds: 60 },
+    } as unknown as Project;
+    const CITING = 'Opens Search [00:02], then [00:20-00:31] and [09:59].';
+
+    it('makes a citation within the duration a button that seeks and plays the video', async () => {
+      const { fixture, element } = await setup(
+        [COMPLETED],
+        { getGenerationDocument: () => of(CITING) },
+        TIMED,
+      );
+      const video = element.querySelector('video')!;
+      const play = vi.fn().mockResolvedValue(undefined);
+      video.play = play;
+
+      const citation = element.querySelector<HTMLButtonElement>('.document-text button')!;
+      expect(citation.textContent!.trim()).toBe('[00:02]');
+      expect(citation.getAttribute('aria-label')).toBe('Play the video from 00:02');
+      citation.click();
+      fixture.detectChanges();
+
+      expect(video.currentTime).toBe(2);
+      expect(play).toHaveBeenCalledOnce();
+    });
+
+    it('keeps ranges and times past the duration as plain text', async () => {
+      const { element } = await setup(
+        [COMPLETED],
+        { getGenerationDocument: () => of(CITING) },
+        TIMED,
+      );
+
+      expect(element.querySelectorAll('.document-text button')).toHaveLength(1);
+      expect(element.querySelector('.document-text p')!.textContent).toContain(
+        '[00:20-00:31] and [09:59].',
+      );
+    });
+
+    it('activates a citation from the keyboard like any button', async () => {
+      const { element } = await setup(
+        [COMPLETED],
+        { getGenerationDocument: () => of(CITING) },
+        TIMED,
+      );
+      const video = element.querySelector('video')!;
+      video.play = vi.fn().mockResolvedValue(undefined);
+      const citation = element.querySelector<HTMLButtonElement>('.document-text button')!;
+
+      // A native button is focusable and the browser turns Enter and Space into a click.
+      expect(citation.tagName).toBe('BUTTON');
+      expect(citation.type).toBe('button');
+      expect(citation.tabIndex).toBe(0);
+      expect(citation.disabled).toBe(false);
+    });
+
+    it('shows no button when the duration is unknown or the original video was removed', async () => {
+      const unknown = await setup([COMPLETED], { getGenerationDocument: () => of(CITING) });
+      expect(unknown.element.querySelectorAll('.document-text button')).toHaveLength(0);
+      TestBed.resetTestingModule();
+
+      const removed = {
+        ...TIMED,
+        videoAsset: { id: 'asset-1', sourceRemovedAt: '2026-07-16T10:00:00Z', durationSeconds: 60 },
+      } as unknown as Project;
+      const gone = await setup([COMPLETED], { getGenerationDocument: () => of(CITING) }, removed);
+      expect(gone.element.querySelectorAll('.document-text button')).toHaveLength(0);
+      expect(gone.element.querySelector('.document-text p')!.textContent).toContain('[00:02]');
+    });
+  });
+
   it('regenerates while the current document stays visible', async () => {
     const progress = new Subject<DocumentGeneration>();
     const createGeneration = vi.fn(() => of(QUEUED));

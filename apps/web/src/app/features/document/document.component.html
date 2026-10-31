@@ -236,7 +236,7 @@
               transcript and the saved screenshots are still here.
             </p>
           } @else {
-            <video controls preload="metadata" [src]="api.videoUrl(projectId())">
+            <video #videoPlayer controls preload="metadata" [src]="api.videoUrl(projectId())">
               <ng-container i18n="@@review.no_video_support"
                 >This browser cannot play the video.</ng-container
               >
@@ -250,7 +250,17 @@
 
 <ng-template #runs let-items>
   @for (run of items; track $index) {
-    @if (run.bold) {
+    @if (run.seconds !== undefined && canSeek(run.seconds)) {
+      <button
+        class="time-ref mono"
+        type="button"
+        [class.time-ref--bold]="run.bold"
+        [attr.aria-label]="seekLabel(run.seconds)"
+        (click)="seekTo(run.seconds)"
+      >
+        {{ run.text }}
+      </button>
+    } @else if (run.bold) {
       <strong>{{ run.text }}</strong>
     } @else {
       <ng-container>{{ run.text }}</ng-container>

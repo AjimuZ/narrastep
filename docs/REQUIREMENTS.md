@@ -36,7 +36,7 @@ Status: **Implemented** in Version 0.2, **Partial** when only the named package 
 | R11 | Install, enable, disable and delete an optional local multimodal model from the interface | Planned (P06) |
 | R12 | Generate the type-specific document locally from transcript and screenshots | Planned (P06) |
 | R13 | Present every screen with the pixel design system and plain text | Planned (P04) |
-| R12a | Open the video at the time of any `[mm:ss]` reference in review and in the generated document | Planned (P06.6) |
+| R12a | Open the video at the time of any `[mm:ss]` reference in review and in the generated document | Done in the web app (P06.6a, P06.6b) |
 | R14 | Switch the interface between English and Italian at any time | Planned (P04) |
 | R15 | `start.sh` opens Narrastep in its own desktop window; `--headless` keeps browser-only use | In progress: the window exists in `desktop/` (P07.1); `start.sh` opens it after health and `--headless` skips it (P07.2, verified on the Docker stack on Windows on 2026-10-31, not on macOS or Linux desktops) ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
 | R16 | `start-podman.sh` runs the same stack, with the same options and desktop window, on Podman instead of Docker | Partly delivered: script and stub tests (P08.9–P08.10); not yet run on real Podman (P08.12) |

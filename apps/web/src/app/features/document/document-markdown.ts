@@ -1,9 +1,13 @@
 // Turns the generated Markdown into a few typed blocks so the Document screen renders it without innerHTML.
 
-/** A run of text inside a block; `bold` comes from `**…**`. */
+/**
+ * A run of text inside a block; `bold` comes from `**…**`. `seconds` is set only for a `[mm:ss]`
+ * citation and holds the time it names; `text` keeps the citation as written.
+ */
 export interface DocumentInline {
   text: string;
   bold: boolean;
+  seconds?: number;
 }
 
 /** One block of the document: a heading, a paragraph, or a bulleted or numbered list. */
@@ -16,6 +20,7 @@ const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
 const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 const BOLD_LINE = /^\*\*([^*]+)\*\*:?$/;
+const CITATION = /\[(\d{1,3}):([0-5]\d)\]/;
 
 /**
  * Parses the stored `document.md`. The leading comment that records the prompt version and model
@@ -76,7 +81,28 @@ function inlines(text: string): DocumentInline[] {
   const parts = text.split(/\*\*([^*]+)\*\*/);
   parts.forEach((part, index) => {
     if (part !== '') {
-      runs.push({ text: part, bold: index % 2 === 1 });
+      runs.push(...citations(part, index % 2 === 1));
+    }
+  });
+  return runs;
+}
+
+/** Splits one run around `[mm:ss]` citations; ranges such as `[00:20-00:31]` do not match. */
+function citations(text: string, bold: boolean): DocumentInline[] {
+  const runs: DocumentInline[] = [];
+  const parts = text.split(CITATION);
+  parts.forEach((part, index) => {
+    if (part === '') {
+      return;
+    }
+    if (index % 3 === 0) {
+      runs.push({ text: part, bold });
+    } else if (index % 3 === 1) {
+      runs.push({
+        text: `[${part}:${parts[index + 1]}]`,
+        bold,
+        seconds: Number(part) * 60 + Number(parts[index + 1]),
+      });
     }
   });
   return runs;
