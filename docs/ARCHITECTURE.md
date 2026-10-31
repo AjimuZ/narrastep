@@ -272,8 +272,10 @@ flowchart LR
   and downloads (P07.4) are still planned.
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
-  `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`; nothing starts it
-  yet ([Local generation](LOCAL_GENERATION.md#server-in-the-backend-image)). The worker keeps no Internet route, and generation is serialized with
+  `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`
+  ([Local generation](LOCAL_GENERATION.md#server-in-the-backend-image)). Since P06.3c
+  `app/services/llama_session.py` holds the lifecycle (memory check, start on `127.0.0.1`, health
+  wait, requests, stop); no job calls it yet. The worker keeps no Internet route, and generation is serialized with
   processing by the single worker.
 
 See the decisions under [decisions](decisions/) and the [processing pipeline](PROCESSING_PIPELINE.md).

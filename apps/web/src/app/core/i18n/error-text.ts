@@ -95,6 +95,8 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.MODEL_IMPORT_FILES_MISSING:The import folder does not contain every file of this model. Copy the files into it, then try again.`;
     case 'MODEL_IMPORT_NOT_PINNED':
       return $localize`:@@error.MODEL_IMPORT_NOT_PINNED:A file in the import folder is not a pinned model file, so it was not imported. Copy the original file from the model's repository.`;
+    case 'GENERATION_OUT_OF_MEMORY':
+      return $localize`:@@error.GENERATION_OUT_OF_MEMORY:There is not enough free memory to generate the document. Raise the memory limit of Docker or Podman, or close other programs, then try again.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

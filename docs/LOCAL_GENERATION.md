@@ -289,6 +289,38 @@ screenshots of a part are the ones that come right before its segments, as in P0
 `build_merge_input(output_mode, notes, language=None)` returns the type's system prompt and the notes
 of every part in order, marked as evidence; it logs counts only. No model is called yet.
 
+Implemented in P06.3c (`backend/app/services/llama_session.py`; no job calls it yet):
+
+- **Memory check (risk K5).** `read_available_memory_bytes()` returns the smaller of the cgroup v2
+  headroom (`memory.max` minus `memory.current`, less `inactive_file` from `memory.stat`, because
+  cached pages are reclaimable) and `MemAvailable` of `/proc/meminfo`. The cgroup limit is the one
+  that Docker Desktop's memory setting changes. `estimate_required_memory_bytes(option)` is the size
+  of the model's files plus 1 GiB for the context cache and image encoder, an estimate and not a
+  measurement (P06.5 measures the real peak). `ensure_enough_memory(required, available)` raises
+  `GenerationOutOfMemoryError` with code `GENERATION_OUT_OF_MEMORY`, a message that states the
+  needed and available GiB, and no transcript text. When the amount cannot be read (no cgroup limit
+  and no `MemAvailable`) the check passes with a warning, so an uninspectable system is not blocked.
+  The web catalogs translate the code into English and Italian; the job and the routes that report
+  it come with P06.3d.
+- **Start.** `build_llama_server_command` returns an argument array: `-m`, `--mmproj`,
+  `--host 127.0.0.1`, `--port` (a free loopback port), `-c` (context tokens, default 8192), `-np 1`
+  and `-t` only when `NARRASTEP_GENERATION_THREADS` is above 0. There is no host parameter, so the
+  server cannot listen elsewhere. `LlamaServerSession` starts it with `shell=False`,
+  `llama_server_environment` (the library path of the server process only), the bundled folder as
+  working directory and its output discarded, because server output can echo prompts.
+- **Health and requests.** The session polls `GET /health` until it answers 200 (a loading server
+  answers 503), and fails when the process exits first or `startup_timeout_seconds` (default 300)
+  passes. `complete()` posts `/v1/chat/completions` with the system prompt and the user parts
+  (images as base64 PNG data URLs). Requests ignore proxy environment variables. A server error, a
+  timeout, a dead server or an empty answer raises `LlamaServerRequestError`, whose message never
+  includes the response body.
+- **Stop.** The session is a context manager: leaving it, also by an exception, terminates the
+  process, waits 5 seconds, then kills it. A failed start stops the process before the error
+  leaves `start()`.
+- Verified only with a stand-in server script in the tests. The real `llama-server` has not been
+  started with a model, so its flags and the request format are unverified against the pinned
+  build until the opt-in integration test and P06.5.
+
 ## Package
 
 When a generation exists, the user can include it in the next export as
@@ -314,7 +346,7 @@ in `.env.example` and the README). Startup fails on a value outside these ranges
 | `NARRASTEP_GENERATION_THREADS` | whole number from 0 to 256 |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | whole number of pixels from 256 to 4096 |
 
-Nothing reads the model, thread and image settings until the generation job (P06.3).
+Nothing reads the model, thread and image settings until the generation job (P06.3d).
 `NARRASTEP_MODEL_IMPORT_DIR` is read by the import (P06.2d): Compose uses it as the host folder
 and passes `/import` to the API, and outside Compose it is the folder the backend reads.
 

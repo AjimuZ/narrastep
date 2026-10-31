@@ -73,6 +73,10 @@ describe('Italian interface', () => {
     expect(localizedError('MODEL_IMPORT_NOT_PINNED', null, 'x')).toContain('non è stato importato');
   });
 
+  it('translates the generation out-of-memory error', () => {
+    expect(localizedError('GENERATION_OUT_OF_MEMORY', null, 'x')).toContain('memoria libera');
+  });
+
   it('renders the shell, the language switch and the health word in Italian', async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],

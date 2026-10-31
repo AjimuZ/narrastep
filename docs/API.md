@@ -407,4 +407,5 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `LICENSE_NOT_ACCEPTED` | 422 | An import was requested with `licenseAccepted` false (P06.2d). |
 | `MODEL_IMPORT_FILES_MISSING` | 404 | The import folder does not contain a pinned file name, or the folder is missing (P06.2d). |
 | `MODEL_IMPORT_NOT_PINNED` | 422 | A file of a pinned name in the import folder is a link, a directory or has another size: not a pinned model file (P06.2d). |
+| `GENERATION_OUT_OF_MEMORY` | none yet | The worker container has less free memory than the model needs (risk K5). The memory check exists since P06.3c; no endpoint or job state reports it until the generation job and routes exist (P06.3d). |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

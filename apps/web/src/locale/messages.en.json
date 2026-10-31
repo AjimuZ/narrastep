@@ -54,6 +54,7 @@
     "error.LICENSE_NOT_ACCEPTED": "Read the license before importing the model files.",
     "error.MODEL_IMPORT_FILES_MISSING": "The import folder does not contain every file of this model. Copy the files into it, then try again.",
     "error.MODEL_IMPORT_NOT_PINNED": "A file in the import folder is not a pinned model file, so it was not imported. Copy the original file from the model's repository.",
+    "error.GENERATION_OUT_OF_MEMORY": "There is not enough free memory to generate the document. Raise the memory limit of Docker or Podman, or close other programs, then try again.",
     "error.VALIDATION_ERROR": "Some values are not valid. Check the fields and try again.",
     "error.api_unreachable": "Narrastep could not reach the local service. Check that Narrastep is running.",
     "error.request_failed": "Narrastep could not complete the request.",

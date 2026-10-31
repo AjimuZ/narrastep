@@ -54,6 +54,7 @@
     "error.LICENSE_NOT_ACCEPTED": "Leggi la licenza prima di importare i file del modello.",
     "error.MODEL_IMPORT_FILES_MISSING": "La cartella di importazione non contiene tutti i file di questo modello. Copiali nella cartella e riprova.",
     "error.MODEL_IMPORT_NOT_PINNED": "Un file nella cartella di importazione non è un file del modello previsto, quindi non è stato importato. Copia il file originale dal repository del modello.",
+    "error.GENERATION_OUT_OF_MEMORY": "Non c'è abbastanza memoria libera per generare il documento. Aumenta il limite di memoria di Docker o Podman, oppure chiudi altri programmi, poi riprova.",
     "error.VALIDATION_ERROR": "Alcuni valori non sono validi. Controlla i campi e riprova.",
     "error.api_unreachable": "Narrastep non riesce a raggiungere il servizio locale. Controlla che Narrastep sia in esecuzione.",
     "error.request_failed": "Narrastep non è riuscito a completare la richiesta.",
