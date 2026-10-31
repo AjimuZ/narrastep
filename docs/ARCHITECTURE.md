@@ -281,6 +281,7 @@ flowchart LR
   the progress and result in the `generations` table; the API queues and cancels it
   (`/projects/{id}/generations`, `/generations/{id}`). The worker keeps no Internet route, and
   generation is serialized with processing and export by the single worker (one queue, concurrency
-  one); the API refuses overlapping work on the same project. Verified with a stand-in server only.
+  one); the API refuses overlapping work on the same project. The queue and the routes are verified
+  with a stand-in server only; the job ran with the real server and model in an opt-in test (P06.3e).
 
 See the decisions under [decisions](decisions/) and the [processing pipeline](PROCESSING_PIPELINE.md).

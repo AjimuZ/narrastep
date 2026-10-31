@@ -12,7 +12,8 @@ All notable changes to Narrastep are documented in this file.
   `projects/{id}/generations/{generationId}/document.md` with the prompt version and the model file
   hashes. Progress is reported per part, a running generation can be cancelled, and failures carry
   stable codes. A generation blocks processing, deleting the project, removing its original video
-  and deleting the model while it is active. It has only run against a stand-in model server.
+  and deleting the model while it is active. It has run with the real model only in an opt-in test,
+  not yet through the API, Celery or the backend image.
 - Documentation for running with Docker or Podman, the generated `.env` and the `podman machine`
   memory limit, in the README and the development guide.
 - `./start-podman.sh` starts the stack with rootless Podman and the same options (`-r`,

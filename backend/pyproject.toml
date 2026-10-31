@@ -49,7 +49,10 @@ packages = ["app"]
 testpaths = ["tests"]
 addopts = "-q"
 asyncio_default_fixture_loop_scope = "function"
-markers = ["integration: opt-in test requiring FFmpeg, espeak-ng, and a local Whisper model"]
+markers = [
+    "integration: opt-in test requiring a real local model and its tools",
+    "real_generation: test of the real generation model, deselected without its opt-in variable",
+]
 
 [tool.ruff]
 target-version = "py314"

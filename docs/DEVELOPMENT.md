@@ -389,6 +389,21 @@ NARRASTEP_RUN_REAL_PIPELINE_TESTS=1 NARRASTEP_REAL_WHISPER_MODEL_PATH=/path/to/m
   python -m pytest -m integration tests/integration/test_transcription_stack.py
 ```
 
+The local generation job (P06.3e) has its own opt-in test,
+`tests/integration/test_real_generation.py`, with its own variable, because it needs the pinned E2B
+files (3.4 GB; the job's memory check asks for about 4.2 GiB free) and takes minutes on a CPU. The
+model folder holds both files with their pinned names, and the test fails when a file is missing or
+a hash differs. The server is `/opt/llama.cpp` in the backend image; elsewhere, point the last variable at a folder with
+the pinned server files. Add `-s` to read the generated documents. Without the first variable pytest
+deselects the two real-model tests (`tests/integration/conftest.py`) and runs the checks of a
+document alone, so the summary counts them as deselected and not as skipped.
+
+```bash
+NARRASTEP_RUN_REAL_GENERATION_TESTS=1 NARRASTEP_REAL_GENERATION_MODEL_DIR=/path/to/gemma-4-e2b \
+  NARRASTEP_REAL_LLAMA_SERVER_DIR=/path/to/llama.cpp \
+  python -m pytest -m integration tests/integration/test_real_generation.py
+```
+
 `legacy` remains the default screenshot strategy. To exercise the experimental strategy locally,
 set these values before queueing a new job (an already queued job keeps its immutable snapshot):
 

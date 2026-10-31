@@ -355,7 +355,8 @@ copy is deleted. The import folder is never modified.
 ### Document generation (P06.3d)
 
 Specification: [Local generation](LOCAL_GENERATION.md#generation-job-p063d). No screen calls these
-endpoints yet (P06.4); they are tested with a stand-in model server, not with a real model.
+endpoints yet (P06.4); they are tested with a stand-in model server. The job behind them also ran
+with the real model in an opt-in test (P06.3e), which calls the job directly, not these endpoints.
 
 `POST /projects/{projectId}/generations` takes an optional `{"language": "it"}` (a Whisper language
 code; `auto` or blank means the transcript language) and answers `202` with the queued generation:

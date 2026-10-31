@@ -48,6 +48,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - To make a blocking network call cancellable, run it in a one-thread `ThreadPoolExecutor` and poll the durable cancellation flag from the calling thread with `future.result(timeout=...)`. On cancel, stop the server so the pending call fails, then raise.
 - Settle terminal state with a guarded `UPDATE ... WHERE status = 'processing'` and treat zero matched rows as a cancellation that won the race.
 - When a value is pinned in a catalog (here the model file hashes), store it on the result row and in the output file header. Check only cheap invariants such as file size on each run, instead of re-hashing multi-gigabyte files.
+- When a claim about verification changes, search CHANGELOG.md, docs/STATUS.md and every other document for the old wording, because the same claim is often repeated in several places.
+- An opt-in test that needs heavy files should be deselected at collection in a conftest.py and fail when opted in without its files, so a proof that did not happen never reads as a pass.
 
 ---
 
@@ -381,4 +383,34 @@ Notes for the orchestrator:
   - Context size (8192) and the part budget (`PART_BUDGET_TOKENS` = context minus 1200 for the system prompt minus 2048 for the answer) are estimates; the real llama-server flags and request format are still unverified, so P06.5 must confirm them.
   - The session does not expire objects on commit, and the cancel endpoint changes the row from another process. The job therefore reloads with `populate_existing=True` before writing progress, and checks cancellation after `expire_all()`.
   - A worker killed outright can leave its `llama-server` child running until the container stops; nothing reaps it at the next worker start.
+---
+
+## 2026-10-31T04:43:55Z - P06.3e
+- Fixed the three review findings for P06.3e and ran the opt-in test again with the real server and E2B files.
+
+Review fixes:
+- CHANGELOG.md no longer says generation only ran against a stand-in. It now says it ran with the real model only in an opt-in test, not yet through the API, Celery or the backend image.
+- docs/LOCAL_GENERATION.md no longer says nothing starts the server.
+- The nested `recording_input` helper now has a contract docstring.
+
+Other documentation fixes:
+- Two stale P06.3a and P06.3b phrases in docs/LOCAL_GENERATION.md, which said no job or model call existed yet.
+- One overlong line in docs/DEVELOPMENT.md.
+
+Observed in this attempt:
+- Real run, in `./scripts/ralph/sandbox.sh` with the pinned files in /cache: `2 passed, 4 deselected in 192.52s`, 44 s as one part and 143 s as three parts plus the merge. docs/ROADMAP.md and docs/STATUS.md now carry these figures. The 239.99s figure kept as an earlier run comes from the previous evidence text; I did not observe that run.
+- Default run of the test file, without the opt-in: `4 passed, 2 deselected in 4.58s`.
+- `./scripts/ralph/check.sh backend` passed (format, lint, types, full tests, OpenAPI).
+- `./scripts/ralph/check.sh docs` passed.
+
+Not run: web, e2e, desktop, the job through the API, Celery or the backend image, a model installed through the model manager, the other three project types, E4B, a long recording, and measured peak memory and context limits (P06.5).
+
+The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when this attempt started. I did not make that change and left it alone as instructed, so the orchestrator should confirm it is intended.
+- Files changed: CHANGELOG.md, backend/pyproject.toml, backend/tests/integration/conftest.py, backend/tests/integration/test_real_generation.py, docs/API.md, docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/LOCAL_GENERATION.md, docs/ROADMAP.md, docs/STATUS.md
+- **Learnings for future iterations:**
+  - The sandbox cache holds the pinned E2B files in /cache/models/gemma-4-e2b and the pinned server in /cache/llama.cpp-v0.5.0, so P06.5 and later tasks need no new download on this computer.
+  - Run the proof with: ./scripts/ralph/sandbox.sh 'cd backend && NARRASTEP_RUN_REAL_GENERATION_TESTS=1 NARRASTEP_REAL_GENERATION_MODEL_DIR=/cache/models/gemma-4-e2b NARRASTEP_REAL_LLAMA_SERVER_DIR=/cache/llama.cpp-v0.5.0 python -m pytest -m integration -s tests/integration/test_real_generation.py'. It takes about 3 to 4 minutes.
+  - Run times vary between runs of the same scenario: 44 s and 143 s in this attempt, 58 s and 163 s recorded earlier. P06.5 should not treat a single run as a measurement.
+  - E2B writes section titles as bold lines such as `**1. Summary**` rather than Markdown headings, and it cites ranges such as `[00:20-00:31]`. P06.4 rendering and P06.6 citation buttons must handle both forms.
+  - The job has not yet run with the real model through the API, Celery or the backend image, and no model has been installed through the model manager for a real run; the test walks the stored states and links the folder.
 ---
