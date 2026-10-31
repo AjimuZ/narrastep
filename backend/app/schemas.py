@@ -772,6 +772,73 @@ class ModelImportPreviewResponse(ApiModel):
     license_text: str
 
 
+class GenerationCreate(ApiModel):
+    """Choose the optional language of the document to generate (P06.3d).
+
+    Without `language` the document follows the transcript language.
+    """
+
+    language: str | None = Field(default=None, max_length=16)
+
+    @field_validator("language")
+    @classmethod
+    def validate_document_language(cls, value: str | None) -> str | None:
+        """Accept a lowercase Whisper-supported language code; `auto` and blank mean no choice."""
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized in {"", "auto"}:
+            return None
+        if normalized not in SUPPORTED_WHISPER_LANGUAGES:
+            raise ValueError("Language must be a Whisper-supported language code.")
+        return normalized
+
+
+class GenerationModelFileResponse(ApiModel):
+    """Record one model file that produced a document: name, size and the pinned SHA-256."""
+
+    name: str
+    size_bytes: int
+    sha256: str
+
+
+class GenerationResponse(ApiModel):
+    """Expose the progress and result of one document generation.
+
+    `parts_completed` of `parts_total` counts finished model requests per chronological part
+    (`parts_total` is 0 until the parts are planned). `document_available` is true once the
+    document can be read. `prompt_version` and `model_files` say what produced the document.
+    """
+
+    id: str
+    project_id: str
+    model_id: str
+    status: JobStatus
+    current_stage: str
+    progress_percent: int
+    message: str
+    parts_total: int
+    parts_completed: int
+    language: str | None
+    prompt_version: str
+    model_files: list[GenerationModelFileResponse]
+    document_available: bool
+    size_bytes: int | None
+    error_code: str | None
+    error_message: str | None
+    version: int
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+
+
+class GenerationListResponse(ApiModel):
+    """Return the generations of a project, newest first."""
+
+    items: list[GenerationResponse]
+    total: int
+
+
 class ModelImportRequest(ApiModel):
     """Confirm that the user saw the license; the body names no path, because none is accepted."""
 

@@ -320,6 +320,61 @@ def estimate_export_package(request: ExportRequest) -> ExportEstimate:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class SelectedScreenshot:
+    """One screenshot the export selector keeps, with the name it has in a package.
+
+    `source_path` is the stored PNG when there is one; otherwise `source_video_path` and
+    `source_timestamp_seconds` say which frame of the original video to decode.
+    """
+
+    file_name: str
+    timestamp_seconds: float
+    source_path: Path | None
+    source_video_path: Path | None
+    source_timestamp_seconds: float | None
+
+
+def select_package_screenshots(
+    segments: list[ExportSegment],
+    *,
+    similarity_threshold: float,
+    selection_strategy: str,
+    output_mode: str,
+    duration_seconds: float,
+    budget_profile: str,
+) -> list[SelectedScreenshot]:
+    """Return the screenshots a package of these segments would contain, in transcript order.
+
+    Uses the same selector and file names as `build_export_package`, so a generated document cites
+    the files of the package. Raises `FileNotFoundError` when a selected image is unavailable.
+    """
+    selection = _select_screenshot_groups(
+        segments,
+        similarity_threshold=similarity_threshold,
+        selection_strategy=selection_strategy,
+        output_mode=output_mode,
+        duration_seconds=duration_seconds,
+        budget_profile=budget_profile,
+    )
+    return [
+        SelectedScreenshot(
+            file_name=screenshot_file_name(
+                group.first_sequence + 1, group.segments[0].start_seconds
+            ),
+            timestamp_seconds=(
+                group.timestamp_seconds
+                if group.timestamp_seconds is not None
+                else group.segments[0].start_seconds
+            ),
+            source_path=group.source_path,
+            source_video_path=group.source_video_path,
+            source_timestamp_seconds=group.timestamp_seconds,
+        )
+        for group in selection.representatives
+    ]
+
+
 def _render_screenshots(
     request: ExportRequest,
     package_root: Path,

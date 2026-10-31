@@ -64,6 +64,11 @@ The API uses `400` for malformed domain input, `403` for a feature turned off by
 | POST | `/api/v1/models/{modelId}/cancel` | Cancel a download or its verification and delete the files | 202 |
 | GET | `/api/v1/models/{modelId}/import` | Show what the read-only import folder holds for a model, with the license text to show before importing | 200 |
 | POST | `/api/v1/models/{modelId}/import` | Copy the model's pinned files from the import folder and verify them; the body only confirms the license | 202 |
+| POST | `/api/v1/projects/{projectId}/generations` | Queue the local generation of a document from the reviewed project; the optional body carries the document language (P06.3d) | 202 |
+| GET | `/api/v1/projects/{projectId}/generations` | List the project's generations, newest first, as `{items, total}` | 200 |
+| GET | `/api/v1/generations/{generationId}` | Poll one generation: status, progress per part, prompt version and model files | 200 |
+| POST | `/api/v1/generations/{generationId}/cancel` | Cancel a queued generation at once, or stop a running one within about a second | 202 |
+| GET | `/api/v1/generations/{generationId}/document` | Read the Markdown document of a completed generation | 200 |
 
 ## Important requests
 
@@ -307,7 +312,8 @@ from `installed` and is refused with `403 LOCAL_GENERATION_DISABLED` under the k
 works only from `enabled`. `DELETE /models/{modelId}` removes the model's files and answers `200`
 with the `not_installed` entry; it works only from `installed` or `enabled`. Disable and delete
 stay possible under the kill switch. A wrong state gives `409 MODEL_STATE_CONFLICT`, and delete
-gives `409 MODEL_IN_USE` while a generation runs (P06.3 feeds that check).
+gives `409 MODEL_IN_USE` while a generation is queued, running or being cancelled (answered from the
+`generations` table since P06.3d).
 
 #### Import from disk (P06.2d)
 
@@ -346,12 +352,84 @@ size) and `507 INSUFFICIENT_DISK_SPACE`. A file with the pinned name and size bu
 ends in `failed` with an `errorMessage` that says the file is not a pinned model file, and the
 copy is deleted. The import folder is never modified.
 
+### Document generation (P06.3d)
+
+Specification: [Local generation](LOCAL_GENERATION.md#generation-job-p063d). No screen calls these
+endpoints yet (P06.4); they are tested with a stand-in model server, not with a real model.
+
+`POST /projects/{projectId}/generations` takes an optional `{"language": "it"}` (a Whisper language
+code; `auto` or blank means the transcript language) and answers `202` with the queued generation:
+
+```json
+{
+  "id": "…",
+  "projectId": "…",
+  "modelId": "gemma-4-e2b",
+  "status": "queued",
+  "currentStage": "queued",
+  "progressPercent": 0,
+  "message": "Waiting for the local worker.",
+  "partsTotal": 0,
+  "partsCompleted": 0,
+  "language": null,
+  "promptVersion": "generation-prompts-v1",
+  "modelFiles": [
+    {"name": "gemma-4-E2B-it-Q4_0.gguf", "sizeBytes": 2841481184, "sha256": "8e30…"},
+    {"name": "mmproj-gemma-4-E2B-it-Q8_0.gguf", "sizeBytes": 557368064, "sha256": "9406…"}
+  ],
+  "documentAvailable": false,
+  "sizeBytes": null,
+  "errorCode": null,
+  "errorMessage": null,
+  "version": 1,
+  "createdAt": "…",
+  "startedAt": null,
+  "completedAt": null
+}
+```
+
+- `status` is one of `queued`, `processing`, `cancelling`, `completed`, `failed` and `cancelled`.
+  `currentStage` is `queued`, `starting`, `preparing`, `starting_server`, `generating`, `merging`,
+  `saving`, `completed`, `failed` or `cancelled`.
+- Progress is real work done: `partsTotal` is the number of chronological model requests planned
+  (0 until the parts are planned) and `partsCompleted` counts the finished ones. `progressPercent`
+  is 5 while the evidence is collected and 10 while the model server starts, then grows with the
+  finished parts up to 90, is 97 while the document is saved and 100 when it is stored. A single part needs no merge request; several are merged afterwards. There is
+  no event stream for generations: poll `GET /generations/{generationId}` (`version` rises with
+  every stored change).
+- `promptVersion` and `modelFiles` (name, size and the pinned SHA-256 of each model file) are the
+  values that also head the stored document. The stored path is never returned;
+  `documentAvailable` says whether `GET …/document` will answer.
+- The document is `projects/{id}/generations/{generationId}/document.md`. `GET …/document` answers
+  `200` with `text/markdown`, or `409 GENERATION_NOT_READY` until the generation completed.
+- Generating does not change the project state. A project may have one generation that is queued,
+  running or being cancelled at a time.
+- Queueing is refused, with nothing stored: `403 LOCAL_GENERATION_DISABLED` (kill switch),
+  `404 PROJECT_NOT_FOUND`, `409 INVALID_PROJECT_STATE` (the project is not in `review` or
+  `completed`, or has no transcript), `409 PROJECT_BUSY` (it already has an active generation),
+  `409 GENERATION_MODEL_UNAVAILABLE` (the model set by `NARRASTEP_GENERATION_MODEL` is not
+  `enabled`, or a file is missing or has the wrong size), `422 VALIDATION_ERROR` (unknown
+  language) and `503 REDIS_UNAVAILABLE` or `WORKER_UNAVAILABLE`.
+- While a generation is active, `POST …/process` and `DELETE /projects/{id}` answer `409
+  PROJECT_BUSY`, the original video cannot be removed, and `DELETE /models/{id}` answers `409
+  MODEL_IN_USE`.
+- A job that fails stores a stable `errorCode` and an English `errorMessage` free of transcript text:
+  `GENERATION_MODEL_UNAVAILABLE`, `LOCAL_GENERATION_DISABLED`, `GENERATION_OUT_OF_MEMORY`,
+  `GENERATION_SERVER_FAILED` (the server could not start, stopped or did not answer),
+  `GENERATION_FAILED` (anything else, including a project with no usable transcript),
+  `GENERATION_INTERRUPTED` (a service restart), `WORKER_BUSY` (other work was running on the
+  worker) and `WORKER_UNAVAILABLE`.
+- `POST /generations/{generationId}/cancel` cancels a `queued` generation at once. A `processing`
+  one becomes `cancelling`; the worker stops the model server within about a second, removes the
+  partial files and reports `cancelled`. A finished generation is returned unchanged. Unknown ids
+  give `404 GENERATION_NOT_FOUND`.
+
 ## Planned changes
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- Enable, disable and delete of a model, import from disk and the generation endpoints
-  ([Local generation](LOCAL_GENERATION.md)).
+- Screens for the generation and model endpoints, and the optional inclusion of a generated
+  document in an export package (P06.4); the benchmark (P06.5).
 
 ## Progress events
 
@@ -402,10 +480,17 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `MODEL_NOT_FOUND` | 404 | The generation model is not in the pinned catalog (P06.2b). |
 | `LOCAL_GENERATION_DISABLED` | 403 | `NARRASTEP_LOCAL_GENERATION=disabled` refuses model downloads (P06.2b). |
 | `MODEL_STATE_CONFLICT` | 409 | The model's state does not allow the action: a download of a model that is not `not_installed` or `failed`, or a cancel with nothing in progress (P06.2b); enable, disable or delete from a state the diagram does not allow (P06.2c). |
-| `MODEL_IN_USE` | 409 | A generation is running, so the model cannot be deleted (P06.2c). |
+| `MODEL_IN_USE` | 409 | A generation is queued, running or being cancelled, so the model cannot be deleted (P06.2c; answered from the generation table since P06.3d). |
 | `MODEL_DELETE_FAILED` | 500 | The model files could not be removed, so the state is unchanged (P06.2c). |
 | `LICENSE_NOT_ACCEPTED` | 422 | An import was requested with `licenseAccepted` false (P06.2d). |
 | `MODEL_IMPORT_FILES_MISSING` | 404 | The import folder does not contain a pinned file name, or the folder is missing (P06.2d). |
 | `MODEL_IMPORT_NOT_PINNED` | 422 | A file of a pinned name in the import folder is a link, a directory or has another size: not a pinned model file (P06.2d). |
-| `GENERATION_OUT_OF_MEMORY` | none yet | The worker container has less free memory than the model needs (risk K5). The memory check exists since P06.3c; no endpoint or job state reports it until the generation job and routes exist (P06.3d). |
+| `GENERATION_OUT_OF_MEMORY` | failed generation | The worker container has less free memory than the model needs (risk K5); stored as the `errorCode` of the generation (P06.3d). |
+| `GENERATION_NOT_FOUND` | 404 | The generation does not exist (P06.3d). |
+| `GENERATION_NOT_READY` | 409 | The document was requested before the generation completed (P06.3d). |
+| `GENERATION_MODEL_UNAVAILABLE` | 409 or failed generation | The configured model is not `enabled`, or one of its files is missing or has the wrong size (P06.3d). |
+| `GENERATION_SERVER_FAILED` | failed generation | The local model server could not start, stopped or did not answer (P06.3d). |
+| `GENERATION_FAILED` | failed generation | The document could not be generated for another reason, such as a project with no usable transcript (P06.3d). |
+| `GENERATION_INTERRUPTED` | failed generation | Startup reconciliation or a redelivered task found the generation running without a worker; start it again (P06.3d). |
+| `WORKER_BUSY` | failed generation | The worker found processing, an export or another generation running when the generation started; start it again when that ends (P06.3d). |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

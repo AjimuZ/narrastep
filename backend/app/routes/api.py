@@ -28,6 +28,7 @@ from app.database import SessionLocal, get_session
 from app.errors import ApiError, error_response
 from app.models import (
     ExportStatus,
+    Generation,
     JobStatus,
     MediaAsset,
     OutputMode,
@@ -50,6 +51,9 @@ from app.schemas import (
     ExportEstimateResponse,
     ExportListResponse,
     ExportResponse,
+    GenerationCreate,
+    GenerationListResponse,
+    GenerationResponse,
     HealthResponse,
     JobResponse,
     MediaAssetResponse,
@@ -79,14 +83,24 @@ from app.schemas import (
 )
 from app.services.export_names import stored_export_zip_file_name
 from app.services.exporting import ExportRequest, estimate_export_package
+from app.services.generation_job import (
+    ERROR_DISABLED,
+    GENERATION_PROMPT_VERSION,
+    GenerationFailure,
+    pinned_model_files,
+    require_enabled_model,
+)
 from app.services.media import MediaServiceError, validate_video
 from app.services.model_catalog import MODEL_CATALOG
 from app.services.model_download import begin_download, delete_model, request_cancel
 from app.services.model_import import begin_import, import_preview
 from app.services.model_manager import (
+    ACTIVE_GENERATION_STATUSES,
     disable_model,
     enable_model,
     model_payload,
+    project_has_active_generation,
+    require_generation_available,
     require_known_model,
 )
 from app.services.pipeline import (
@@ -289,6 +303,8 @@ def delete_project(
     try:
         session.refresh(project)
         _reject_busy_project(project)
+        if project_has_active_generation(session, project.id):
+            raise ApiError("PROJECT_BUSY", "The project has active background work.", 409)
         _delete_project_and_workspace(session, project, settings)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     finally:
@@ -866,7 +882,9 @@ def _queue_processing_job(
     """
     if project.media_asset is None:
         raise ApiError("PROJECT_ASSET_MISSING", "Upload a valid source video first.", 409)
-    if _active_job(session, project.id) is not None:
+    if _active_job(session, project.id) is not None or project_has_active_generation(
+        session, project.id
+    ):
         raise ApiError("PROJECT_BUSY", "This project already has active processing work.", 409)
     if project.state not in {ProjectState.UPLOADED, ProjectState.FAILED}:
         raise ApiError(
@@ -1616,6 +1634,230 @@ def download_export(
         media_type="application/zip",
         filename=stored_export_zip_file_name(export.download_name, export.id),
     )
+
+
+@router.post(
+    "/projects/{project_id}/generations",
+    response_model=GenerationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def create_generation(
+    project_id: str,
+    request: GenerationCreate | None = None,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Queue the local generation of a document from the reviewed project.
+
+    The optional body picks the language of the document. Refused with `403
+    LOCAL_GENERATION_DISABLED` (kill switch), `404 PROJECT_NOT_FOUND`, `409 INVALID_PROJECT_STATE`
+    (not in review, or no transcript), `409 PROJECT_BUSY` (the project already has a generation),
+    `409 GENERATION_MODEL_UNAVAILABLE` (the configured model is not enabled or its files are
+    missing) and `503` when the worker is unavailable. The job runs on the same single worker as
+    processing and export; poll `GET /generations/{id}`.
+    """
+    project = _require_project(session, project_id)
+    reservation = acquire_project_operation(settings.data_root, project.id, "generate")
+    try:
+        session.refresh(project)
+        return _queue_generation(session, project, request or GenerationCreate(), settings)
+    finally:
+        release_project_operation(reservation)
+
+
+def _queue_generation(
+    session: Session, project: Project, request: GenerationCreate, settings: Settings
+) -> dict[str, object]:
+    """Validate, persist and dispatch one generation; nothing is stored when it is refused."""
+    require_generation_available(settings)
+    if project.state not in {ProjectState.REVIEW, ProjectState.COMPLETED}:
+        raise ApiError(
+            "INVALID_PROJECT_STATE", "Complete processing before generating a document.", 409
+        )
+    if project_has_active_generation(session, project.id):
+        raise ApiError("PROJECT_BUSY", "This project already has an active generation.", 409)
+    segment_count = session.scalar(
+        select(func.count())
+        .select_from(TranscriptSegment)
+        .where(TranscriptSegment.project_id == project.id, TranscriptSegment.active.is_(True))
+    )
+    if not segment_count:
+        raise ApiError(
+            "INVALID_PROJECT_STATE", "There is no transcript to generate a document from.", 409
+        )
+    try:
+        files = require_enabled_model(session, settings, settings.generation_model)
+    except GenerationFailure as error:
+        raise ApiError(
+            error.code, error.message, 403 if error.code == ERROR_DISABLED else 409
+        ) from error
+    _ensure_worker_available(settings)
+    task_id = str(uuid.uuid4())
+    generation = Generation(
+        project_id=project.id,
+        model_id=files.option.model_id,
+        celery_task_id=task_id,
+        language=request.language,
+        prompt_version=GENERATION_PROMPT_VERSION,
+        model_files=pinned_model_files(files.option),
+    )
+    session.add(generation)
+    try:
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        raise ApiError(
+            "PROJECT_BUSY", "This project already has an active generation.", 409
+        ) from error
+    session.refresh(generation)
+    try:
+        from app.tasks.celery_app import generate_document_task
+
+        generate_document_task.apply_async(args=(generation.id,), task_id=task_id)
+    except Exception as error:
+        session.expire_all()
+        current = _require_generation(session, generation.id)
+        if current.status == JobStatus.QUEUED:
+            current.status = JobStatus.FAILED
+            current.stage = "failed"
+            current.message = "The local worker is unavailable."
+            current.error_code = "WORKER_UNAVAILABLE"
+            current.error_message = "The local processing worker is unavailable."
+            current.completed_at = utc_now()
+            session.commit()
+        else:
+            return _generation_payload(current)
+        raise ApiError(
+            "WORKER_UNAVAILABLE", "The local processing worker is unavailable.", 503
+        ) from error
+    session.expire_all()
+    return _generation_payload(_require_generation(session, generation.id))
+
+
+@router.get("/projects/{project_id}/generations", response_model=GenerationListResponse)
+def list_generations(project_id: str, session: Session = Depends(get_session)) -> dict[str, object]:
+    """Return the generations of a project, newest first."""
+    _require_project(session, project_id)
+    generations = list(
+        session.scalars(
+            select(Generation)
+            .where(Generation.project_id == project_id)
+            .order_by(desc(Generation.created_at))
+        )
+    )
+    return {"items": [_generation_payload(item) for item in generations], "total": len(generations)}
+
+
+@router.get("/generations/{generation_id}", response_model=GenerationResponse)
+def get_generation(
+    generation_id: str, session: Session = Depends(get_session)
+) -> dict[str, object]:
+    """Return the latest stored progress of one generation for polling clients."""
+    return _generation_payload(_require_generation(session, generation_id))
+
+
+@router.post(
+    "/generations/{generation_id}/cancel",
+    response_model=GenerationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def cancel_generation(
+    generation_id: str, session: Session = Depends(get_session)
+) -> dict[str, object]:
+    """Persist a cancellation: a queued generation is cancelled at once, a running one stops.
+
+    A running generation becomes `cancelling`; the worker stops the model server within about a
+    second and then reports `cancelled`. A finished generation is returned unchanged.
+    """
+    generation = _require_generation(session, generation_id)
+    if generation.status not in ACTIVE_GENERATION_STATUSES:
+        return _generation_payload(generation)
+    generation.cancel_requested = True
+    generation.progress_version += 1
+    if generation.status == JobStatus.QUEUED:
+        if generation.celery_task_id:
+            from app.tasks.celery_app import celery_app
+
+            try:
+                celery_app.control.revoke(generation.celery_task_id, terminate=False)
+            except Exception:
+                # The durable flag stays authoritative when Redis is temporarily unavailable.
+                logger.warning(
+                    "Queued task revoke could not be published for generation %s.", generation.id
+                )
+        generation.status = JobStatus.CANCELLED
+        generation.stage = "cancelled"
+        generation.message = "The generation was cancelled before it started."
+        generation.completed_at = utc_now()
+    else:
+        generation.status = JobStatus.CANCELLING
+        generation.message = "Stopping the local model."
+    session.commit()
+    session.refresh(generation)
+    return _generation_payload(generation)
+
+
+@router.get(
+    "/generations/{generation_id}/document",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "The generated Markdown document",
+            "content": {"text/markdown": {"schema": {"type": "string"}}},
+        }
+    },
+)
+def read_generation_document(
+    generation_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Return the Markdown document of a completed generation.
+
+    Refused with `404 GENERATION_NOT_FOUND` and `409 GENERATION_NOT_READY` until it completed.
+    """
+    generation = _require_generation(session, generation_id)
+    if generation.status != JobStatus.COMPLETED or not generation.relative_path:
+        raise ApiError("GENERATION_NOT_READY", "The document is not ready yet.", 409)
+    path = ensure_within_root(settings.data_root, generation.relative_path)
+    if not path.is_file():
+        raise ApiError("PROJECT_ASSET_MISSING", "The document file is unavailable.", 404)
+    return FileResponse(path, media_type="text/markdown")
+
+
+def _require_generation(session: Session, generation_id: str) -> Generation:
+    """Load a generation or raise a stable not-found error."""
+    generation = session.get(Generation, generation_id)
+    if generation is None:
+        raise ApiError("GENERATION_NOT_FOUND", "The generation was not found.", 404)
+    return generation
+
+
+def _generation_payload(generation: Generation) -> dict[str, object]:
+    """Map a generation row to the polling contract; the document path is never exposed."""
+    return {
+        "id": generation.id,
+        "projectId": generation.project_id,
+        "modelId": generation.model_id,
+        "status": generation.status.value,
+        "currentStage": generation.stage,
+        "progressPercent": generation.progress_percent,
+        "message": generation.message,
+        "partsTotal": generation.parts_total,
+        "partsCompleted": generation.parts_completed,
+        "language": generation.language,
+        "promptVersion": generation.prompt_version,
+        "modelFiles": list(generation.model_files or []),
+        "documentAvailable": generation.status == JobStatus.COMPLETED
+        and bool(generation.relative_path),
+        "sizeBytes": generation.size_bytes,
+        "errorCode": generation.error_code,
+        "errorMessage": generation.error_message,
+        "version": generation.progress_version,
+        "createdAt": generation.created_at,
+        "startedAt": generation.started_at,
+        "completedAt": generation.completed_at,
+    }
 
 
 def _require_project(session: Session, project_id: str) -> Project:

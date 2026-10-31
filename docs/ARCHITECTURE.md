@@ -275,7 +275,12 @@ flowchart LR
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`
   ([Local generation](LOCAL_GENERATION.md#server-in-the-backend-image)). Since P06.3c
   `app/services/llama_session.py` holds the lifecycle (memory check, start on `127.0.0.1`, health
-  wait, requests, stop); no job calls it yet. The worker keeps no Internet route, and generation is serialized with
-  processing by the single worker.
+  wait, requests, stop). Since P06.3d `app/services/generation_job.py`, run by the Celery task
+  `narrastep.generate_document`, plans the chronological parts, calls the session once per part
+  (and for the merge), writes `projects/{id}/generations/{generationId}/document.md` and stores
+  the progress and result in the `generations` table; the API queues and cancels it
+  (`/projects/{id}/generations`, `/generations/{id}`). The worker keeps no Internet route, and
+  generation is serialized with processing and export by the single worker (one queue, concurrency
+  one); the API refuses overlapping work on the same project. Verified with a stand-in server only.
 
 See the decisions under [decisions](decisions/) and the [processing pipeline](PROCESSING_PIPELINE.md).

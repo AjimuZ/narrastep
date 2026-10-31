@@ -97,6 +97,20 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.MODEL_IMPORT_NOT_PINNED:A file in the import folder is not a pinned model file, so it was not imported. Copy the original file from the model's repository.`;
     case 'GENERATION_OUT_OF_MEMORY':
       return $localize`:@@error.GENERATION_OUT_OF_MEMORY:There is not enough free memory to generate the document. Raise the memory limit of Docker or Podman, or close other programs, then try again.`;
+    case 'GENERATION_NOT_FOUND':
+      return $localize`:@@error.GENERATION_NOT_FOUND:This document generation does not exist. It may have been deleted.`;
+    case 'GENERATION_NOT_READY':
+      return $localize`:@@error.GENERATION_NOT_READY:The document is not ready yet. Wait until the generation is finished.`;
+    case 'GENERATION_MODEL_UNAVAILABLE':
+      return $localize`:@@error.GENERATION_MODEL_UNAVAILABLE:The generation model is not enabled, or its files are missing. Install and enable it first, then try again.`;
+    case 'GENERATION_SERVER_FAILED':
+      return $localize`:@@error.GENERATION_SERVER_FAILED:The local model stopped or did not answer. Try generating the document again.`;
+    case 'GENERATION_FAILED':
+      return $localize`:@@error.GENERATION_FAILED:The document could not be generated. Try again.`;
+    case 'GENERATION_INTERRUPTED':
+      return $localize`:@@error.GENERATION_INTERRUPTED:The generation stopped before it finished. Start it again.`;
+    case 'WORKER_BUSY':
+      return $localize`:@@error.WORKER_BUSY:The local service is busy with another job. Start the generation again when it finishes.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

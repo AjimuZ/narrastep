@@ -4,8 +4,9 @@ Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binari
 backend image contains since P06.1 and which nothing starts yet, and the pinned file catalog, the
 four settings and the stored model state, which exist since P06.2a, and the model download, resume,
 verification and cancel API, which exists since P06.2b, the enable, disable and delete API (P06.2c)
-and the import from disk (P06.2d). Version 0.2 exports evidence and
-prompts only and never calls a model. Decision:
+and the import from disk (P06.2d), and the generation job and its endpoints, which exist since
+P06.3d but have only run against a stand-in model server. No screen offers generation yet (P06.4).
+Version 0.2 exports evidence and prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
 ## Goal
@@ -136,8 +137,8 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
   license copy and the endpoints of [API](API.md#local-generation-models-p062b).
 - Implemented in P06.2c: enable, disable and delete endpoints. Delete removes the model folder
   first, then resets the row. It is refused with `MODEL_IN_USE` while `generation_is_running()` in
-  `services/model_manager.py` is true; that function returns false until P06.3 answers it from its
-  generation jobs.
+  `services/model_manager.py` is true; since P06.3d that function answers from the `generations`
+  table (a queued, running or cancelling generation counts).
 - Implemented in P06.2d: [import from disk](#import-from-disk) enters the same `downloading`,
   `verifying` and `installed` states.
 - Download progress is persisted in SQLite and survives an API restart; a restart resumes with
@@ -250,7 +251,8 @@ Otherwise E2B stays the default. E4B remains a manual choice in Settings in ever
 5. The result is written to `projects/{id}/generations/{generationId}/document.md` with its prompt
    version and model file hashes. The server is stopped. The job reports real progress per part.
 
-Generation and processing share the single worker, so they never run at the same time.
+Generation and processing share the single worker, so they never run at the same time
+([how](#generation-job-p063d)).
 
 ## Output per project type
 
@@ -289,7 +291,7 @@ screenshots of a part are the ones that come right before its segments, as in P0
 `build_merge_input(output_mode, notes, language=None)` returns the type's system prompt and the notes
 of every part in order, marked as evidence; it logs counts only. No model is called yet.
 
-Implemented in P06.3c (`backend/app/services/llama_session.py`; no job calls it yet):
+Implemented in P06.3c (`backend/app/services/llama_session.py`; the job of P06.3d calls it):
 
 - **Memory check (risk K5).** `read_available_memory_bytes()` returns the smaller of the cgroup v2
   headroom (`memory.max` minus `memory.current`, less `inactive_file` from `memory.stat`, because
@@ -300,8 +302,8 @@ Implemented in P06.3c (`backend/app/services/llama_session.py`; no job calls it 
   `GenerationOutOfMemoryError` with code `GENERATION_OUT_OF_MEMORY`, a message that states the
   needed and available GiB, and no transcript text. When the amount cannot be read (no cgroup limit
   and no `MemAvailable`) the check passes with a warning, so an uninspectable system is not blocked.
-  The web catalogs translate the code into English and Italian; the job and the routes that report
-  it come with P06.3d.
+  The web catalogs translate the code into English and Italian; the job of P06.3d stores it as the
+  error code of a failed generation.
 - **Start.** `build_llama_server_command` returns an argument array: `-m`, `--mmproj`,
   `--host 127.0.0.1`, `--port` (a free loopback port), `-c` (context tokens, default 8192), `-np 1`
   and `-t` only when `NARRASTEP_GENERATION_THREADS` is above 0. There is no host parameter, so the
@@ -320,6 +322,63 @@ Implemented in P06.3c (`backend/app/services/llama_session.py`; no job calls it 
 - Verified only with a stand-in server script in the tests. The real `llama-server` has not been
   started with a model, so its flags and the request format are unverified against the pinned
   build until the opt-in integration test and P06.5.
+
+### Generation job (P06.3d)
+
+Implemented in `backend/app/services/generation_job.py`, the Celery task
+`narrastep.generate_document` (`app/tasks/celery_app.py`), the table `generations` (migration
+`20261031_0011`) and the routes of [API](API.md#document-generation-p063d). It has run only against
+a stand-in `llama-server` script in `backend/tests/test_generation_job.py`, never against the real
+server or a model, so the real flags and request format are still unverified (P06.5).
+
+- **Queueing.** `POST /projects/{id}/generations` stores a `queued` row (model from
+  `NARRASTEP_GENERATION_MODEL`, the prompt version, the pinned model files and the optional
+  language) and dispatches the task. It is refused unless the kill switch allows generation, the
+  project is in review (or completed) with a transcript, has no active generation, and the model is
+  `enabled` with every pinned file present at its pinned size. The project state does not change.
+- **Steps of the task.** It claims the row atomically (a repeated delivery does nothing; a delivery
+  of its own running task settles it as interrupted), then: checks that no processing, export or
+  other generation is running (`WORKER_BUSY` otherwise), checks the model again, checks the memory
+  (`GENERATION_OUT_OF_MEMORY`), collects the active reviewed segments and the screenshots the export
+  selector keeps for the project (`exporting.select_package_screenshots`, so the file names are the
+  ones of a package; a screenshot that exists only as a video position is decoded into
+  `generations/{id}/.work/`), plans the parts with a budget of the context minus 1200 tokens for the
+  system prompt and 2048 for the answer, starts `llama-server` and sends one request per part.
+  One part is already the document. Several parts are merged: notes are grouped so a merge request
+  stays below 5000 estimated tokens, and groups are merged in rounds until one text is left.
+- **Output.** `projects/{id}/generations/{generationId}/document.md`, written to a `.partial` file
+  and renamed. It starts with an HTML comment holding the prompt version
+  (`generation-prompts-v1`), the model id, repository and revision and the name and SHA-256 of each
+  model file, followed by the model's text. The hashes are the pinned catalog values: the files
+  were verified when installed, and the job only compares their sizes before each run, because
+  hashing 3 to 5 GB for every run would take longer than the check is worth. The same values are
+  stored in the row (`prompt_version`, `model_files`).
+- **Progress.** Stored per part: `parts_total` after planning, `parts_completed` after each answer,
+  and `progress_percent` 5 (evidence), 10 (server), then 10 to 90 across the parts, 90 while
+  merging, 97 saving, 100 done. No event stream; clients poll.
+- **Cancellation.** The request runs in a helper thread while the job checks the stored flag every
+  second, so a cancellation does not wait for the model: the server process is terminated (and
+  killed after 5 seconds), the folder of the generation is removed and the row becomes
+  `cancelled`. A cancellation that arrives after the last check but before the row is completed
+  wins, and the file is removed. The flag is read from SQLite only; no Redis hint is used.
+- **Failures.** Each ends the row as `failed` with a stable code and a fixed English message and
+  removes the generation's folder: `GENERATION_MODEL_UNAVAILABLE`, `LOCAL_GENERATION_DISABLED`,
+  `GENERATION_OUT_OF_MEMORY`, `GENERATION_SERVER_FAILED` (could not start, stopped or did not
+  answer), `GENERATION_FAILED` and `WORKER_BUSY`. The server is stopped on every path, because
+  `LlamaServerSession` is a context manager. Logs hold identifiers, counts and exception types,
+  never transcript text, model output or prompts.
+- **Sharing the single worker.** The task has no route of its own, so it uses the default queue of
+  `process_project` and `export_project`, and the worker runs with `--concurrency=1` in
+  `docker-compose.yml` (a test reads both). The three kinds of work therefore run one after the
+  other, also across projects. The check for running work at the start is a safety net for a broken
+  invariant such as a stale `processing` row; startup reconciliation fails a generation that no
+  worker owns with `GENERATION_INTERRUPTED` and removes its folder. For the same project the API
+  refuses processing, deletion and removal of the original video while a generation is active, and
+  generating while the project is queued, processing or exporting.
+- **Not done.** The Settings and Document screens, including the document in an export package
+  (P06.4), the clickable citations (P06.6) and the benchmark (P06.5). The context size (8192) and
+  the part budget are estimates until the benchmark measures them. A worker killed outright can
+  leave its `llama-server` child running until the container stops.
 
 ## Package
 
@@ -346,8 +405,8 @@ in `.env.example` and the README). Startup fails on a value outside these ranges
 | `NARRASTEP_GENERATION_THREADS` | whole number from 0 to 256 |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | whole number of pixels from 256 to 4096 |
 
-Nothing reads the model, thread and image settings until the generation job (P06.3d).
-`NARRASTEP_MODEL_IMPORT_DIR` is read by the import (P06.2d): Compose uses it as the host folder
+The generation job (P06.3d) reads the model, thread and image settings when a generation is queued
+and run. `NARRASTEP_MODEL_IMPORT_DIR` is read by the import (P06.2d): Compose uses it as the host folder
 and passes `/import` to the API, and outside Compose it is the folder the backend reads.
 
 ## Verification

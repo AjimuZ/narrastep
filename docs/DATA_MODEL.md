@@ -9,6 +9,7 @@ erDiagram
     PROJECT ||--o{ SCREENSHOT : contains
     PROJECT ||--o{ PROCESSING_JOB : runs
     PROJECT ||--o{ PROJECT_EXPORT : creates
+    PROJECT ||--o{ GENERATION : generates
     PROJECT ||--o| RECORDING_SESSION : recorded_by
     RECORDING_SESSION ||--o{ RECORDING_CHUNK : stores
     TRANSCRIPT_SEGMENT ||--o{ SEGMENT_SCREENSHOT_ASSOCIATION : has
@@ -67,6 +68,31 @@ export is queued, so renaming the project later does not rename existing exports
 `20261029_0004` numbered existing exports by creation time and left their `download_name` empty;
 an empty name means a Version 0.2 export, served as `narrastep-{export UUID}.zip`.
 
+### Generation
+
+One per local document generation ([Local generation](LOCAL_GENERATION.md), P06.3d, migration
+`20261031_0011`, table `generations`). `model_id` is the catalog key of the model used. `status`
+reuses the job statuses (`queued`, `processing`, `cancelling`, `completed`, `failed`, `cancelled`,
+`interrupted`; the CHECK constraint is `generation_status`) with `stage`, `message`,
+`progress_percent`, a monotonic `progress_version` and `cancel_requested`. `parts_total` and
+`parts_completed` count the chronological model requests planned and finished, so progress is real
+work. `language` is the document language the user chose (null follows the transcript).
+`prompt_version` (for example `generation-prompts-v1`) and `model_files` (a JSON list of `name`,
+`size_bytes` and the pinned `sha256` of each model file) record what produced the document;
+`relative_path` and `size_bytes` point to the stored `document.md` once the status is `completed`.
+Also `celery_task_id`, `error_code`, `error_message` (never transcript text) and the lifecycle
+timestamps. The partial unique index `uq_active_generation_per_project` allows one `queued`,
+`processing` or `cancelling` generation per project. `project_id` cascades on project deletion;
+generating does not change the project's own state. The migration creates the table empty and its
+downgrade drops it, leaving `projects/{id}/generations/` folders on disk.
+
+### GenerationModel
+
+One row per local generation model that was ever touched (P06.2a, migration `20261030_0010`, table
+`generation_models`): the catalog key, the install `state` (CHECK constraint `model_install_state`),
+downloaded and total bytes, the pinned `revision` and the readable `error_message` of a failed
+state. A model without a row is `not_installed`.
+
 ### SegmentLineage
 
 Records directed source-to-derived edges produced by split and merge. Source rows are archived rather than deleted, preserving structural history.
@@ -109,6 +135,8 @@ projects/{project UUID}/
   diagnostics/processing-{job UUID}.json
   diagnostics/export-{export UUID}.json
   exports/narrastep-{export UUID}.zip
+  generations/{generation UUID}/document.md   (completed generations only, P06.3d)
+  generations/{generation UUID}/.work/        (screenshots decoded during a run; removed afterwards)
   source/microphone.webm                (recorder projects with a microphone, P05.2)
   recording/screen/NNNNNN.webm          (open recording sessions only, P05.1)
   recording/microphone/NNNNNN.webm
@@ -136,12 +164,9 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 
 ## Planned changes
 
-**Planned**, not in the schema yet:
-
-| Change | Package |
-| --- | --- |
-| `ModelInstall` (model key, state, downloaded bytes, verified hashes, error) with files under `models/` | P06 |
-| `Generation` (project, model key, prompt version, status, progress, relative document path) | P06 |
+Nothing is planned in the schema at this point. The model install state (`GenerationModel`, P06.2a)
+and the generations (`Generation`, P06.3d) are implemented; the generated document will join the
+export package in P06.4 without a schema change.
 
 ### Export layout
 

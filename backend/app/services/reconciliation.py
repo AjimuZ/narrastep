@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import and_, or_, select
 
 from app.config import Settings
 from app.database import SessionLocal
-from app.models import ExportStatus, JobStatus, ProcessingJob, ProjectExport, ProjectState, utc_now
+from app.models import (
+    ExportStatus,
+    Generation,
+    JobStatus,
+    ProcessingJob,
+    ProjectExport,
+    ProjectState,
+    utc_now,
+)
 from app.services.workspaces import ensure_within_root, project_relative_path
 
 logger = logging.getLogger(__name__)
@@ -45,7 +54,20 @@ def reconcile_interrupted_work(settings: Settings) -> None:
                 )
             )
         )
-        if not stale_jobs and not stale_exports:
+        stale_generations = list(
+            session.scalars(
+                select(Generation).where(
+                    or_(
+                        Generation.status.in_((JobStatus.RUNNING, JobStatus.CANCELLING)),
+                        and_(
+                            Generation.status == JobStatus.QUEUED,
+                            Generation.updated_at < threshold,
+                        ),
+                    ),
+                )
+            )
+        )
+        if not stale_jobs and not stale_exports and not stale_generations:
             return
         active_task_ids = _active_celery_task_ids()
         if active_task_ids is None:
@@ -78,7 +100,31 @@ def reconcile_interrupted_work(settings: Settings) -> None:
             export.error_message = "Export was interrupted and can be started again."
             export.completed_at = utc_now()
             export.project.state = ProjectState.REVIEW
+        for generation in stale_generations:
+            if generation.status == JobStatus.QUEUED and generation.celery_task_id:
+                continue
+            if generation.celery_task_id and generation.celery_task_id in active_task_ids:
+                continue
+            _cleanup_generation_files(settings, generation)
+            generation.status = JobStatus.FAILED
+            generation.stage = "failed"
+            generation.message = "The document could not be generated."
+            generation.error_code = "GENERATION_INTERRUPTED"
+            generation.error_message = (
+                "The generation was interrupted by a local service restart. Start it again."
+            )
+            generation.progress_version += 1
+            generation.completed_at = utc_now()
         session.commit()
+
+
+def _cleanup_generation_files(settings: Settings, generation: Generation) -> None:
+    """Remove only the interrupted generation's own folder, which holds no finished document."""
+    directory = ensure_within_root(
+        settings.data_root,
+        project_relative_path(generation.project_id) / "generations" / generation.id,
+    )
+    shutil.rmtree(directory, ignore_errors=True)
 
 
 def _cleanup_export_partial(settings: Settings, export: ProjectExport) -> None:

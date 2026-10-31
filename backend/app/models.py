@@ -213,6 +213,9 @@ class Project(Base):
     recording_session: Mapped[RecordingSession | None] = relationship(
         back_populates="project", cascade="all, delete-orphan", uselist=False, lazy="selectin"
     )
+    generations: Mapped[list[Generation]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
     @property
     def mode_value(self) -> str:
@@ -590,6 +593,74 @@ class RecordingChunk(Base):
     )
 
     recording: Mapped[RecordingSession] = relationship(back_populates="chunks")
+
+
+class Generation(Base):
+    """Persist one local document generation of a project and its progress (P06.3d).
+
+    It reuses `JobStatus` for the lifecycle. `parts_total` and `parts_completed` count the
+    chronological model requests (the merge request included), so progress is real work done.
+    `prompt_version` and `model_files` (name, size and SHA-256 pinned for the model) record what
+    produced the document; `relative_path` points to
+    `projects/{project_id}/generations/{id}/document.md` once the job completed. At most one
+    generation per project is active (queued, processing or cancelling).
+    """
+
+    __tablename__ = "generations"
+    __table_args__ = (
+        Index(
+            "uq_active_generation_per_project",
+            "project_id",
+            unique=True,
+            sqlite_where=text("status IN ('queued', 'processing', 'cancelling')"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    model_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[JobStatus] = mapped_column(
+        Enum(
+            JobStatus,
+            name="generation_status",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda values: [item.value for item in values],
+        ),
+        default=JobStatus.QUEUED,
+        nullable=False,
+        index=True,
+    )
+    stage: Mapped[str] = mapped_column(String(80), default="queued", nullable=False)
+    message: Mapped[str] = mapped_column(
+        String(300), default="Waiting for the local worker.", nullable=False
+    )
+    progress_percent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    progress_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    parts_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    parts_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Language the user asked the document to be written in; null follows the transcript.
+    language: Mapped[str | None] = mapped_column(String(16))
+    prompt_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    model_files: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    relative_path: Mapped[str | None] = mapped_column(String(500))
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    celery_task_id: Mapped[str | None] = mapped_column(String(80))
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    error_message: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    project: Mapped[Project] = relationship(back_populates="generations")
 
 
 class GenerationModel(Base):

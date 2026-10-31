@@ -6,6 +6,13 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Local document generation in the API (no screen yet): `POST /api/v1/projects/{id}/generations`
+  queues a job on the same worker as processing and export, which sends the reviewed transcript and
+  screenshots to the enabled local model in chronological parts and stores
+  `projects/{id}/generations/{generationId}/document.md` with the prompt version and the model file
+  hashes. Progress is reported per part, a running generation can be cancelled, and failures carry
+  stable codes. A generation blocks processing, deleting the project, removing its original video
+  and deleting the model while it is active. It has only run against a stand-in model server.
 - Documentation for running with Docker or Podman, the generated `.env` and the `podman machine`
   memory limit, in the README and the development guide.
 - `./start-podman.sh` starts the stack with rootless Podman and the same options (`-r`,

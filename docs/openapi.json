@@ -166,6 +166,150 @@
         "title": "ExportStatus",
         "type": "string"
       },
+      "GenerationCreate": {
+        "description": "Choose the optional language of the document to generate (P06.3d).\n\nWithout `language` the document follows the transcript language.",
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          }
+        },
+        "title": "GenerationCreate",
+        "type": "object"
+      },
+      "GenerationListResponse": {
+        "description": "Return the generations of a project, newest first.",
+        "properties": {
+          "items": {
+            "title": "Items"
+          },
+          "total": {
+            "title": "Total"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "GenerationListResponse",
+        "type": "object"
+      },
+      "GenerationModelFileResponse": {
+        "description": "Record one model file that produced a document: name, size and the pinned SHA-256.",
+        "properties": {
+          "name": {
+            "title": "Name"
+          },
+          "sha256": {
+            "title": "Sha256"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          }
+        },
+        "required": [
+          "name",
+          "sizeBytes",
+          "sha256"
+        ],
+        "title": "GenerationModelFileResponse",
+        "type": "object"
+      },
+      "GenerationResponse": {
+        "description": "Expose the progress and result of one document generation.\n\n`parts_completed` of `parts_total` counts finished model requests per chronological part\n(`parts_total` is 0 until the parts are planned). `document_available` is true once the\ndocument can be read. `prompt_version` and `model_files` say what produced the document.",
+        "properties": {
+          "completedAt": {
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "title": "Createdat"
+          },
+          "currentStage": {
+            "title": "Currentstage"
+          },
+          "documentAvailable": {
+            "title": "Documentavailable"
+          },
+          "errorCode": {
+            "title": "Errorcode"
+          },
+          "errorMessage": {
+            "title": "Errormessage"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "language": {
+            "title": "Language"
+          },
+          "message": {
+            "title": "Message"
+          },
+          "modelFiles": {
+            "title": "Modelfiles"
+          },
+          "modelId": {
+            "title": "Modelid"
+          },
+          "partsCompleted": {
+            "title": "Partscompleted"
+          },
+          "partsTotal": {
+            "title": "Partstotal"
+          },
+          "progressPercent": {
+            "title": "Progresspercent"
+          },
+          "projectId": {
+            "title": "Projectid"
+          },
+          "promptVersion": {
+            "title": "Promptversion"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          },
+          "startedAt": {
+            "title": "Startedat"
+          },
+          "status": {},
+          "version": {
+            "title": "Version"
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "modelId",
+          "status",
+          "currentStage",
+          "progressPercent",
+          "message",
+          "partsTotal",
+          "partsCompleted",
+          "language",
+          "promptVersion",
+          "modelFiles",
+          "documentAvailable",
+          "sizeBytes",
+          "errorCode",
+          "errorMessage",
+          "version",
+          "createdAt",
+          "startedAt",
+          "completedAt"
+        ],
+        "title": "GenerationResponse",
+        "type": "object"
+      },
       "HealthResponse": {
         "description": "Report process health without leaking configuration or filesystem paths.",
         "properties": {
@@ -1489,6 +1633,126 @@
         "summary": "Download Export"
       }
     },
+    "/api/v1/generations/{generation_id}": {
+      "get": {
+        "description": "Return the latest stored progress of one generation for polling clients.",
+        "operationId": "get_generation_api_v1_generations__generation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Get Generation"
+      }
+    },
+    "/api/v1/generations/{generation_id}/cancel": {
+      "post": {
+        "description": "Persist a cancellation: a queued generation is cancelled at once, a running one stops.\n\nA running generation becomes `cancelling`; the worker stops the model server within about a\nsecond and then reports `cancelled`. A finished generation is returned unchanged.",
+        "operationId": "cancel_generation_api_v1_generations__generation_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Cancel Generation"
+      }
+    },
+    "/api/v1/generations/{generation_id}/document": {
+      "get": {
+        "description": "Return the Markdown document of a completed generation.\n\nRefused with `404 GENERATION_NOT_FOUND` and `409 GENERATION_NOT_READY` until it completed.",
+        "operationId": "read_generation_document_api_v1_generations__generation_id__document_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The generated Markdown document"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Read Generation Document"
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Verify that the API process and authoritative SQLite store are available.",
@@ -2330,6 +2594,101 @@
           }
         },
         "summary": "Create Export"
+      }
+    },
+    "/api/v1/projects/{project_id}/generations": {
+      "get": {
+        "description": "Return the generations of a project, newest first.",
+        "operationId": "list_generations_api_v1_projects__project_id__generations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "List Generations"
+      },
+      "post": {
+        "description": "Queue the local generation of a document from the reviewed project.\n\nThe optional body picks the language of the document. Refused with `403\nLOCAL_GENERATION_DISABLED` (kill switch), `404 PROJECT_NOT_FOUND`, `409 INVALID_PROJECT_STATE`\n(not in review, or no transcript), `409 PROJECT_BUSY` (the project already has a generation),\n`409 GENERATION_MODEL_UNAVAILABLE` (the configured model is not enabled or its files are\nmissing) and `503` when the worker is unavailable. The job runs on the same single worker as\nprocessing and export; poll `GET /generations/{id}`.",
+        "operationId": "create_generation_api_v1_projects__project_id__generations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GenerationCreate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Create Generation"
       }
     },
     "/api/v1/projects/{project_id}/process": {

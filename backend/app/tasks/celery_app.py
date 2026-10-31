@@ -48,6 +48,18 @@ def export_project_task(task: Any, export_id: str) -> None:
     perform_export(export_id, celery_task_id=str(task.request.id))
 
 
+@celery_app.task(bind=True, name="narrastep.generate_document")  # type: ignore[untyped-decorator]
+def generate_document_task(task: Any, generation_id: str) -> None:
+    """Delegate one local document generation to the application orchestration service.
+
+    It uses the default queue and the same worker as processing and export, whose concurrency of
+    one keeps the three kinds of work from running at the same time.
+    """
+    from app.services.generation_job import perform_generation
+
+    perform_generation(generation_id, celery_task_id=str(task.request.id))
+
+
 @worker_ready.connect  # type: ignore[untyped-decorator]
 def reconcile_after_worker_ready(**_: object) -> None:
     """Reconcile stale durable work after the worker control channel is responsive."""

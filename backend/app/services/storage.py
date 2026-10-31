@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.errors import ApiError
 from app.models import ExportStatus, Project, ProjectExport, ProjectState, utc_now
+from app.services.model_manager import project_has_active_generation
 from app.services.workspaces import ensure_within_root, project_relative_path
 
 logger = logging.getLogger(__name__)
@@ -148,7 +149,11 @@ def removal_blocked_reason(session: Session, project: Project, data_root: Path) 
         return REASON_NO_VIDEO
     if asset.source_removed_at is not None:
         return REASON_ALREADY_REMOVED
-    if project.state in {ProjectState.QUEUED, ProjectState.PROCESSING, ProjectState.EXPORTING}:
+    if project.state in {
+        ProjectState.QUEUED,
+        ProjectState.PROCESSING,
+        ProjectState.EXPORTING,
+    } or project_has_active_generation(session, project.id):
         return REASON_BUSY
     if not has_current_package(session, project, data_root):
         return REASON_PACKAGE_REQUIRED

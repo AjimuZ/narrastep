@@ -77,6 +77,16 @@ describe('Italian interface', () => {
     expect(localizedError('GENERATION_OUT_OF_MEMORY', null, 'x')).toContain('memoria libera');
   });
 
+  it('translates the document generation errors', () => {
+    expect(localizedError('GENERATION_NOT_FOUND', null, 'x')).toContain('non esiste');
+    expect(localizedError('GENERATION_NOT_READY', null, 'x')).toContain('non è ancora pronto');
+    expect(localizedError('GENERATION_MODEL_UNAVAILABLE', null, 'x')).toContain('modello');
+    expect(localizedError('GENERATION_SERVER_FAILED', null, 'x')).toContain('non ha risposto');
+    expect(localizedError('GENERATION_FAILED', null, 'x')).toContain('Non è stato possibile');
+    expect(localizedError('GENERATION_INTERRUPTED', null, 'x')).toContain('si è interrotta');
+    expect(localizedError('WORKER_BUSY', null, 'x')).toContain('occupato');
+  });
+
   it('renders the shell, the language switch and the health word in Italian', async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],

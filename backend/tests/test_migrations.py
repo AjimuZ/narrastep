@@ -25,6 +25,8 @@ APPLICATION_TABLES = {
     "segment_lineage",
     "recording_sessions",
     "recording_chunks",
+    "generation_models",
+    "generations",
 }
 
 
@@ -593,6 +595,85 @@ def test_generation_model_revision_upgrades_the_previous_head_with_nothing_insta
         assert "generation_models" not in schema.get_table_names()
         with engine.connect() as connection:
             assert connection.execute(text("SELECT count(*) FROM projects")).scalar() == 1
+        engine.dispose()
+    finally:
+        get_settings.cache_clear()
+
+
+def test_generations_revision_upgrades_the_previous_head_and_keeps_project_data(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Add `generations` on the previous head: empty, constrained, cascading, and reversible.
+
+    The CHECK constraint accepts only the job statuses, the partial unique index allows one
+    active generation per project, deleting a project removes its generations, `alembic check`
+    finds no drift and the downgrade drops only the new table.
+    """
+    data_root = tmp_path / "migration-generations"
+    database_url = f"sqlite:///{(data_root / 'narrastep.db').as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+    insert_generation = text(
+        "INSERT INTO generations (id, project_id, model_id, status, stage, message,"
+        " progress_percent, progress_version, cancel_requested, parts_total, parts_completed,"
+        " prompt_version, model_files, created_at, updated_at) VALUES (:id, 'project',"
+        " 'gemma-4-e2b', :status, 'queued', 'Waiting', 0, 1, 0, 0, 0, 'generation-prompts-v1',"
+        " '[]', '2026-10-31', '2026-10-31')"
+    )
+
+    try:
+        command.upgrade(alembic_config, "20261030_0010")
+        engine = create_engine(database_url)
+        assert "generations" not in inspect(engine).get_table_names()
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projects (id, name, source_language, output_mode, state,"
+                    " created_at, updated_at) VALUES ('project', 'P', 'auto', 'meeting',"
+                    " 'review', '2026-10-31', '2026-10-31')"
+                )
+            )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        command.check(alembic_config)
+        engine = create_engine(database_url)
+        schema = inspect(engine)
+        columns = {item["name"]: item for item in schema.get_columns("generations")}
+        assert {"parts_total", "parts_completed", "prompt_version", "model_files"} <= set(columns)
+        assert columns["relative_path"]["nullable"] and not columns["prompt_version"]["nullable"]
+        assert {item["name"] for item in schema.get_check_constraints("generations")} == {
+            "generation_status"
+        }
+        indexes = {item["name"]: item for item in schema.get_indexes("generations")}
+        active = indexes["uq_active_generation_per_project"]
+        assert active["unique"] == 1 and active["column_names"] == ["project_id"]
+        assert str(active["dialect_options"]["sqlite_where"]) == (
+            "status IN ('queued', 'processing', 'cancelling')"
+        )
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM generations")).scalar() == 0
+        with engine.begin() as connection:
+            connection.execute(insert_generation, {"id": "done", "status": "completed"})
+            connection.execute(insert_generation, {"id": "active", "status": "queued"})
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(insert_generation, {"id": "second", "status": "processing"})
+        with pytest.raises(IntegrityError), engine.begin() as connection:
+            connection.execute(insert_generation, {"id": "bad", "status": "paused"})
+        with engine.begin() as connection:
+            connection.execute(text("PRAGMA foreign_keys=ON"))
+            connection.execute(text("DELETE FROM projects WHERE id = 'project'"))
+            assert connection.execute(text("SELECT count(*) FROM generations")).scalar() == 0
+        engine.dispose()
+
+        command.downgrade(alembic_config, "20261030_0010")
+        engine = create_engine(database_url)
+        schema = inspect(engine)
+        assert "generations" not in schema.get_table_names()
+        assert "generation_models" in schema.get_table_names()
         engine.dispose()
     finally:
         get_settings.cache_clear()

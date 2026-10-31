@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Final
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.errors import ApiError
-from app.models import GenerationModel, ModelInstallState, utc_now
+from app.models import Generation, GenerationModel, JobStatus, ModelInstallState, utc_now
 from app.services.model_catalog import (
     MODEL_CATALOG,
     MODEL_LICENSE_NAME,
@@ -34,6 +35,10 @@ ALLOWED_TRANSITIONS: Final[dict[ModelInstallState, frozenset[ModelInstallState]]
 # Moving into one of these states needs `NARRASTEP_LOCAL_GENERATION=available`. Leaving the feature
 # (delete, disable, fail) stays possible so the kill switch never traps disk space.
 KILL_SWITCH_BLOCKED_TARGETS: Final = frozenset({State.DOWNLOADING, State.ENABLED})
+
+# Generation statuses that still hold the worker or a model: kept here so the model manager does
+# not import the job module, which imports the manager.
+ACTIVE_GENERATION_STATUSES: Final = (JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.CANCELLING)
 
 
 class InvalidModelTransition(ValueError):
@@ -138,11 +143,33 @@ def transition_model(
 
 
 def generation_is_running(session: Session) -> bool:
-    """Tell whether a text generation is running; always False until P06.3 adds generation jobs.
+    """Tell whether a document generation is queued, running or being cancelled.
 
-    Deleting a model asks this first, so P06.3 only has to answer it from its job table.
+    Deleting a model asks this first; a queued generation counts because the worker would start
+    it on files that are being removed.
     """
-    return False
+    active = session.scalar(
+        select(func.count())
+        .select_from(Generation)
+        .where(Generation.status.in_(ACTIVE_GENERATION_STATUSES))
+    )
+    return bool(active)
+
+
+def project_has_active_generation(session: Session, project_id: str) -> bool:
+    """Tell whether the project has a generation that is queued, running or being cancelled.
+
+    Deleting the project or its original video asks this first, because the job reads both.
+    """
+    active = session.scalar(
+        select(func.count())
+        .select_from(Generation)
+        .where(
+            Generation.project_id == project_id,
+            Generation.status.in_(ACTIVE_GENERATION_STATUSES),
+        )
+    )
+    return bool(active)
 
 
 def _refuse_state(model_id: str, state: ModelInstallState, action: str) -> ApiError:
