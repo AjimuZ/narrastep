@@ -130,8 +130,19 @@ describe('isAllowedRequestUrl', () => {
 });
 
 describe('isPermissionAllowed', () => {
-  it('allows only full screen, only for the app origin', () => {
-    assert.deepEqual([...ALLOWED_PERMISSIONS], ['fullscreen']);
+  it('allows the microphone only for audio-only requests from the app origin', () => {
+    assert.equal(isPermissionAllowed('media', ORIGIN, ORIGIN, ['audio']), true);
+    assert.equal(isPermissionAllowed('media', 'http://127.0.0.1:4200/r', ORIGIN, ['audio']), true);
+    assert.equal(isPermissionAllowed('media', ORIGIN, ORIGIN, ['video']), false);
+    assert.equal(isPermissionAllowed('media', ORIGIN, ORIGIN, ['audio', 'video']), false);
+    assert.equal(isPermissionAllowed('media', ORIGIN, ORIGIN, []), false);
+    assert.equal(isPermissionAllowed('media', ORIGIN, ORIGIN), false);
+    assert.equal(isPermissionAllowed('media', 'http://127.0.0.1:9999/', ORIGIN, ['audio']), false);
+    assert.equal(isPermissionAllowed('media', 'http://localhost:4200/', ORIGIN, ['audio']), false);
+  });
+
+  it('allows only full screen and the microphone, only for the app origin', () => {
+    assert.deepEqual([...ALLOWED_PERMISSIONS], ['fullscreen', 'media']);
     assert.equal(
       isPermissionAllowed('fullscreen', 'http://127.0.0.1:4200/projects/1', ORIGIN),
       true,
@@ -143,7 +154,6 @@ describe('isPermissionAllowed', () => {
 
   it('denies every other permission to the app origin', () => {
     for (const permission of [
-      'media',
       'display-capture',
       'notifications',
       'geolocation',
@@ -162,7 +172,7 @@ describe('isPermissionAllowed', () => {
   });
 
   it('cannot be widened at run time', () => {
-    assert.throws(() => ALLOWED_PERMISSIONS.push('media'), TypeError);
+    assert.throws(() => ALLOWED_PERMISSIONS.push('geolocation'), TypeError);
   });
 });
 

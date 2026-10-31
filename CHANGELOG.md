@@ -104,6 +104,9 @@ All notable changes to Narrastep are documented in this file.
   that notifications are best muted while recording. On macOS and Linux the desktop window shares
   no system audio and the recorder says so; the recording then keeps only the microphone. The
   browser flow is unchanged. Not yet checked with a real capture on Windows.
+- Microphone in the desktop window: the Narrastep page can now record the microphone. Only the
+  local Narrastep page may ask, only for audio; the camera, every other address and every other
+  permission stay denied.
 
 - Shared pixel interface pieces for later screens: window, tabs, segmented gauge, status pill,
   activity line, button, field and menu-entry styles, a 16×16 pixel icon sprite with 21 icons, and

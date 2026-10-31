@@ -85,6 +85,10 @@ async function isolation(window, appOrigin) {
   result.microphone = await run(
     "navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'granted'; }, (e) => e.name)",
   );
+  // Negative control: the camera uses the same Chromium permission and must stay denied.
+  result.camera = await run(
+    "navigator.mediaDevices.getUserMedia({ video: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'granted'; }, (e) => e.name)",
+  );
   // The app origin gets the source picker, so the request stays pending until the picker window is
   // closed; closing it is the user's cancel and rejects the page's promise.
   const screenRequest = run(

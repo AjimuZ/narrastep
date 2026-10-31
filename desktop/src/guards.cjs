@@ -8,7 +8,8 @@ const { isAllowedRequestUrl, isAppUrl, isPermissionAllowed } = require('./policy
  * window loads. Afterwards:
  * - every network request outside the app origin is cancelled (only inline `data:` is exempt);
  * - permission requests and checks are denied, except the policy's allowed permissions for the
- *   app origin, so external protocol links, notifications, location, camera and microphone fail;
+ *   app origin (the microphone, audio only), so external protocol links, notifications, location
+ *   and the camera fail;
  * - HID, serial and USB devices are refused;
  * - screen capture requests from the app origin get the Narrastep picker (`pickSource`, from
  *   `createSourcePicker`); other origins, and every request when `pickSource` is omitted, are denied;
@@ -22,10 +23,16 @@ function installSessionGuards(session, appOrigin, pickSource, platform) {
     callback({ cancel: !isAllowedRequestUrl(details.url, appOrigin) });
   });
   session.setPermissionRequestHandler((_contents, permission, callback, details) => {
-    callback(isPermissionAllowed(permission, details.requestingUrl, appOrigin));
+    callback(isPermissionAllowed(permission, details.requestingUrl, appOrigin, details.mediaTypes));
   });
-  session.setPermissionCheckHandler((_contents, permission, requestingOrigin) =>
-    isPermissionAllowed(permission, requestingOrigin, appOrigin),
+  // A check reports one `mediaType` (or `'unknown'`), a request reports a `mediaTypes` list.
+  session.setPermissionCheckHandler((_contents, permission, requestingOrigin, details) =>
+    isPermissionAllowed(
+      permission,
+      requestingOrigin,
+      appOrigin,
+      details && details.mediaType ? [details.mediaType] : undefined,
+    ),
   );
   session.setDevicePermissionHandler(() => false);
   // Answers the picker's source for the app origin and `null` (which rejects getDisplayMedia()) otherwise.

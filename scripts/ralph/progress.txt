@@ -65,6 +65,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Make time, sleep, memory sampling and FFmpeg execution injectable parameters of benchmark and poll loops, so tests use a virtual clock and stand-ins instead of waiting or needing media tools.
 - A report meant to hold numbers only can be tested by matching every output line against a strict character pattern and asserting that secret transcript text never appears.
 - Inline text buttons need `display: inline-flex` with `min-width` and `min-height` of 1.5rem to pass the WCAG 2.5.8 target-size check in the e2e accessibility spec.
+- When a permission policy changes, grep the docs for the old denial wording (STATUS, ROADMAP, ARCHITECTURE, DEVELOPMENT) and fix every occurrence in the same change.
 
 ---
 
@@ -506,4 +507,14 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - The e2e accessibility spec's smallTargets check applies at 390 px and narrower. It requires every visible button to be at least 24×24 CSS px, and inline buttons in text are not exempt (only inline links are). Give any new inline text button a min-width and min-height of 1.5rem.
   - Document citations are out of scope here. They belong to P06.6b.
   - In this autopilot session, Bash was denied for plain grep and sed, but ./scripts/ralph/check.sh worked.
+---
+
+## 2026-10-31T13:01:05Z - P07.4a
+- The desktop window now grants the microphone to the app origin only. It checks that the request is audio only, so a camera or video request stays denied. Every other origin and permission stays denied. This attempt fixed the stale documentation the review found. The desktop checks passed (227 tests, 0 failed) and the docs check found valid links. I did not run the real-Electron window test.
+- Files changed: CHANGELOG.md, desktop/src/guards.cjs, desktop/src/policy.cjs, desktop/test/electron-window.test.cjs, desktop/test/guards.test.cjs, desktop/test/policy.test.cjs, desktop/test/support/electron-harness.cjs, docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/STATUS.md, docs/ROADMAP.md
+- **Learnings for future iterations:**
+  - The ROADMAP P07.4 box stays unchecked. I added a note that splits it into P07.4a (microphone, implemented) and P07.4b (native Save as, remaining).
+  - The Electron media permission covers audio and video. The request handler checks details.mediaTypes and the check handler checks details.mediaType, so a camera request stays denied.
+  - The real-Electron window test (opt-in) was not run in this attempt, and the docs say so.
+  - Keep wrapped doc paragraphs at about 100 characters when editing ARCHITECTURE.md and DEVELOPMENT.md.
 ---

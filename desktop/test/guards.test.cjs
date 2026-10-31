@@ -39,6 +39,20 @@ function grants(session, permission, requestingUrl) {
   return granted;
 }
 
+/** Calls the permission request handler with a `media` request for `mediaTypes` and returns what it granted. */
+function grantsMedia(session, requestingUrl, mediaTypes) {
+  let granted;
+  session.handlers.permissionRequest(
+    {},
+    'media',
+    (value) => {
+      granted = value;
+    },
+    { requestingUrl, isMainFrame: true, mediaTypes },
+  );
+  return granted;
+}
+
 describe('installSessionGuards', () => {
   it('filters every URL and cancels requests outside the app origin', () => {
     const session = guardedSession();
@@ -54,16 +68,35 @@ describe('installSessionGuards', () => {
     const session = guardedSession();
     assert.equal(grants(session, 'fullscreen', 'http://127.0.0.1:4200/projects/1/review'), true);
     assert.equal(grants(session, 'fullscreen', 'http://127.0.0.1:4300/'), false);
-    assert.equal(grants(session, 'media', 'http://127.0.0.1:4200/record'), false);
     assert.equal(grants(session, 'display-capture', 'http://127.0.0.1:4200/record'), false);
     assert.equal(grants(session, 'openExternal', 'http://127.0.0.1:4200/'), false);
     assert.equal(grants(session, 'notifications', 'http://127.0.0.1:4200/'), false);
   });
 
+  it('grants the microphone to the app origin only, never the camera', () => {
+    const session = guardedSession();
+    const record = 'http://127.0.0.1:4200/record';
+    assert.equal(grantsMedia(session, record, ['audio']), true);
+    // Negative controls: camera, mixed, empty, missing types and every other origin.
+    assert.equal(grantsMedia(session, record, ['video']), false);
+    assert.equal(grantsMedia(session, record, ['audio', 'video']), false);
+    assert.equal(grantsMedia(session, record, []), false);
+    assert.equal(grantsMedia(session, record, undefined), false);
+    assert.equal(grantsMedia(session, 'http://127.0.0.1:4300/', ['audio']), false);
+    assert.equal(grantsMedia(session, 'http://localhost:4200/', ['audio']), false);
+    assert.equal(grantsMedia(session, 'https://example.com/', ['audio']), false);
+  });
+
   it('answers permission checks with the same rule', () => {
     const session = guardedSession();
-    assert.equal(session.handlers.permissionCheck(null, 'fullscreen', ORIGIN, {}), true);
-    assert.equal(session.handlers.permissionCheck(null, 'media', ORIGIN, {}), false);
+    const check = session.handlers.permissionCheck;
+    assert.equal(check(null, 'fullscreen', ORIGIN, {}), true);
+    assert.equal(check(null, 'media', ORIGIN, { mediaType: 'audio' }), true);
+    assert.equal(check(null, 'media', ORIGIN, { mediaType: 'video' }), false);
+    assert.equal(check(null, 'media', ORIGIN, { mediaType: 'unknown' }), false);
+    assert.equal(check(null, 'media', ORIGIN, {}), false);
+    assert.equal(check(null, 'media', 'http://localhost:4200', { mediaType: 'audio' }), false);
+    assert.equal(check(null, 'notifications', ORIGIN, {}), false);
     assert.equal(
       session.handlers.permissionCheck(null, 'fullscreen', 'http://localhost:4200', {}),
       false,

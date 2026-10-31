@@ -196,10 +196,11 @@ folder because `/tmp` may be mounted `noexec`.
 which runs the production shell against two local HTTP servers: a stand-in app and a second
 origin that must never receive a request. It checks the web preferences, that the page has no
 `require`, `process`, `module` or `Buffer`, that popups, navigation, redirects, frames, webviews
-and requests to another port or to `localhost` are blocked, that the microphone and notifications
-are denied and full screen is allowed, that a screen capture request opens the source picker and
-is rejected when the picker window is closed, the Italian fallback page, and that a
-second launch exits while the first window loads the app again. Closing the window must end the
+and requests to another port or to `localhost` are blocked, that the microphone (a fake device)
+is granted while the camera and notifications are denied and full screen is allowed, that a
+screen capture request opens the source picker and is rejected when the picker window is closed,
+the Italian fallback page, and that a second launch exits while the first window loads the app
+again. Closing the window must end the
 process with code 0.
 
 These two window tests are opt-in, like the backend's real-model test, because the Electron binary

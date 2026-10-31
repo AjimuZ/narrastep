@@ -215,7 +215,8 @@ describe('desktop window in Electron', { skip }, () => {
       assert.equal(result.fetchSameOrigin, 200);
       assert.equal(result.fetchOther, 'TypeError', 'a request to another loopback port fails');
       assert.equal(result.fetchLocalhost, 'TypeError', 'a request to localhost fails');
-      assert.equal(result.microphone, 'NotAllowedError');
+      assert.equal(result.microphone, 'granted');
+      assert.equal(result.camera, 'NotAllowedError', 'the camera stays denied');
       assert.equal(result.screen, 'NotAllowedError');
       assert.equal(result.notifications, 'denied');
       assert.equal(result.fullscreen, 'granted');

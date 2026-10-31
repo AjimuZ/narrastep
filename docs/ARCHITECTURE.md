@@ -192,10 +192,10 @@ flowchart LR
   it is refused (`src/guards.cjs`), so the page reaches neither the Internet nor another local
   service.
 - **No host bridge.** The page runs with context isolation, the renderer sandbox and no Node.js,
-  without preload script or IPC. Only `fullscreen` and screen capture are granted; the
-  microphone, notifications, devices and external protocol links are denied until P07.4 adds the
-  microphone and "Save as" in the main process. Screen capture goes through the source picker
-  (`src/source-picker.cjs`): `getDisplayMedia()` from the app origin, and only from it, opens a
+  without preload script or IPC. Only `fullscreen`, the microphone (audio only, P07.4a) and
+  screen capture are granted, all to the app origin; the camera, notifications, devices and
+  external protocol links are denied until P07.4b adds "Save as" in the main process. Screen
+  capture goes through the source picker (`src/source-picker.cjs`): `getDisplayMedia()` from the app origin, and only from it, opens a
   small modal window that lists the screens and windows of `desktopCapturer` and answers the
   session's `setDisplayMediaRequestHandler` with the chosen source (or denies on cancel). The
   picker page has no script, preload or IPC; its links are cancelled navigations that the main
@@ -269,7 +269,8 @@ flowchart LR
   loopback-only loading, isolation and single instance exists since P07.1 and the launcher since
   P07.2 ("Desktop shell" above); the screen and window picker since P07.3a and Windows loopback
   system audio since P07.3b (implemented, not yet run on a real Windows system). The microphone
-  and downloads (P07.4) are still planned.
+  permission exists since P07.4a (unit-tested; the real-Electron window test was not run here);
+  native downloads are still planned.
 - **Generation.** The worker starts `llama-server` as a loopback subprocess for one generation job
   and stops it afterwards. Since P06.1 the backend image holds the pinned CPU server in
   `/opt/llama.cpp`, checked at image build by `scripts/check_llama_server.py`
