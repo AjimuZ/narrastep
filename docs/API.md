@@ -456,7 +456,8 @@ code; `auto` or blank means the transcript language) and answers `202` with the 
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- The benchmark (P06.5).
+- The benchmark run (P06.5). Its tool, `backend/scripts/benchmark_generation.py`, only calls the
+  endpoints above and adds none ([procedure](DEVELOPMENT.md#generation-benchmark)).
 
 ## Progress events
 

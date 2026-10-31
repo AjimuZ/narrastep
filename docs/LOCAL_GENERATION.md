@@ -443,6 +443,8 @@ and passes `/import` to the API, and outside Compose it is the folder the backen
   were not part of that run.
 - P06.5 benchmark on the owner's computer: generation time and peak memory for a 10-minute and a
   60-minute recording with E2B and with E4B, recorded in [Status](STATUS.md); the E4B figures
-  apply the [default model rule](#default-model-rule).
+  apply the [default model rule](#default-model-rule). The tool exists since P06.5a
+  (`backend/scripts/benchmark_generation.py`, [procedure](DEVELOPMENT.md#generation-benchmark)) and
+  uses the same thresholds as constants; it has not been run yet, so no figure is recorded.
 - Import from disk: a pinned file is accepted, a file with another name, size or hash is refused,
   the import folder is not modified, and the stack starts with the folder missing.

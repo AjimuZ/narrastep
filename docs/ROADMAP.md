@@ -164,6 +164,7 @@ Decision: [ADR 0011](decisions/0011-optional-local-generation.md). Specification
   minutes, E2B and E4B). E2B stays the default unless E4B generates the 60-minute meeting in at most 30 minutes
   with a peak under 6 GB (owner decision Q6, 2026-10-29:
   [Default model rule](LOCAL_GENERATION.md#default-model-rule)).
+  Progress (2026-10-31, P06.5a): new `backend/scripts/benchmark_generation.py` (`--model e2b|e4b`) installs the model through the API, builds synthetic 10-minute and 60-minute `meeting` projects from FFmpeg speech, times only the generation, samples memory from `/proc/meminfo` in the api container (the VM that also runs the worker), cancels a run at 45 minutes and reports it as cut, and applies the fixed thresholds (60 minutes in at most 1800 s, peak under 6 GiB) to print `e4b_passes`. Procedure in [Development](DEVELOPMENT.md#generation-benchmark). `backend/tests/test_benchmark_generation.py` covers the report, the thresholds (pass, time, memory, cut and missing 60-minute run), the install, the cut and the flow with stand-ins. Not run: the script against a stack, FFmpeg or a real model; no figure was measured, and the memory sampling is an estimate that has not been compared with a cgroup reading. The owner's run, the recorded figures and the default decision remain open, so the box stays unchecked.
 - [ ] P06.6 Clickable `[mm:ss]` references in Review and Document that move the video to that
   time (I-04).
 

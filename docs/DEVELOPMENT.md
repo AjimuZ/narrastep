@@ -455,6 +455,71 @@ it, because the expected words are missing. To run it in the API container:
 `--ffmpeg` and `--timeout` change the FFmpeg path and the seconds each background step may take
 (default 900). `tests/test_full_job_check.py` covers the script with a stand-in API.
 
+## Generation benchmark
+
+`backend/scripts/benchmark_generation.py` measures local document generation time and peak memory
+for the [default model rule](LOCAL_GENERATION.md#default-model-rule) (P06.5a). The owner runs it on
+their computer; no result is recorded in the repository by the script or the tests. It uses the
+standard library, FFmpeg and the API only:
+
+1. It requires health `ok` and installs the model with `--model e2b` or `--model e4b`: it starts or
+   resumes the download, waits for the verification and enables the model. The script has no
+   license screen, so read the model license in Settings first.
+2. For each duration (10 and 60 minutes) it builds a spoken video from FFmpeg's `flite` voice (a
+   10-second clip repeated, never a real recording), creates a `meeting` project, uploads and
+   processes it, and checks that the transcript holds the spoken words.
+3. It queues one generation through `POST /projects/{id}/generations` and times it from the request
+   to `completed`. Uploading and processing are not timed. A run still going after 45 minutes is
+   cancelled through `POST /generations/{id}/cancel` and reported as `outcome=cut`; `--limit-minutes`
+   can only lower that limit.
+4. Each project is deleted afterwards, also after a failure.
+
+The API decides which model generates (`NARRASTEP_GENERATION_MODEL`, see the README), so the
+variable must already name the model of `--model`; the script cancels the generation and says so
+when it does not. To measure E4B, set `NARRASTEP_GENERATION_MODEL=gemma-4-e4b` in `.env`, recreate
+the `api` and `worker` services, close other programs and run, in the `api` container:
+
+```bash
+docker compose exec -T api python scripts/benchmark_generation.py --model e4b
+```
+
+Use `podman compose` with Podman. `--minutes` changes the durations (whole minutes, default `10
+60`), `--api`, `--ffmpeg`, `--install-timeout` and `--processing-timeout` change the address, the
+FFmpeg path and the seconds the install and the processing may take. Processing a 60-minute video on
+a CPU can take a long time before the timed step starts.
+
+**Report.** One line per run, with numbers and fixed words only, never transcript or document text:
+
+```text
+run model=gemma-4-e4b minutes=60 outcome=completed seconds=… peak_memory_bytes=… peak_memory_gib=… baseline_memory_bytes=… parts=…
+rule max_seconds=1800 minutes=60 max_peak_memory_bytes=6442450944
+verdict model=gemma-4-e4b e4b_passes=yes|no|not_applicable
+```
+
+`seconds` is the generation time (the limit that was reached when `outcome=cut`). The script exits
+with 0 when the runs finished, also for a cut run or a failed rule, and with 1 and one line on
+stderr when a step failed.
+
+**Memory.** The worker, not the `api` container, runs `llama-server`, and the API has no memory
+field. The script samples `/proc/meminfo` in the `api` container every 2 seconds. That file shows
+the memory of the whole virtual machine Docker runs in (Docker Desktop, Podman machine), which
+includes the worker. A sample is the memory that is neither free nor reclaimable cache, plus mapped
+pages, because `llama-server` maps its weights as file pages that `MemAvailable` counts as free.
+`baseline_memory_bytes` is the sample before queueing; `peak_memory_bytes` is the highest sample
+minus the baseline, the memory the job added. On a native Linux host the file shows the host, so
+close other programs. This is an estimate with a 2-second resolution, not a cgroup peak.
+
+**Thresholds.** `--model e4b` applies the rule of Local generation: the 60-minute run completes in
+at most 30 minutes (1800 s) and no run adds 6 GiB or more (the document's "6 GB", read like Docker's
+8 GB limit as GiB). `e4b_passes=yes` needs both; a cut 60-minute run, a missing one (`--minutes`
+without 60) or a failed run never passes. `--model e2b` prints `e4b_passes=not_applicable`: E2B
+stays the default. Record the figures in [Status](STATUS.md) and tick P06.5 only after the owner's
+run.
+
+`tests/test_benchmark_generation.py` covers the report, the thresholds, the install, the cut and the
+whole flow with a stand-in client, a virtual clock and a generated `meminfo` file. It does not run
+FFmpeg, a model or a stack.
+
 ## Backend package lock
 
 Every backend package, direct and transitive, is pinned with its SHA-256 hashes (P08.2,
