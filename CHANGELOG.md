@@ -6,6 +6,14 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Take a generated document out of the Document screen in two ways. **Copy as Markdown** (Italian
+  **Copia come Markdown**) puts the document on the clipboard and says "The document was copied as
+  Markdown." (Italian "Il documento è stato copiato come Markdown."); if the browser or the desktop
+  window refuses, an error points to the download instead. **Download with images** (Italian
+  **Scarica con le immagini**) saves one Markdown file with each screenshot the document cites
+  embedded as a PNG image, downscaled to the size the model saw; a name that matches no screenshot
+  stays text and the stored document is not changed. In the API this is
+  `GET /api/v1/generations/{id}/document/single-file`.
 - Include a generated document in the next package. The Export screen has **Include the generated
   document** (Italian **Includi il documento generato**), off by default and shown only when the
   project has a finished generation; the package then holds it as

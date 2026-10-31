@@ -365,9 +365,17 @@ notice, pixel icons):
   headings and lines that are only `**bold**` (how the Light model writes its titles) become
   headings, `-`, `1.` lists and paragraphs are kept, and `**bold**` inside text is bold. Nothing
   is rendered as HTML.
+- **Taking the result out (P06.4d).** Above the text, once it was read, two controls:
+  **Copy as Markdown** puts the stored Markdown, unchanged, on the clipboard and shows "The
+  document was copied as Markdown." beside the buttons in a polite status line (an alert, "The
+  document could not be copied. Download the Markdown file instead.", when the copy is refused).
+  The copy uses the clipboard API and falls back to the copy command, because the desktop window
+  denies the API's permission. **Download with images** is a link to
+  `GET /generations/{id}/document/single-file`: one Markdown file with the screenshots the document
+  cites embedded, described by a help line. Neither control is shown before there is a document.
 - **Not offered yet, and therefore not shown at all** (not as a disabled control): citations that
-  play the video from their time (P06.6; `[00:20-00:31]` stays plain text), copying the result as
-  Markdown (P06.4d), and including it in a package (P06.4c). No language choice is offered; the
+  play the video from their time (P06.6; `[00:20-00:31]` stays plain text). Including the document
+  in a package is a checkbox on the Export screen (P06.4c). No language choice is offered; the
   document follows the transcript language.
 - **Focus.** After **Generate document** or **Cancel generation** removes the button that had focus,
   focus moves to the **Status** heading (not a Tab stop). A polite status line says what happened.

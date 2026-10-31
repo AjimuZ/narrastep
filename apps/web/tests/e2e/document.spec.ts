@@ -1,8 +1,9 @@
-// Document screen journeys (docs/UI.md, Document; P06.4b): generate with real progress per part, the
-// result beside the video, regenerate, cancel, and the screen being absent when generation is off.
+// Document screen journeys (docs/UI.md, Document; P06.4b, P06.4d): generate with real progress per
+// part, the result beside the video, copy and download, regenerate, cancel, and the screen being
+// absent when generation is off.
 import { expect, test, type Page } from '@playwright/test';
 
-import { useFakeApi } from './support/fake-api';
+import { FAKE_DOCUMENT, FAKE_SINGLE_FILE, useFakeApi } from './support/fake-api';
 
 const LANGUAGES = [
   {
@@ -23,6 +24,9 @@ const LANGUAGES = [
     partsTwo: 'Parts written: 2 of 3',
     summary: '1. Summary',
     ready: 'The document is ready.',
+    copy: 'Copy as Markdown',
+    download: 'Download with images',
+    copied: 'The document was copied as Markdown.',
     memory: 'The worker has less free memory than the model needs.',
     documentLink: 'Document',
   },
@@ -44,6 +48,9 @@ const LANGUAGES = [
     partsTwo: 'Parti scritte: 2 di 3',
     summary: '1. Summary',
     ready: 'Il documento è pronto.',
+    copy: 'Copia come Markdown',
+    download: 'Scarica con le immagini',
+    copied: 'Il documento è stato copiato come Markdown.',
     memory: "Non c'è abbastanza memoria libera",
     documentLink: 'Documento',
   },
@@ -109,10 +116,48 @@ for (const language of LANGUAGES) {
         expect(videoBox!.y).toBeGreaterThan(textBox!.y + textBox!.height - 1);
       }
 
-      // Nothing offers copying or the package yet.
-      await expect(page.getByRole('button', { name: /copy|copia|package|pacchetto/i })).toHaveCount(
-        0,
-      );
+      // The result offers taking it out; creating a package stays on the Export screen.
+      await expect(page.getByRole('button', { name: language.copy })).toBeVisible();
+      await expect(page.getByRole('link', { name: language.download })).toBeVisible();
+      await expect(page.getByRole('button', { name: /package|pacchetto/i })).toHaveCount(0);
+    });
+
+    test('copies the document as Markdown and says so', async ({ context, page }) => {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await useFakeApi(context, { status: 'review', lightEnabled: true, generationExisting: true });
+      await openDocument(page, language);
+      await expect(page.locator('.document-text')).toContainText('The customer opens');
+
+      await page.getByRole('button', { name: language.copy }).click();
+
+      await expect(page.locator('.take-out [role="status"]')).toHaveText(language.copied);
+      const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+      expect(clipboard).toBe(FAKE_DOCUMENT);
+    });
+
+    // Chromium does not hand a download started by an `<a download>` click to Playwright's route
+    // handlers, so the click itself cannot be answered by the fake API. The test checks the link
+    // target and then requests that exact target through the fake API from the page.
+    test('offers one Markdown file with the screenshots embedded', async ({ context, page }) => {
+      await useFakeApi(context, { status: 'review', lightEnabled: true, generationExisting: true });
+      await openDocument(page, language);
+      await expect(page.locator('.document-text')).toContainText('The customer opens');
+
+      const link = page.getByRole('link', { name: language.download });
+      await expect(link).toHaveAttribute('download', '');
+      const target = await link.getAttribute('href');
+      expect(target).toBe('/api/v1/generations/generation-1/document/single-file');
+
+      const served = await page.evaluate(async (url) => {
+        const response = await fetch(url);
+        return {
+          text: await response.text(),
+          disposition: response.headers.get('content-disposition'),
+        };
+      }, target!);
+      expect(served.disposition).toContain('.md');
+      expect(served.text).toBe(FAKE_SINGLE_FILE);
+      expect(served.text).toContain('![step-001_00m02s.png](data:image/png;base64,');
     });
 
     test('shows an existing document and regenerates it while the old text stays', async ({

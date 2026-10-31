@@ -17,6 +17,7 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subscription, catchError, finalize, forkJoin } from 'rxjs';
 
 import { DocumentGeneration, Project } from '../../core/api.models';
+import { copyText } from '../../core/clipboard';
 import { errorText, localizedError } from '../../core/i18n/error-text';
 import { ApiService } from '../../core/services/api.service';
 import { StatusLabel } from '../../shared/status-labels';
@@ -41,8 +42,9 @@ function isActive(generation: DocumentGeneration): boolean {
 /**
  * Generates a document for one project with the local model and shows the newest finished one with
  * the video beside it. Progress is the real `partsCompleted` of `partsTotal` from polling the API.
- * The route is reachable only while generation is available (`generationAvailableGuard`). Copying
- * and the package are not offered yet (P06.4c and P06.4d), so no control stands in for them.
+ * The route is reachable only while generation is available (`generationAvailableGuard`). Next to
+ * the text it offers Copy as Markdown and a download of one Markdown file with the screenshots the
+ * document cites embedded (P06.4d); including the document in a package is on the Export screen.
  */
 @Component({
   selector: 'ns-document',
@@ -73,6 +75,8 @@ export class DocumentComponent implements OnInit {
   readonly documentText = signal<string | null>(null);
   readonly documentLoading = signal(false);
   readonly documentError = signal<string | null>(null);
+  /** Outcome of the last Copy as Markdown, shown beside the button; null before any copy. */
+  readonly copyState = signal<'copied' | 'failed' | null>(null);
   /** Result of the last action, announced politely to screen readers. */
   readonly notice = signal<string | null>(null);
 
@@ -153,6 +157,19 @@ export class DocumentComponent implements OnInit {
       this.api.cancelGeneration(active.id),
       $localize`:@@document.notice.cancel_requested:Cancelling the generation.`,
     );
+  }
+
+  /**
+   * Puts the document text on the clipboard and says so next to the button. Does nothing until the
+   * text was read. A browser or window that refuses the copy gets an error pointing to the download.
+   */
+  async copyMarkdown(): Promise<void> {
+    const text = this.documentText();
+    if (text === null) {
+      return;
+    }
+    this.copyState.set(null);
+    this.copyState.set((await copyText(text)) ? 'copied' : 'failed');
   }
 
   /** Reads the finished document again after a failed read. */
@@ -303,7 +320,10 @@ export class DocumentComponent implements OnInit {
           return EMPTY;
         }),
       )
-      .subscribe((text) => this.documentText.set(text));
+      .subscribe((text) => {
+        this.copyState.set(null);
+        this.documentText.set(text);
+      });
   }
 
   /** Puts a fresh answer in the list: replaces the entry with the same id, else adds it first. */

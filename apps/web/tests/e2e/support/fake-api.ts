@@ -49,6 +49,13 @@ The customer opens **Search** and reviews the results [00:02].
 - Not stated in the recording: the owner of the follow-up.
 `;
 
+/** One generated 1x1 PNG, base64 encoded, for the fake single-file download. */
+const FAKE_PIXEL =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+/** The single-file Markdown the fake API returns: the document plus one embedded image. */
+export const FAKE_SINGLE_FILE = `${FAKE_DOCUMENT}\n![step-001_00m02s.png](data:image/png;base64,${FAKE_PIXEL})\n`;
+
 /** Steps a started generation goes through, one per poll: stage, finished parts of 3 and percent. */
 const GENERATION_STEPS = [
   { status: 'queued', stage: 'queued', done: 0, total: 0, percent: 0 },
@@ -435,6 +442,14 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
         generations = [created, ...generations];
         await route.fulfill({ status: 202, json: generationRow(created.id, 0) });
       }
+    } else if (/^\/api\/v1\/generations\/[^/]+\/document\/single-file$/.test(path)) {
+      await route.fulfill({
+        contentType: 'text/markdown; charset=utf-8',
+        headers: {
+          'content-disposition': 'attachment; filename="contract-search_document-with-images.md"',
+        },
+        body: FAKE_SINGLE_FILE,
+      });
     } else if (/^\/api\/v1\/generations\/[^/]+(\/[a-z]+)?$/.test(path)) {
       const [, generationId, action] = /^\/api\/v1\/generations\/([^/]+)(?:\/([a-z]+))?$/.exec(
         path,

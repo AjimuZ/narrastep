@@ -1,4 +1,4 @@
-// Document screen tests: generate, per-part progress, result beside the video, regenerate, cancel, failures and Italian text.
+// Document screen tests: generate, per-part progress, result beside the video, regenerate, cancel, copy as Markdown, failures and Italian text.
 import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
@@ -93,6 +93,8 @@ describe('DocumentComponent', () => {
             getGenerationDocument: () => of(MARKDOWN),
             monitorGeneration: () => new Subject<DocumentGeneration>(),
             videoUrl: (id: string) => `/api/v1/projects/${id}/video`,
+            generationSingleFileUrl: (id: string) =>
+              `/api/v1/generations/${id}/document/single-file`,
             ...api,
           },
         },
@@ -132,13 +134,135 @@ describe('DocumentComponent', () => {
     expect(element.querySelector('video')).toBeNull();
   });
 
-  it('does not offer copying or the package, which do not exist yet', async () => {
+  it('offers copying and the single-file download beside a readable document, and nothing else', async () => {
     const { element } = await setup([COMPLETED]);
 
     const names = Array.from(element.querySelectorAll('button, a')).map((control) =>
       control.textContent!.trim(),
     );
-    expect(names).toEqual(['Back to review', 'Regenerate']);
+    expect(names).toEqual([
+      'Back to review',
+      'Regenerate',
+      'Copy as Markdown',
+      'Download with images',
+    ]);
+    const download = element.querySelector<HTMLAnchorElement>('a[download]')!;
+    expect(download.getAttribute('href')).toBe(
+      '/api/v1/generations/generation-1/document/single-file',
+    );
+    expect(download.getAttribute('aria-describedby')).toBe('take-out-help');
+    expect(element.querySelector('#take-out-help')!.textContent).toContain('one Markdown file');
+  });
+
+  it('offers neither copying nor the download when there is no document to read', async () => {
+    const { element } = await setup([]);
+
+    expect(element.querySelector('.take-out')).toBeNull();
+  });
+
+  describe('copy as Markdown', () => {
+    const realClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const realCommand = Object.getOwnPropertyDescriptor(document, 'execCommand');
+
+    /** Replaces the browser's clipboard API and copy command with stand-ins. */
+    function stubCopy(writeText: unknown, execCommand: unknown = () => false): void {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: writeText ? { writeText } : undefined,
+        configurable: true,
+      });
+      Object.defineProperty(document, 'execCommand', { value: execCommand, configurable: true });
+    }
+
+    /** Lets the asynchronous copy settle, then renders its outcome. */
+    async function settle(fixture: { detectChanges(): void }): Promise<void> {
+      await new Promise((resolve) => setTimeout(resolve));
+      fixture.detectChanges();
+    }
+
+    afterEach(() => {
+      for (const [target, key, saved] of [
+        [navigator, 'clipboard', realClipboard],
+        [document, 'execCommand', realCommand],
+      ] as const) {
+        if (saved) {
+          Object.defineProperty(target, key, saved);
+        } else {
+          delete (target as unknown as Record<string, unknown>)[key];
+        }
+      }
+    });
+
+    it('writes the document to the clipboard and confirms it in English', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+      stubCopy(writeText);
+      const { fixture, element } = await setup([COMPLETED]);
+
+      expect(
+        element.querySelector('.take-out__result[role="status"]')!.hasAttribute('hidden'),
+      ).toBe(true);
+      button(element, 'Copy as Markdown').click();
+      await settle(fixture);
+
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(MARKDOWN);
+      const status = element.querySelector('.take-out__result[role="status"]')!;
+      expect(status.hasAttribute('hidden')).toBe(false);
+      expect(status.textContent!.trim()).toBe('The document was copied as Markdown.');
+      expect(element.querySelector('.take-out [role="alert"]')).toBeNull();
+    });
+
+    it('confirms in Italian with the Italian catalog', async () => {
+      loadTranslations(messagesIt.translations);
+      registerLocaleData(localeIt);
+      document.documentElement.lang = 'it';
+      const writeText = vi.fn(() => Promise.resolve());
+      stubCopy(writeText);
+      const { fixture, element } = await setup([COMPLETED], {}, PROJECT, 'it');
+
+      expect(
+        Array.from(element.querySelectorAll('.take-out .ns-button')).map((control) =>
+          control.textContent!.trim(),
+        ),
+      ).toEqual(['Copia come Markdown', 'Scarica con le immagini']);
+      button(element, 'Copia come Markdown').click();
+      await settle(fixture);
+
+      expect(writeText).toHaveBeenCalledExactlyOnceWith(MARKDOWN);
+      expect(element.querySelector('.take-out__result[role="status"]')!.textContent!.trim()).toBe(
+        'Il documento è stato copiato come Markdown.',
+      );
+    });
+
+    it('falls back to the copy command when the clipboard API is missing', async () => {
+      const execCommand = vi.fn(() => true);
+      stubCopy(undefined, execCommand);
+      const { fixture, element } = await setup([COMPLETED]);
+
+      button(element, 'Copy as Markdown').click();
+      await settle(fixture);
+
+      expect(execCommand).toHaveBeenCalledExactlyOnceWith('copy');
+      expect(element.querySelector('textarea')).toBeNull();
+      expect(element.querySelector('.take-out__result[role="status"]')!.textContent).toContain(
+        'copied as Markdown',
+      );
+    });
+
+    it('shows an error pointing to the download when nothing can copy', async () => {
+      const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+      stubCopy(writeText, () => false);
+      const { fixture, element } = await setup([COMPLETED]);
+
+      button(element, 'Copy as Markdown').click();
+      await settle(fixture);
+
+      expect(writeText).toHaveBeenCalledTimes(1);
+      expect(element.querySelector('.take-out [role="alert"]')!.textContent!.trim()).toBe(
+        'The document could not be copied. Download the Markdown file instead.',
+      );
+      expect(
+        element.querySelector('.take-out__result[role="status"]')!.hasAttribute('hidden'),
+      ).toBe(true);
+    });
   });
 
   it('starts a generation and follows the real progress per part until the document is ready', async () => {

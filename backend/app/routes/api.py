@@ -81,7 +81,7 @@ from app.schemas import (
     StorageResponse,
     serialize_utc,
 )
-from app.services.export_names import stored_export_zip_file_name
+from app.services.export_names import slugify_project_name, stored_export_zip_file_name
 from app.services.exporting import ExportRequest, estimate_export_package
 from app.services.generation_job import (
     ERROR_DISABLED,
@@ -90,6 +90,7 @@ from app.services.generation_job import (
     pinned_model_files,
     require_enabled_model,
 )
+from app.services.generation_markdown import build_single_file_markdown
 from app.services.media import MediaServiceError, validate_video
 from app.services.model_catalog import MODEL_CATALOG
 from app.services.model_download import begin_download, delete_model, request_cancel
@@ -1845,6 +1846,41 @@ def read_generation_document(
     if not path.is_file():
         raise ApiError("PROJECT_ASSET_MISSING", "The document file is unavailable.", 404)
     return FileResponse(path, media_type="text/markdown")
+
+
+@router.get(
+    "/generations/{generation_id}/document/single-file",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "The generated Markdown document with the cited screenshots embedded",
+            "content": {"text/markdown": {"schema": {"type": "string"}}},
+        }
+    },
+)
+def download_generation_single_file(
+    generation_id: str,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Download the document as one Markdown file with its cited screenshots as `data:` images.
+
+    Refused like the document: `404 GENERATION_NOT_FOUND`, `409 GENERATION_NOT_READY` until it
+    completed and `404 PROJECT_ASSET_MISSING` when its file is gone. A cited name that matches no
+    screenshot of the project stays plain text. The stored document is not changed.
+    """
+    generation = _require_generation(session, generation_id)
+    if generation.status != JobStatus.COMPLETED or not generation.relative_path:
+        raise ApiError("GENERATION_NOT_READY", "The document is not ready yet.", 409)
+    if not ensure_within_root(settings.data_root, generation.relative_path).is_file():
+        raise ApiError("PROJECT_ASSET_MISSING", "The document file is unavailable.", 404)
+    project = session.get(Project, generation.project_id)
+    slug = slugify_project_name(project.name if project else None)
+    return Response(
+        build_single_file_markdown(session, settings, generation),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{slug}_document-with-images.md"'},
+    )
 
 
 def _require_generation(session: Session, generation_id: str) -> Generation:

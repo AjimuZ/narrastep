@@ -1769,6 +1769,46 @@
         "summary": "Read Generation Document"
       }
     },
+    "/api/v1/generations/{generation_id}/document/single-file": {
+      "get": {
+        "description": "Download the document as one Markdown file with its cited screenshots as `data:` images.\n\nRefused like the document: `404 GENERATION_NOT_FOUND`, `409 GENERATION_NOT_READY` until it\ncompleted and `404 PROJECT_ASSET_MISSING` when its file is gone. A cited name that matches no\nscreenshot of the project stays plain text. The stored document is not changed.",
+        "operationId": "download_generation_single_file_api_v1_generations__generation_id__document_single_file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "generation_id",
+            "required": true,
+            "schema": {
+              "title": "Generation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The generated Markdown document with the cited screenshots embedded"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Download Generation Single File"
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Verify that the API process and authoritative SQLite store are available.",

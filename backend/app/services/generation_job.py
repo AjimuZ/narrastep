@@ -27,7 +27,7 @@ from app.models import (
     canonical_output_mode,
     utc_now,
 )
-from app.services.exporting import select_package_screenshots
+from app.services.exporting import SelectedScreenshot, select_package_screenshots
 from app.services.generation_input import (
     GenerationInput,
     GenerationScreenshot,
@@ -324,6 +324,49 @@ def _load(session: Session, generation_id: str) -> Generation:
     return generation
 
 
+def _active_segments(session: Session, project: Project) -> list[TranscriptSegment]:
+    """Return the active segments of a project in transcript order."""
+    return list(
+        session.scalars(
+            select(TranscriptSegment)
+            .where(TranscriptSegment.project_id == project.id, TranscriptSegment.active.is_(True))
+            .order_by(TranscriptSegment.sequence)
+        )
+    )
+
+
+def select_project_screenshots(
+    session: Session,
+    settings: Settings,
+    project: Project,
+    output_mode: str,
+    rows: list[TranscriptSegment] | None = None,
+) -> list[SelectedScreenshot]:
+    """Return the screenshots a package of the project would hold, with their package names.
+
+    Uses the settings of the latest completed processing job, as an export does, so the names match
+    the ones a generated document cites while the review is unchanged. `rows` are the active
+    segments when the caller already loaded them. Raises `FileNotFoundError` like the selector.
+    """
+    segments = rows if rows is not None else _active_segments(session, project)
+    snapshots = [export_segment_snapshot(settings, row) for row in segments]
+    processing_job = session.scalar(
+        select(ProcessingJob)
+        .where(ProcessingJob.project_id == project.id, ProcessingJob.status == JobStatus.COMPLETED)
+        .order_by(ProcessingJob.created_at.desc())
+    )
+    processing = processing_job.configuration_snapshot if processing_job else {}
+    asset = project.media_asset
+    return select_package_screenshots(
+        snapshots,
+        similarity_threshold=settings.duplicate_similarity_threshold,
+        selection_strategy=str(processing.get("selectionStrategy", "legacy")),
+        output_mode=output_mode,
+        duration_seconds=asset.duration_seconds if asset else 0.0,
+        budget_profile=str(processing.get("imageBudgetProfile", settings.image_budget_profile)),
+    )
+
+
 def _load_evidence(
     session: Session,
     settings: Settings,
@@ -338,29 +381,8 @@ def _load_evidence(
     original video is decoded into `work_directory`. Raises `FileNotFoundError` for an image that
     cannot be found. The text is never logged.
     """
-    rows = list(
-        session.scalars(
-            select(TranscriptSegment)
-            .where(TranscriptSegment.project_id == project.id, TranscriptSegment.active.is_(True))
-            .order_by(TranscriptSegment.sequence)
-        )
-    )
-    snapshots = [export_segment_snapshot(settings, row) for row in rows]
-    processing_job = session.scalar(
-        select(ProcessingJob)
-        .where(ProcessingJob.project_id == project.id, ProcessingJob.status == JobStatus.COMPLETED)
-        .order_by(ProcessingJob.created_at.desc())
-    )
-    processing = processing_job.configuration_snapshot if processing_job else {}
-    asset = project.media_asset
-    selected = select_package_screenshots(
-        snapshots,
-        similarity_threshold=settings.duplicate_similarity_threshold,
-        selection_strategy=str(processing.get("selectionStrategy", "legacy")),
-        output_mode=output_mode,
-        duration_seconds=asset.duration_seconds if asset else 0.0,
-        budget_profile=str(processing.get("imageBudgetProfile", settings.image_budget_profile)),
-    )
+    rows = _active_segments(session, project)
+    selected = select_project_screenshots(session, settings, project, output_mode, rows)
     screenshots: list[GenerationScreenshot] = []
     for item in selected:
         if item.source_path is not None and item.source_path.is_file():

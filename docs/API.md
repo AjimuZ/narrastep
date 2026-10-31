@@ -69,6 +69,7 @@ The API uses `400` for malformed domain input, `403` for a feature turned off by
 | GET | `/api/v1/generations/{generationId}` | Poll one generation: status, progress per part, prompt version and model files | 200 |
 | POST | `/api/v1/generations/{generationId}/cancel` | Cancel a queued generation at once, or stop a running one within about a second | 202 |
 | GET | `/api/v1/generations/{generationId}/document` | Read the Markdown document of a completed generation | 200 |
+| GET | `/api/v1/generations/{generationId}/document/single-file` | Download the document as one Markdown file with the screenshots it cites embedded as `data:` images (P06.4d) | 200 |
 
 ## Important requests
 
@@ -418,6 +419,17 @@ code; `auto` or blank means the transcript language) and answers `202` with the 
   `documentAvailable` says whether `GET …/document` will answer.
 - The document is `projects/{id}/generations/{generationId}/document.md`. `GET …/document` answers
   `200` with `text/markdown`, or `409 GENERATION_NOT_READY` until the generation completed.
+- `GET …/document/single-file` (P06.4d) answers the same text as an attachment named
+  `{project-slug}_document-with-images.md`, with each screenshot file name the document cites
+  (`step-001_00m00s.png`) matched to the project's own package selection, the one an export would
+  use and the one the generation cited, and embedded once as a PNG `data:image/png;base64,…` image
+  on its own line after the line that first cites it. An image link the model wrote to such a name
+  gets its target replaced instead. Images are downscaled to `generation_image_max_edge` (1024
+  pixels by default). A name that matches no screenshot, or whose image cannot be read, stays plain
+  text and never fails the download; a cited name never chooses a path. The stored document is not
+  changed. Refusals are the same as for the plain document: `404 GENERATION_NOT_FOUND`,
+  `409 GENERATION_NOT_READY` and `404 PROJECT_ASSET_MISSING`. The names match only while the review
+  is unchanged since the generation, as for the package copy.
 - Generating does not change the project state. A project may have one generation that is queued,
   running or being cancelled at a time.
 - Queueing is refused, with nothing stored: `403 LOCAL_GENERATION_DISABLED` (kill switch),
@@ -444,7 +456,7 @@ code; `auto` or blank means the transcript language) and answers `202` with the 
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- Copying the generated document as Markdown (P06.4d); the benchmark (P06.5).
+- The benchmark (P06.5).
 
 ## Progress events
 

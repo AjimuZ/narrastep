@@ -138,6 +138,55 @@
               </button>
             </div>
           } @else {
+            @if (documentText() !== null) {
+              <div class="take-out">
+                <div class="take-out__buttons">
+                  <button class="ns-button" type="button" (click)="copyMarkdown()">
+                    <ns-pixel-icon name="copy" /><span i18n="@@document.copy_markdown"
+                      >Copy as Markdown</span
+                    >
+                  </button>
+                  <a
+                    class="ns-button"
+                    [href]="api.generationSingleFileUrl(done.id)"
+                    download
+                    aria-describedby="take-out-help"
+                  >
+                    <ns-pixel-icon name="download" /><span i18n="@@document.download_with_images"
+                      >Download with images</span
+                    >
+                  </a>
+                </div>
+                <p
+                  id="take-out-help"
+                  class="ns-help take-out__help"
+                  i18n="@@document.take_out_help"
+                >
+                  The download is one Markdown file with the screenshots the document cites inside
+                  it.
+                </p>
+                <p
+                  class="ns-notice ns-notice--ok take-out__result"
+                  role="status"
+                  [hidden]="copyState() !== 'copied'"
+                >
+                  @if (copyState() === 'copied') {
+                    <ng-container i18n="@@document.copied"
+                      >The document was copied as Markdown.</ng-container
+                    >
+                  }
+                </p>
+                @if (copyState() === 'failed') {
+                  <p
+                    class="ns-notice ns-notice--error take-out__result"
+                    role="alert"
+                    i18n="@@document.copy_failed"
+                  >
+                    The document could not be copied. Download the Markdown file instead.
+                  </p>
+                }
+              </div>
+            }
             <article class="document-text">
               @for (block of blocks(); track $index) {
                 @if (block.kind === 'heading') {

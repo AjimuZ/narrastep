@@ -60,6 +60,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - An optional package extra follows one pattern: a request field, a nullable column on `project_exports`, an `ExportRequest` field, a conditional folder in `build_export_package`, a manifest `paths` entry that is null when absent, a README line and a history marker in the UI.
 - Refuse a request for another project's resource with the same not-found answer as a missing one, so ids of other projects are not revealed, and validate before any row is stored.
 - Check at queue time and again in the worker for a file the user chose, because the file can disappear between the two. Fail the job rather than build a package that silently omits it.
+- Do not rely on a Playwright click on <a download> to exercise a mocked API; assert the link attributes and fetch the target from the page.
+- When a roadmap or status note says checks were not run, replace it with dated evidence only after the checks pass, and keep the remaining unverified items listed.
 
 ---
 
@@ -467,4 +469,16 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - The generated document cites screenshot file names as plain text, not as links. The package copy is byte-exact, and the names match `02-screenshots/` only while the review is unchanged since generation. P06.4d's single-file Markdown with images will have to resolve names to files.
   - The size estimate (`export-estimate`) does not count the document; it is a few KB. Add an `includeGenerationId` query parameter only if that ever matters.
   - Shell calls with `cd … && …` or pipes were denied. `./scripts/ralph/sandbox.sh 'cd apps/web && npx prettier --write FILES'` and `./scripts/ralph/sandbox.sh 'cd backend && python scripts/export_openapi.py'` both worked, the latter regenerating docs/openapi.json.
+---
+
+## 2026-10-31T11:27:41Z - P06.4d
+- Ran the checks on the earlier work, which had never been executed. Backend, web and docs passed unchanged. One e2e test failed, so I rewrote it. After that, e2e passed (956 tests). The Document screen now has Copy as Markdown (a confirmation in English and Italian). It also has Download with images, which serves GET /generations/{id}/document/single-file. The ROADMAP.md and STATUS.md notes that said the checks had not run now carry dated evidence. I did not tick the P06.4 checkbox. The desktop suite was not run (no desktop file changed). Not verified: the copy in the desktop window, a saved file from a real browser download click, a document written by a real model, and the screen against the real API.
+- Files changed: CHANGELOG.md, apps/web/src/app/core/clipboard.ts, apps/web/src/app/core/services/api.service.ts, apps/web/src/app/features/document/document.component.html, apps/web/src/app/features/document/document.component.scss, apps/web/src/app/features/document/document.component.spec.ts, apps/web/src/app/features/document/document.component.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, apps/web/tests/e2e/document.spec.ts, apps/web/tests/e2e/support/fake-api.ts, backend/app/routes/api.py, backend/app/services/generation_job.py, backend/app/services/generation_markdown.py, backend/tests/test_generation_single_file.py, docs/API.md, docs/LOCAL_GENERATION.md, docs/ROADMAP.md, docs/STATUS.md, docs/UI.md, docs/openapi.json
+- **Learnings for future iterations:**
+  - Chromium does not pass an <a download> click to Playwright route handlers: the request reached the Vite proxy (ECONNREFUSED) and the file was saved as single-file.txt. E2E tests for download links should check href and download, then fetch the href from the page through the fake API.
+  - The fake API serves GET /generations/{id}/document/single-file with FAKE_SINGLE_FILE, exported from tests/e2e/support/fake-api.ts, and a Content-Disposition header.
+  - The single-file route reuses select_project_screenshots, factored out of generation_job.py, and the generation_image_max_edge setting. Cited step-NNN_MMmSSs.png names are matched to the package selection.
+  - Copy uses core/clipboard.ts: the async Clipboard API first, then a temporary textarea with execCommand, because the desktop window denies the clipboard permission.
+  - Docker was up this time, so ./scripts/ralph/check.sh backend, web, e2e and docs all ran. Backend takes about 2.5 minutes and e2e about 3.5 minutes.
+  - scripts/ralph/prd.json carries a pre-existing modification (the earlier BLOCKED note removed from P06.4d). I left it alone because only the orchestrator edits that directory.
 ---

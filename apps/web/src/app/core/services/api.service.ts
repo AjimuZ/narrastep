@@ -505,6 +505,11 @@ export class ApiService {
     });
   }
 
+  /** Returns the route of the document as one Markdown file with its screenshots embedded. */
+  generationSingleFileUrl(generationId: string): string {
+    return `${API_ROOT}/generations/${generationId}/document/single-file`;
+  }
+
   /**
    * Polls a generation every two seconds and completes after the first answer that is final
    * (`completed`, `failed` or `cancelled`), which it still emits. A failed poll is skipped, so an

@@ -380,7 +380,12 @@ itself also ran with the real server and model in the [opt-in integration test](
   worker owns with `GENERATION_INTERRUPTED` and removes its folder. For the same project the API
   refuses processing, deletion and removal of the original video while a generation is active, and
   generating while the project is queued, processing or exporting.
-- **Not done.** Copying the result and the import control in Settings (P06.4d), the clickable
+- **Taking the result out (P06.4d).** The Document screen copies the document as Markdown and
+  downloads `GET /generations/{id}/document/single-file`, where each cited screenshot name that
+  the project's package selection also produces is embedded once as a downscaled PNG `data:`
+  image. Names that match nothing stay text. Only generated documents were tried; no real model
+  output has been fed to it.
+- **Not done.** The import control in Settings, the clickable
   citations (P06.6) and the benchmark (P06.5). The
   Document screen (P06.4b) has not run against the real API, Celery or a real model. The context size (8192) and
   the part budget are estimates until the benchmark measures them. A worker killed outright can
