@@ -238,6 +238,8 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy
 stack; manual Windows check records one window with system audio; `--headless` still works.
 
+Evidence (2026-10-31, P07-CHECK, manual Windows check): the owner recorded one single window with system audio in the desktop window on Windows; the result is in `docs/STATUS.md` under Last documentation check ("P07 manual check"). The project "test audio finestra" is 6.7 s at 1402×824 (a window, not the 2560×1440 screen); FFmpeg `volumedetect` found sound in `microphone.webm`, `system.webm` and `source.webm`, and the owner heard both their voice and the video. The system sound was a YouTube video, not a Teams call. Not confirmed: the Included label on screen. Speaker labels and the echo risk stay with P05.6, which remains open.
+
 ## P08 — Podman, generated environment and dependency refresh
 
 **Depends on:** none. **Areas:** backend, containers, launcher, documentation.

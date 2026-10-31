@@ -609,3 +609,11 @@ The `scripts/ralph/prd.json` diff in the tree (the task notes) was not made in t
   - The earlier attempt's P06.6b code, tests, docs and CHANGELOG were left in the working tree unchanged, so a commit of the tree includes them.
   - e2e was not run for P06.6b; citation behavior rests on unit tests.
 ---
+
+## 2026-10-31T16:43:20Z - P07-CHECK
+- I added a dated evidence line under the P07 Exit line in docs/ROADMAP.md. It cites the owner's 2026-10-31 single-window recording with system audio on Windows, which is recorded in docs/STATUS.md. It states that the Included label was not confirmed, that the system sound was a YouTube video and not a Teams call, and that P05.6 stays open. I also changed a stale sentence in docs/STATUS.md. It said the P07-CHECK result was not recorded yet, and now points to the "P07 manual check" entry. `check.sh docs` passed. I did not ask for a new recording or run any other check. The P07 checkbox is untouched.
+- Files changed: docs/ROADMAP.md, docs/STATUS.md
+- **Learnings for future iterations:**
+  - The P07 Exit line in docs/ROADMAP.md is near line 238; the P07-CHECK evidence line sits right below it.
+  - The task text had a stale 'BLOCKED' paragraph about a Teams call; the repo shows the owner check was already done and P05.6 is separate.
+---
