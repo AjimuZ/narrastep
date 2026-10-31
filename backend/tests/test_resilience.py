@@ -340,8 +340,48 @@ def test_export_root_folder_carries_the_project_export_sequence(session: Session
     with open_package(get_settings().data_root / done.relative_path) as archive:
         assert archive.root == f"2026-10-28_{project.output_mode.value}_resilience_export-02"
         manifest = json.loads(archive.read("metadata/manifest.json"))
-    assert manifest["schemaVersion"] == "0.3.0"
+    assert manifest["schemaVersion"] == "0.4.0"
     assert manifest["archiveName"] == archive.root
+
+
+def test_version_0_3_export_still_lists_and_downloads_unchanged(
+    client: TestClient, session: Session
+) -> None:
+    """Serve a 0.3.0 archive with `04-chatgpt-batches/` byte for byte; it is never rewritten."""
+    project = Project(name="Earlier", state=ProjectState.COMPLETED, output_mode=OutputMode.TUTORIAL)
+    session.add(project)
+    session.flush()
+    workspace = create_project_workspace(get_settings().data_root, project.id)
+    export = ProjectExport(
+        project_id=project.id,
+        status=ExportStatus.COMPLETED,
+        sequence=1,
+        download_name="2026-10-30_tutorial_earlier_export-01.zip",
+    )
+    session.add(export)
+    session.flush()
+    archive_path = workspace / "exports" / f"narrastep-{export.id}.zip"
+    root = "2026-10-30_tutorial_earlier_export-01"
+    old_manifest = {"schemaVersion": "0.3.0", "paths": {"chatgptBatches": "04-chatgpt-batches"}}
+    with zipfile.ZipFile(archive_path, "w") as earlier:
+        earlier.writestr(f"{root}/metadata/manifest.json", json.dumps(old_manifest))
+        earlier.writestr(f"{root}/04-chatgpt-batches/README.md", "# Guide\n")
+        earlier.writestr(f"{root}/04-chatgpt-batches/batch-01-of-01/batch-input.md", "# Batch\n")
+    export.relative_path = archive_path.relative_to(get_settings().data_root).as_posix()
+    session.commit()
+
+    response = client.get(f"/api/v1/exports/{export.id}/download")
+
+    assert response.status_code == 200
+    assert response.content == archive_path.read_bytes()
+    disposition = response.headers["content-disposition"]
+    assert 'filename="2026-10-30_tutorial_earlier_export-01.zip"' in disposition
+    history = client.get(f"/api/v1/projects/{project.id}/exports").json()["items"]
+    assert history[0]["downloadName"] == "2026-10-30_tutorial_earlier_export-01.zip"
+    with zipfile.ZipFile(io.BytesIO(response.content)) as served:
+        assert f"{root}/04-chatgpt-batches/README.md" in served.namelist()
+        manifest = json.loads(served.read(f"{root}/metadata/manifest.json"))
+        assert manifest["paths"]["chatgptBatches"] == "04-chatgpt-batches"
 
 
 def test_version_0_2_export_still_downloads_unchanged(client: TestClient, session: Session) -> None:

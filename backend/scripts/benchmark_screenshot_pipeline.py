@@ -183,7 +183,7 @@ def _estimate_batch_copies(
             destination_path=output_root / "unused.zip",
             output_mode=canonical_output_mode(str(case.get("mode", "general"))),
             original_video_path=video_path,
-            chatgpt_max_files_per_batch=config.chatgpt_max_files_per_batch,
+            max_files_per_batch=config.max_files_per_batch,
             duplicate_similarity_threshold=config.duplicate_similarity_threshold,
             selection_strategy=strategy,
             image_budget_profile=config.image_budget_profile,

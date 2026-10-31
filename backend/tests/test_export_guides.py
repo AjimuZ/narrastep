@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -110,8 +111,10 @@ def test_export_package_writes_type_specific_files(tmp_path: Path, output_mode: 
 
     with open_package(request.destination_path) as archive:
         prompt = archive.read("01-ai-input/generation-prompt.md").decode("utf-8")
-        guide = archive.read("04-chatgpt-batches/README.md").decode("utf-8")
-        batch = archive.read("04-chatgpt-batches/batch-01-of-01/batch-input.md").decode("utf-8")
+        guide = archive.read("04-batches/README.md").decode("utf-8")
+        batch = archive.read("04-batches/batch-01-of-01/batch-input.md").decode("utf-8")
+        readme = archive.read("README.md").decode("utf-8")
+        llm_input = archive.read("01-ai-input/llm-input.md").decode("utf-8")
         manifest = json.loads(archive.read("metadata/manifest.json"))
     expected = guide_for(output_mode)
     assert prompt == build_generation_prompt(output_mode)
@@ -120,3 +123,9 @@ def test_export_package_writes_type_specific_files(tmp_path: Path, output_mode: 
     assert "This batch is the whole recording." in batch
     assert "Evidence step 1" in batch
     assert manifest["paths"]["generationPrompt"] == "01-ai-input/generation-prompt.md"
+    assert manifest["paths"]["batches"] == "04-batches"
+    # The package leaves the choice of tool to the person: no text names an AI service.
+    service_names = re.compile(r"chatgpt|openai|\bgpt\b|claude|gemini|copilot|anthropic", re.I)
+    for text in (prompt, guide, batch, readme, llm_input):
+        assert service_names.search(text) is None
+    assert "04-batches/README.md" in readme

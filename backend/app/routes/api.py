@@ -1437,7 +1437,7 @@ def export_estimate(
             output_mode=project.mode_value,
             original_video_path=source_path,
             include_original_video=include_original_video,
-            chatgpt_max_files_per_batch=settings.chatgpt_max_files_per_batch,
+            max_files_per_batch=settings.max_files_per_batch,
             duplicate_similarity_threshold=settings.duplicate_similarity_threshold,
             selection_strategy=str(snapshot.get("selectionStrategy", "legacy")),
             image_budget_profile=str(

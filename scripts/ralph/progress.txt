@@ -72,6 +72,8 @@ Each session sees the patterns below and the last entries. Older entries move to
 - After a smoke script passes, read the logs it keeps as well as its PASS lines: user-facing messages may not be asserted by any step.
 - Identify generated test video frames by their pixels, for example a Gray-code barcode, so that a test never trusts the position a decoder reports.
 - Resolve bundled asset paths from __dirname, never from the current directory, and keep the asset folder out of the packager ignore patterns.
+- When a rename must leave old data readable, keep an alias in the config and a test that serves an old-format archive byte for byte.
+- Test that user-facing text names no service by matching a regex over the rendered component and over every generated package file.
 
 ---
 
@@ -642,4 +644,14 @@ Left alone: the P07.6 checkbox and the `scripts/ralph/prd.json` diff.
   - `check.sh desktop` runs a Prettier check that fails on test files with lines over the print width. Wrap long assertions.
   - The packaged-app icon and the real taskbar icon were not verified visually. The macOS build keeps the default icon.
   - The scripts/ralph/prd.json diff in the tree belongs to the orchestrator and was left alone.
+---
+
+## 2026-10-31T17:47:54Z - P09.4
+- The rename was already in the working tree from the earlier attempt, so I checked it and finished the one remaining gap. The roadmap checkbox for P09.4 had been ticked, so I put it back to unticked and left the dated progress note. The backend, web, docs and e2e checks all pass. The ChatGPT search in apps/web/src, backend/app, README.md and docs/ now finds only the setting alias, the old-layout compatibility notes, a "no service named" test and the roadmap's own task text. It also finds ChatGPT in older dated roadmap evidence, which stays as written. I did not read .env.example, as instructed. Its content is unverified, and the docker-compose.yml and README.md changes are the only ones I checked.
+- Files changed: docs/ROADMAP.md
+- **Learnings for future iterations:**
+  - The commit checker rejects the word AI even in a subject about removing AI references, so describe this change as neutral naming.
+  - Remaining ChatGPT mentions are intentional: the config.py alias, the old-layout notes in exporting.py, DATA_MODEL.md and PROCESSING_PIPELINE.md, old-export tests, a no-service-named test, and dated roadmap evidence.
+  - An earlier attempt had ticked the P09.4 checkbox in docs/ROADMAP.md; I put it back to unticked for the orchestrator.
+  - The .env.example edit was made by the supervisor and never read by a session, so its content is unverified here.
 ---

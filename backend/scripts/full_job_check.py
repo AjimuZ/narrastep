@@ -39,7 +39,7 @@ VIDEO_SECONDS = 10
 VIDEO_NAME = "full-job-check.mp4"
 PROJECT_NAME = "Full job check"
 PROJECT_MODE = "task_briefing"
-MANIFEST_SCHEMA = "0.3.0"
+MANIFEST_SCHEMA = "0.4.0"
 
 # The numbered layout of docs/DATA_MODEL.md, relative to the archive root folder.
 REQUIRED_PATHS = (
@@ -49,12 +49,12 @@ REQUIRED_PATHS = (
     "03-transcript/reviewed-transcript.md",
     "03-transcript/subtitles.srt",
     "03-transcript/raw-transcript.json",
-    "04-chatgpt-batches/README.md",
+    "04-batches/README.md",
     "metadata/manifest.json",
     "metadata/source.json",
 )
 SCREENSHOT_PATH = re.compile(r"^02-screenshots/step-\d{3}_\d{2}m\d{2}s\.png$")
-BATCH_INPUT_PATH = re.compile(r"^04-chatgpt-batches/batch-(\d{2,})-of-(\d{2,})/batch-input\.md$")
+BATCH_INPUT_PATH = re.compile(r"^04-batches/batch-(\d{2,})-of-(\d{2,})/batch-input\.md$")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -260,7 +260,7 @@ def check_archive(archive_path: Path, archive_name: str, segment_count: int) -> 
     """Check a downloaded ZIP against the documented layout and return its counts.
 
     Requires one root folder called `archive_name`, every `REQUIRED_PATHS` entry, real PNG
-    screenshots, complete batch folders, a schema 0.3.0 manifest whose steps match `segment_count`
+    screenshots, complete batch folders, a schema 0.4.0 manifest whose steps match `segment_count`
     and whose screenshot paths exist, and no original video. Raises `FullJobError` naming the first
     problem; nothing from the archive is extracted to disk and no transcript text is reported.
     """
@@ -321,7 +321,7 @@ def _check_manifest(
     listed = [entry.get("path") for entry in manifest.get("screenshots", [])]
     listed += [path for path in manifest.get("paths", {}).values() if path is not None]
     for path in listed:
-        # `paths.chatgptBatches` names a folder; every other entry names a file.
+        # `paths.batches` names a folder; every other entry names a file.
         if path not in paths and not any(item.startswith(f"{path}/") for item in paths):
             raise FullJobError(f"The manifest lists {path}, which is not in the ZIP.")
 

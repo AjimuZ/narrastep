@@ -216,6 +216,14 @@ All notable changes to Narrastep are documented in this file.
 
 ### Changed
 
+- Narrastep no longer names a specific AI service; you choose what to do with the package. The
+  Export screen says "Batches" (Italian "Lotti") and its help text explains the split in time order
+  and the limit of one evidence file and up to 19 images per batch. New packages use the folder
+  `04-batches/` and the manifest key `paths.batches` (manifest schema `0.4.0`), and the archive
+  `README.md` and the batch guide leave the choice of tool to you. Packages made earlier keep
+  `04-chatgpt-batches/` and still list and download unchanged. The setting is now
+  `NARRASTEP_MAX_FILES_PER_BATCH` (default 20, as before); `NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH`
+  still works. The API does not change.
 - The Compose file and Dockerfiles now use fully qualified image names and declare the web health
   check in Compose, so one definition can serve Docker and Podman (Podman itself is not supported
   yet). The images built here are now named `localhost/narrastep-backend:0.2.0` and

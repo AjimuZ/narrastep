@@ -36,7 +36,7 @@ const COPY = {
     useAsPrimary: 'Use as primary',
     userSelected: 'User selected',
     export: 'Export',
-    batchFile: '04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images',
+    batchFile: '04-batches/batch-NN-of-NN/batch-input.md + up to 19 images',
     createPackage: 'Create package',
     downloadPackage: 'Download package',
   },
@@ -72,7 +72,7 @@ const COPY = {
     useAsPrimary: 'Usa come principale',
     userSelected: "Scelto dall'utente",
     export: 'Esporta',
-    batchFile: '04-chatgpt-batches/batch-NN-of-NN/batch-input.md + fino a 19 immagini',
+    batchFile: '04-batches/batch-NN-of-NN/batch-input.md + fino a 19 immagini',
     createPackage: 'Crea pacchetto',
     downloadPackage: 'Scarica pacchetto',
   },
@@ -505,7 +505,7 @@ for (const language of ['en', 'it'] as const) {
       await expect(page.getByText(t.userSelected)).toBeVisible();
       await page.getByRole('link', { name: t.export, exact: true }).click();
       await expectNoHorizontalOverflow(page);
-      await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
+      await expect(page.getByText('metadata/manifest.json (schema 0.4.0)')).toBeVisible();
       await expect(page.getByText(t.batchFile)).toBeVisible();
       await page.getByRole('button', { name: t.createPackage }).click();
       const downloadLink = page.getByRole('link', { name: t.downloadPackage });

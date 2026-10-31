@@ -254,14 +254,17 @@ distinct primary screenshot is exported under `legacy`. Under `adaptive_v1`, the
 budget used by estimation limits automatic groups. Mandatory and manual groups are never merged
 away or removed and may exceed both target and hard cap.
 
-The worker then walks reviewed segments in transcript order to create self-contained ChatGPT upload
+The worker then walks reviewed segments in transcript order to create self-contained
 batches. Each batch reserves one file for `batch-input.md`, so its image capacity is
-`NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH - 1`. A new batch starts before a previously unseen image
+`NARRASTEP_MAX_FILES_PER_BATCH - 1` (the earlier name `NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH` is
+still read when the new one is unset). A new batch starts before a previously unseen image
 would exceed that capacity. Repeated evidence is copied once inside a batch and copied again only
 when a later batch also needs it. Steps without an image remain in chronological order without
 consuming an image slot, and an export with no images still receives one Markdown-only batch.
 Canonical screenshots and the existing complete LLM inputs remain unchanged in content. Existing
-immutable export archives are never rewritten and keep the Version 0.2 layout.
+immutable export archives are never rewritten and keep the layout they were made with (Version 0.2,
+or `04-chatgpt-batches/` for schema 0.3.0). The batch guide and the archive `README.md` name no AI
+service and leave the choice of tool to the person (P09.4).
 
 The project type also selects the wording of three package files
 (`backend/app/services/export_guides.py`, [ADR 0009](decisions/0009-project-types.md)):
@@ -269,8 +272,8 @@ The project type also selects the wording of three package files
 | File | Type-specific content |
 | --- | --- |
 | `01-ai-input/generation-prompt.md` | Type label, purpose, the document sections in order, screenshot guidance, the shared evidence-only rules and the type's own rules |
-| `04-chatgpt-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
-| `04-chatgpt-batches/batch-NN-of-NN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
+| `04-batches/README.md` | Type label and purpose, plus the section list to assemble after the last batch |
+| `04-batches/batch-NN-of-NN/batch-input.md` | A task block before the evidence: the type, whether the batch opens or closes the recording, and notes to write under the type's section names |
 
 Labelled segments (P05.5) carry their speaker into the package: `**Speaker:** You` in
 `reviewed-transcript.md`, a `You:` or `Others:` prefix in `subtitles.srt`, and a `Speaker:` line
@@ -279,7 +282,7 @@ in `llm-input.md` and `batch-input.md`, which also explain the labels once when 
 The sections are those of the "Output per project type" table in
 [Local generation](LOCAL_GENERATION.md). `01-ai-input/llm-input.md` and the screenshots keep their
 content; P03.2 moved them into the numbered archive layout and raised the manifest schema to
-`0.3.0` (see "Export layout" in [Data model](DATA_MODEL.md)). A legacy `technical_walkthrough` value read from a job snapshot is
+`0.3.0`, and P09.4 raised it to `0.4.0` (see "Export layout" in [Data model](DATA_MODEL.md)). A legacy `technical_walkthrough` value read from a job snapshot is
 treated as `task_briefing`; an unknown value falls back to `general` without failing the export.
 The scan rate and the image budgets above are the type-specific screenshot profile; a unit test
 checks that the analysis profile and the export budget use the same rates for every type.

@@ -71,7 +71,7 @@ test('processes generated media through the real local API and exports reviewed 
   await expect(page.getByText('User selected')).toBeVisible();
 
   await page.getByRole('link', { name: 'Export', exact: true }).click();
-  await expect(page.getByText('metadata/manifest.json (schema 0.3.0)')).toBeVisible();
+  await expect(page.getByText('metadata/manifest.json (schema 0.4.0)')).toBeVisible();
   await page.getByRole('button', { name: 'Create package' }).click();
   const downloadLink = page.getByRole('link', { name: 'Download package' });
   await expect(downloadLink).toBeVisible({ timeout: 120_000 });
@@ -219,8 +219,8 @@ function assertExportPackage(archivePath: string, reviewedText: string): void {
     '03-transcript/subtitles.srt',
     '01-ai-input/llm-input.md',
     '01-ai-input/generation-prompt.md',
-    '04-chatgpt-batches/README.md',
-    '04-chatgpt-batches/batch-01-of-01/batch-input.md',
+    '04-batches/README.md',
+    '04-batches/batch-01-of-01/batch-input.md',
   ];
   for (const requiredPath of requiredPaths) {
     expect(entries.has(requiredPath), `Expected ${requiredPath} in the export.`).toBe(true);
@@ -230,7 +230,7 @@ function assertExportPackage(archivePath: string, reviewedText: string): void {
   ).toBe(true);
   expect(
     [...entries.keys()].some((name) =>
-      /^04-chatgpt-batches\/batch-01-of-01\/step-\d{3}_\d{2}m\d{2}s\.png$/.test(name),
+      /^04-batches\/batch-01-of-01\/step-\d{3}_\d{2}m\d{2}s\.png$/.test(name),
     ),
   ).toBe(true);
   expect([...entries.keys()].some((name) => name.startsWith('source/original-video'))).toBe(false);
@@ -241,7 +241,7 @@ function assertExportPackage(archivePath: string, reviewedText: string): void {
     schemaVersion: string;
     segments: Array<{ reviewedText: string }>;
   };
-  expect(manifest.schemaVersion).toBe('0.3.0');
+  expect(manifest.schemaVersion).toBe('0.4.0');
   expect(manifest.segments).toHaveLength(3);
   expect(manifest.segments[0]?.reviewedText.replace('\n', '')).toBe(reviewedText);
   expect(requiredEntry(entries, '03-transcript/raw-transcript.json').toString('utf8')).toContain(
@@ -254,7 +254,7 @@ function assertExportPackage(archivePath: string, reviewedText: string): void {
     'Never invent',
   );
   expect(
-    requiredEntry(entries, '04-chatgpt-batches/batch-01-of-01/batch-input.md').toString('utf8'),
+    requiredEntry(entries, '04-batches/batch-01-of-01/batch-input.md').toString('utf8'),
   ).toContain('Narrastep analysis batch 1 of 1');
 }
 

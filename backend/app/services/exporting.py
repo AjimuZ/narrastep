@@ -29,9 +29,11 @@ from app.services.pipeline import perceptual_hash_similarity
 from app.services.screenshot_materialization import decode_exact_frame, write_png_atomic
 
 # Manifest schema versions: 0.2.0 archives (folders `llm`, `transcript`, `screenshots`,
-# `chatgpt-batches`, `metadata`, manifest at the root, no root folder) are never rewritten; every
-# new export is 0.3.0 (ADR 0013). Manifest `paths` are relative to the archive root folder.
-MANIFEST_SCHEMA_VERSION = "0.3.0"
+# `chatgpt-batches`, `metadata`, manifest at the root, no root folder) and 0.3.0 archives (numbered
+# folders with `04-chatgpt-batches/` and `paths.chatgptBatches`, ADR 0013) are never rewritten;
+# every new export is 0.4.0, which names the batch folder `04-batches/` and the manifest key
+# `paths.batches`. Manifest `paths` are relative to the archive root folder.
+MANIFEST_SCHEMA_VERSION = "0.4.0"
 # English names of the speaker labels of in-app recordings (P05.5) in the transcript files and
 # the AI input; the manifest keeps the stored values `you` and `others`.
 SPEAKER_NAMES = {"you": "You", "others": "Others"}
@@ -47,7 +49,7 @@ SPEAKER_NOTE = (
 AI_INPUT_DIR = "01-ai-input"
 SCREENSHOTS_DIR = "02-screenshots"
 TRANSCRIPT_DIR = "03-transcript"
-BATCHES_DIR = "04-chatgpt-batches"
+BATCHES_DIR = "04-batches"
 GENERATED_DOCUMENT_DIR = "05-generated-document"
 GENERATED_DOCUMENT_FILE = f"{GENERATED_DOCUMENT_DIR}/document.md"
 METADATA_DIR = "metadata"
@@ -110,7 +112,7 @@ class ExportRequest:
     created_at: datetime | None = None
     archive_name: str | None = None
     extra_manifest: dict[str, Any] = field(default_factory=dict)
-    chatgpt_max_files_per_batch: int = 20
+    max_files_per_batch: int = 20
     duplicate_similarity_threshold: float = 0.92
     selection_strategy: str = "legacy"
     image_budget_profile: str = "balanced"
@@ -169,8 +171,8 @@ class _ScreenshotSelection:
 
 
 @dataclass(frozen=True, slots=True)
-class _ChatGptBatch:
-    """Carry one chronological and self-contained ChatGPT upload unit."""
+class _Batch:
+    """Carry one chronological and self-contained upload unit."""
 
     rendered_segments: tuple[RenderedExportSegment, ...]
     screenshots: tuple[ExportedScreenshot, ...]
@@ -201,7 +203,7 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
     """Build a complete package in temporary storage and atomically publish its ZIP.
 
     The ZIP holds one root folder named after the archive (ADR 0013) with the numbered folders,
-    `README.md` and `metadata/manifest.json` (schema 0.3.0). Raises ValueError for an unsafe
+    `README.md` and `metadata/manifest.json` (schema 0.4.0). Raises ValueError for an unsafe
     `archive_name`, FileExistsError when the destination exists and FileNotFoundError when a
     selected evidence asset or the chosen generated document is missing; a failed build leaves no
     partial ZIP behind. `05-generated-document/` exists only when a document was chosen.
@@ -220,7 +222,7 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
             package_root = Path(temporary_directory) / archive_name
             package_root.mkdir()
             rendered_segments = _render_screenshots(request, package_root, metrics)
-            batch_count = _write_chatgpt_batches(request, rendered_segments, package_root, metrics)
+            batch_count = _write_batches(request, rendered_segments, package_root, metrics)
             metadata_root = package_root / METADATA_DIR
             metadata_root.mkdir()
             _write_json(
@@ -303,7 +305,7 @@ def estimate_export_package(request: ExportRequest) -> ExportEstimate:
     batch_count, batch_copy_count = _estimate_batch_shape(
         request.segments,
         selection,
-        request.chatgpt_max_files_per_batch,
+        request.max_files_per_batch,
     )
     estimated_bytes = 32 * 1024
     if request.raw_transcript_path.is_file():
@@ -536,7 +538,7 @@ def _estimate_batch_shape(
 ) -> tuple[int, int]:
     """Count chronological batches and repeated image copies without creating files."""
     if max_files_per_batch < 2:
-        raise ValueError("A ChatGPT batch must allow one Markdown file and at least one image.")
+        raise ValueError("A batch must allow one Markdown file and at least one image.")
     capacity = max_files_per_batch - 1
     batches = 0
     copies = 0
@@ -555,7 +557,7 @@ def _estimate_batch_shape(
     return batches, copies
 
 
-def _write_chatgpt_batches(
+def _write_batches(
     request: ExportRequest,
     rendered: list[RenderedExportSegment],
     package_root: Path,
@@ -563,12 +565,12 @@ def _write_chatgpt_batches(
 ) -> int:
     """Write chronological upload folders without changing the canonical export evidence.
 
-    Folders are named `batch-{nn}-of-{total}` under `04-chatgpt-batches/` and each holds
+    Folders are named `batch-{nn}-of-{total}` under `04-batches/` and each holds
     `batch-input.md` plus copies of the screenshots it needs. Returns the number of batches.
     """
-    batches = _build_chatgpt_batches(
+    batches = _build_batches(
         rendered,
-        max_files_per_batch=request.chatgpt_max_files_per_batch,
+        max_files_per_batch=request.max_files_per_batch,
     )
     batches_root = package_root / BATCHES_DIR
     batches_root.mkdir()
@@ -576,7 +578,7 @@ def _write_chatgpt_batches(
         metrics.set("batchCount", len(batches))
         metrics.set("exportBatchCopyCount", sum(len(batch.screenshots) for batch in batches))
     (batches_root / "README.md").write_text(
-        build_batch_guide(request.output_mode, request.chatgpt_max_files_per_batch, len(batches)),
+        build_batch_guide(request.output_mode, request.max_files_per_batch, len(batches)),
         encoding="utf-8",
     )
 
@@ -587,7 +589,7 @@ def _write_chatgpt_batches(
             source = package_root / screenshot.relative_path
             shutil.copy2(source, batch_root / Path(screenshot.relative_path).name)
         (batch_root / "batch-input.md").write_text(
-            _build_chatgpt_batch_input(
+            _build_batch_input(
                 request,
                 batch,
                 batch_index=batch_index,
@@ -608,15 +610,15 @@ def batch_folder_name(batch_index: int, batch_count: int) -> str:
     return f"batch-{batch_index:0{width}d}-of-{batch_count:0{width}d}"
 
 
-def _build_chatgpt_batches(
+def _build_batches(
     rendered: list[RenderedExportSegment], *, max_files_per_batch: int
-) -> list[_ChatGptBatch]:
+) -> list[_Batch]:
     """Split consecutive steps before a new image would exceed one upload batch."""
     if max_files_per_batch < 2:
-        raise ValueError("A ChatGPT batch must allow one Markdown file and at least one image.")
+        raise ValueError("A batch must allow one Markdown file and at least one image.")
 
     max_images_per_batch = max_files_per_batch - 1
-    batches: list[_ChatGptBatch] = []
+    batches: list[_Batch] = []
     current_segments: list[RenderedExportSegment] = []
     current_screenshots: dict[str, ExportedScreenshot] = {}
 
@@ -627,7 +629,7 @@ def _build_chatgpt_batches(
         )
         if introduces_new_image and len(current_screenshots) >= max_images_per_batch:
             batches.append(
-                _ChatGptBatch(
+                _Batch(
                     rendered_segments=tuple(current_segments),
                     screenshots=tuple(current_screenshots.values()),
                 )
@@ -641,7 +643,7 @@ def _build_chatgpt_batches(
 
     if current_segments or not batches:
         batches.append(
-            _ChatGptBatch(
+            _Batch(
                 rendered_segments=tuple(current_segments),
                 screenshots=tuple(current_screenshots.values()),
             )
@@ -649,9 +651,9 @@ def _build_chatgpt_batches(
     return batches
 
 
-def _build_chatgpt_batch_input(
+def _build_batch_input(
     request: ExportRequest,
-    batch: _ChatGptBatch,
+    batch: _Batch,
     *,
     batch_index: int,
     batch_count: int,
@@ -766,10 +768,11 @@ def _build_manifest(
 ) -> dict[str, Any]:
     """Describe project, source, active segments, and honest evidence associations.
 
-    Schema 0.3.0 adds `archiveName` and lists every `paths` entry relative to the archive root
+    Schema 0.3.0 added `archiveName` and listed every `paths` entry relative to the archive root
     folder (the manifest itself sits in `metadata/`). `paths.generatedDocument` and
-    `includedGeneration` (P06.4c) are null unless a generated document is packed; they are
-    additive keys, so the schema version stays 0.3.0.
+    `includedGeneration` (P06.4c) are null unless a generated document is packed; they were
+    additive keys. Schema 0.4.0 renames `paths.chatgptBatches` to `paths.batches` (P09.4); older
+    archives keep the old key and folder name and are never rewritten.
     """
     manifest_segments = []
     screenshots = []
@@ -833,7 +836,7 @@ def _build_manifest(
             "subtitles": f"{TRANSCRIPT_DIR}/subtitles.srt",
             "llmInput": f"{AI_INPUT_DIR}/llm-input.md",
             "generationPrompt": f"{AI_INPUT_DIR}/generation-prompt.md",
-            "chatgptBatches": BATCHES_DIR,
+            "batches": BATCHES_DIR,
             "sourceMetadata": f"{METADATA_DIR}/source.json",
             "originalVideo": _original_video_export_path(request),
             "generatedDocument": (
@@ -866,9 +869,9 @@ def _build_archive_readme(request: ExportRequest, archive_name: str, batch_count
         "",
         "## Where to start",
         "",
-        f"- To use ChatGPT, open `{BATCHES_DIR}/README.md` and upload one `batch-*` folder at a "
+        f"- To work in steps, open `{BATCHES_DIR}/README.md` and use one `batch-*` folder at a "
         f"time ({batch_count} in this export).",
-        f"- To use any other assistant, give it `{AI_INPUT_DIR}/generation-prompt.md` and "
+        f"- To work on the whole recording at once, use `{AI_INPUT_DIR}/generation-prompt.md` and "
         f"`{AI_INPUT_DIR}/llm-input.md` together with the files in `{SCREENSHOTS_DIR}/`.",
         "- To read the reviewed procedure yourself, open "
         f"`{TRANSCRIPT_DIR}/reviewed-transcript.md`.",
@@ -879,7 +882,7 @@ def _build_archive_readme(request: ExportRequest, archive_name: str, batch_count
         f"- `{SCREENSHOTS_DIR}/`: one PNG per distinct screen, named "
         "`step-{step}_{minutes}m{seconds}s.png` after the step and the video time.",
         f"- `{TRANSCRIPT_DIR}/`: reviewed Markdown, `subtitles.srt` and `raw-transcript.json`.",
-        f"- `{BATCHES_DIR}/`: self-contained upload folders for the ChatGPT web interface.",
+        f"- `{BATCHES_DIR}/`: self-contained folders with a limited number of files each.",
         f"- `{METADATA_DIR}/`: `manifest.json` (schema {MANIFEST_SCHEMA_VERSION}) and "
         "`source.json`.",
     ]

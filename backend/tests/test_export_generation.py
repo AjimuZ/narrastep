@@ -134,7 +134,7 @@ def test_chosen_generation_is_packed_and_described_in_the_manifest(
         assert GENERATED in archive.namelist()
         assert archive.read(GENERATED).decode("utf-8") == DOCUMENT
         manifest = json.loads(archive.read("metadata/manifest.json"))
-        assert manifest["schemaVersion"] == "0.3.0"
+        assert manifest["schemaVersion"] == "0.4.0"
         assert manifest["paths"]["generatedDocument"] == GENERATED
         assert manifest["includedGeneration"] == {
             "generationId": generation.id,

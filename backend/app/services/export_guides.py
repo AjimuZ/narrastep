@@ -149,25 +149,25 @@ def build_generation_prompt(output_mode: str) -> str:
 
 
 def build_batch_guide(output_mode: str, max_files_per_batch: int, batch_count: int) -> str:
-    """Render `04-chatgpt-batches/README.md` for the project type.
+    """Render `04-batches/README.md` for the project type; it names no AI service.
 
-    Requires `max_files_per_batch >= 2`, which `_build_chatgpt_batches` already enforces.
+    Requires `max_files_per_batch >= 2`, which `_build_batches` already enforces.
     """
     guide = guide_for(output_mode)
     sections = ", ".join(guide.sections)
     return (
-        "# ChatGPT batch upload guide\n\n"
+        "# Batch guide\n\n"
         f"Project type: {guide.label}. {guide.purpose}\n\n"
-        "Process the batch folders in numeric order. For each batch, select and attach every "
-        "file inside that folder to one ChatGPT message. Keep the generated responses in global "
-        "step order when assembling the final document.\n\n"
+        "Process the batch folders in numeric order. For each batch, use every file inside that "
+        "folder together, with the tool of your choice. Keep the results in global step order "
+        "when assembling the final document.\n\n"
         f"This export contains {batch_count} batch folder(s). Each folder contains at most "
         f"{max_files_per_batch} files: one `batch-input.md` file and up to "
         f"{max_files_per_batch - 1} screenshot files.\n\n"
-        "After the last batch, assemble the answers into one document with these sections, in "
+        "After the last batch, assemble the results into one document with these sections, in "
         f"this order: {sections}. The full instructions are in "
         "`../01-ai-input/generation-prompt.md`.\n\n"
-        "Narrastep does not upload these files or contact ChatGPT.\n"
+        "Narrastep does not upload these files or send them to any service.\n"
     )
 
 

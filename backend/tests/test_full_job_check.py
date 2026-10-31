@@ -31,8 +31,8 @@ def package_entries() -> dict[str, bytes]:
     """Return a valid package as paths below the root folder, for tests to damage."""
     entries = {path: b"content" for path in check.REQUIRED_PATHS}
     entries[SCREENSHOT] = PNG
-    entries["04-chatgpt-batches/batch-01-of-01/batch-input.md"] = b"content"
-    entries["04-chatgpt-batches/batch-01-of-01/step-001_00m00s.png"] = PNG
+    entries["04-batches/batch-01-of-01/batch-input.md"] = b"content"
+    entries["04-batches/batch-01-of-01/step-001_00m00s.png"] = PNG
     entries["metadata/manifest.json"] = json.dumps(manifest()).encode()
     return entries
 
@@ -40,11 +40,11 @@ def package_entries() -> dict[str, bytes]:
 def manifest(**changes: Any) -> dict[str, Any]:
     """Return a manifest matching `package_entries` with one step, plus `changes`."""
     value = {
-        "schemaVersion": "0.3.0",
+        "schemaVersion": "0.4.0",
         "archiveName": ARCHIVE,
         "segments": [{"reviewedText": TRANSCRIPT}],
         "screenshots": [{"path": SCREENSHOT}],
-        "paths": {"readme": "README.md", "chatgptBatches": "04-chatgpt-batches", "video": None},
+        "paths": {"readme": "README.md", "batches": "04-batches", "video": None},
     }
     return value | changes
 
@@ -280,12 +280,9 @@ def without(path: str) -> dict[str, bytes]:
         (package_entries() | {"README.md": b""}, "empty README.md"),
         (without(SCREENSHOT), "no screenshot"),
         (package_entries() | {SCREENSHOT: b"not an image"}, "is not a PNG"),
+        (without("04-batches/batch-01-of-01/batch-input.md"), "0 batch totals"),
         (
-            without("04-chatgpt-batches/batch-01-of-01/batch-input.md"),
-            "0 batch totals",
-        ),
-        (
-            package_entries() | {"04-chatgpt-batches/batch-03-of-03/batch-input.md": b"content"},
+            package_entries() | {"04-batches/batch-03-of-03/batch-input.md": b"content"},
             "2 batch totals",
         ),
         (package_entries() | {"source/original-video.mp4": b"video"}, "original video"),

@@ -449,7 +449,7 @@ def perform_export(
                 generated_document_path=generated_document_path,
                 generated_document=generated_document,
                 created_at=export.created_at,
-                chatgpt_max_files_per_batch=active_settings.chatgpt_max_files_per_batch,
+                max_files_per_batch=active_settings.max_files_per_batch,
                 duplicate_similarity_threshold=(active_settings.duplicate_similarity_threshold),
                 selection_strategy=str(processing_snapshot.get("selectionStrategy", "legacy")),
                 image_budget_profile=str(

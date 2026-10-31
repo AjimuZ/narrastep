@@ -185,9 +185,9 @@ name; the folder numbers give the reading order:
   01-ai-input/                      llm-input.md and the type-specific generation-prompt.md
   02-screenshots/step-003_00m42s.png
   03-transcript/                    reviewed-transcript.md, subtitles.srt, raw-transcript.json
-  04-chatgpt-batches/               README.md and batch-01-of-03/ (batch-input.md plus its images)
+  04-batches/                       README.md and batch-01-of-03/ (batch-input.md plus its images)
   05-generated-document/document.md (only when the user includes a generation, P06.4c)
-  metadata/                         manifest.json (schema 0.3.0), source.json
+  metadata/                         manifest.json (schema 0.4.0), source.json
   source/original-video.mp4         (only when requested)
 ```
 
@@ -196,8 +196,11 @@ Rules:
 - The screenshot file name is `step-{nnn}_{mm}m{ss}s.png`: the number of the first step that uses
   the image and the video time at which that step starts. Batch folders hold copies with the same
   names. Batch folders are `batch-{nn}-of-{total}` (three digits once there are more than 99).
-- `manifest.json` schema `0.3.0` adds `archiveName` and `paths.readme` and `paths.chatgptBatches`.
+- `manifest.json` schema `0.3.0` added `archiveName` and `paths.readme` and `paths.chatgptBatches`.
   Every `paths` value is relative to the archive root folder, not to the `metadata/` folder.
+- `manifest.json` schema `0.4.0` (P09.4) names no AI service: the folder is `04-batches/` and the
+  key is `paths.batches`; nothing else changes. Archives made before keep `04-chatgpt-batches/`
+  and `paths.chatgptBatches` (schema `0.3.0`) and are never rewritten.
 - P06.4c adds two keys without a schema bump, because a reader that ignores unknown keys is not
   affected and no existing archive changes: `paths.generatedDocument` (`05-generated-document/document.md`
   or `null`) and `includedGeneration` (`null`, or `generationId`, `modelId`, `promptVersion`,

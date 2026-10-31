@@ -164,7 +164,14 @@ class Settings(BaseSettings):
     adaptive_borderline_duplicate_threshold: float = Field(default=0.84, ge=0, le=1)
     adaptive_borderline_ssim_threshold: float = Field(default=0.96, ge=0, le=1)
     adaptive_ocr_token_jaccard_threshold: float = Field(default=0.85, ge=0, le=1)
-    chatgpt_max_files_per_batch: int = Field(default=20, ge=2)
+    # The first name wins; the second is the name used before no service was named in the product.
+    max_files_per_batch: int = Field(
+        default=20,
+        ge=2,
+        validation_alias=AliasChoices(
+            "NARRASTEP_MAX_FILES_PER_BATCH", "NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH"
+        ),
+    )
     sse_heartbeat_seconds: int = Field(default=15, ge=1)
     sse_poll_seconds: float = Field(default=0.5, gt=0)
     orphaned_job_seconds: int = Field(

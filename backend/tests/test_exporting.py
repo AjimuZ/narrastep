@@ -22,7 +22,7 @@ from app.services.exporting import (
     estimate_export_package,
 )
 
-BATCHES = "04-chatgpt-batches"
+BATCHES = "04-batches"
 BATCH_1 = f"{BATCHES}/batch-01-of-01"
 SCREENSHOTS = "02-screenshots"
 
@@ -82,13 +82,13 @@ def test_export_contains_complete_honest_package(tmp_path: Path) -> None:
             "02-screenshots/step-001_00m00s.png",
             "01-ai-input/llm-input.md",
             "01-ai-input/generation-prompt.md",
-            "04-chatgpt-batches/README.md",
+            f"{BATCHES}/README.md",
             f"{BATCH_1}/batch-input.md",
             f"{BATCH_1}/step-001_00m00s.png",
             "metadata/source.json",
         }.issubset(names)
         manifest = json.loads(archive.read("metadata/manifest.json"))
-        assert manifest["schemaVersion"] == "0.3.0"
+        assert manifest["schemaVersion"] == "0.4.0"
         assert manifest["createdAt"].endswith("Z")
         assert manifest["segments"][0]["primaryScreenshotId"] == "shot-1"
         assert (
@@ -431,7 +431,7 @@ def test_automatic_export_keeps_every_distinct_primary_image(
     ("image_count", "expected_batch_count"),
     [(0, 1), (1, 1), (19, 1), (20, 2), (39, 3)],
 )
-def test_chatgpt_batches_respect_the_configured_file_limit(
+def test_batches_respect_the_configured_file_limit(
     tmp_path: Path,
     image_count: int,
     expected_batch_count: int,
@@ -535,7 +535,7 @@ def test_reused_screenshot_is_copied_when_later_batch_needs_it(tmp_path: Path) -
             raw_transcript_path=raw,
             destination_path=destination,
             output_mode="tutorial",
-            chatgpt_max_files_per_batch=3,
+            max_files_per_batch=3,
         )
     )
 
@@ -637,7 +637,7 @@ def test_manual_images_are_preserved_across_multiple_batches(tmp_path: Path) -> 
             raw_transcript_path=raw,
             destination_path=destination,
             output_mode="tutorial",
-            chatgpt_max_files_per_batch=2,
+            max_files_per_batch=2,
         )
     )
 
@@ -787,11 +787,12 @@ def test_archive_has_one_named_root_and_numbered_layout(tmp_path: Path) -> None:
         "metadata/source.json",
         "source/original-video.mp4",
     }
-    assert manifest["schemaVersion"] == "0.3.0"
+    assert manifest["schemaVersion"] == "0.4.0"
     assert manifest["archiveName"] == archive_name
     assert manifest["segments"][2]["primaryScreenshotPath"] == "02-screenshots/step-003_00m42s.png"
     assert manifest["paths"]["readme"] == "README.md"
-    assert manifest["paths"]["chatgptBatches"] == BATCHES
+    assert manifest["paths"]["batches"] == BATCHES
+    assert "chatgptBatches" not in manifest["paths"]
     assert manifest["paths"]["originalVideo"] == "source/original-video.mp4"
     # Every path the manifest lists exists in the archive.
     listed = [value for value in manifest["paths"].values() if value is not None]

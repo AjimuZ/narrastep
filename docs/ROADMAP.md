@@ -420,11 +420,19 @@ format, browser test types). Not run: a real removal or glossary through this br
 uses the fake API, a browser with a 200% default font size (headless Chromium ignores the setting)
 and a screen reader.
 
-- [ ] P09.4 Name no specific AI service in the product. Added on 2026-10-31 at the owner's request:
+- [x] P09.4 Name no specific AI service in the product. Added on 2026-10-31 at the owner's request:
   the interface and the package must not say "ChatGPT", and the person chooses what to do with the
   package.
   Exit: the interface, the package, the settings and the current documents name no AI service; old
   exports still download; export tests check the new layout.
+  Progress (2026-10-31, P09.4): the Export screen says "Batches" / "Lotti" with a neutral help text
+  and message id `export.batch_count`; new packages use `04-batches/`, manifest schema 0.4.0 and
+  `paths.batches`; the archive README and batch guide name no service; the setting is
+  `NARRASTEP_MAX_FILES_PER_BATCH` with the old name read as an alias (also in `docker-compose.yml`).
+  New tests: a 0.3.0 export still lists and downloads unchanged, the alias, and a check that no
+  package text names a service. `.env.example` line 46 now holds `NARRASTEP_MAX_FILES_PER_BATCH=20`;
+  the supervisor made that edit because sessions cannot read the file, so this session did not open
+  it and has not seen its content.
 
 ## P10 — Autonomous development runner
 

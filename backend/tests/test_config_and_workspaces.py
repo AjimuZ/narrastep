@@ -27,7 +27,7 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     monkeypatch.setenv("NARRASTEP_ALLOWED_VIDEO_EXTENSIONS", "mp4, .mkv")
     monkeypatch.setenv("NARRASTEP_CORS_ORIGINS", "http://localhost:4200,http://127.0.0.1:4200")
     monkeypatch.setenv("NARRASTEP_FRAME_DUPLICATE_THRESHOLD", "0.88")
-    monkeypatch.setenv("NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH", "17")
+    monkeypatch.setenv("NARRASTEP_MAX_FILES_PER_BATCH", "17")
     monkeypatch.setenv("NARRASTEP_RECORDING_MAX_CHUNK_MB", "8")
     monkeypatch.setenv("NARRASTEP_RECORDING_INTERRUPTED_AFTER_SECONDS", "45")
     monkeypatch.setenv("NARRASTEP_RECORDING_CHUNK_SECONDS", "3")
@@ -40,12 +40,29 @@ def test_compose_aliases_are_parsed(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert settings.allowed_video_extensions == [".mp4", ".mkv"]
     assert settings.allowed_origins == ["http://localhost:4200", "http://127.0.0.1:4200"]
     assert settings.duplicate_similarity_threshold == pytest.approx(0.88)
-    assert settings.chatgpt_max_files_per_batch == 17
+    assert settings.max_files_per_batch == 17
     assert settings.recording_max_chunk_bytes == 8 * 1024 * 1024
     assert settings.recording_interrupted_after_seconds == 45
     assert settings.recording_chunk_seconds == 3
     assert settings.recording_video_bits_per_second == 1_500_000
     assert settings.recording_max_frame_rate == 10
+
+
+def test_batch_limit_keeps_the_old_environment_name_as_an_alias(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Read the earlier setting name, and let the new name win when both are set."""
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("NARRASTEP_MAX_FILES_PER_BATCH", raising=False)
+    monkeypatch.setenv("NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH", "13")
+    assert Settings().max_files_per_batch == 13
+
+    monkeypatch.setenv("NARRASTEP_MAX_FILES_PER_BATCH", "9")
+    assert Settings().max_files_per_batch == 9
+
+    monkeypatch.delenv("NARRASTEP_MAX_FILES_PER_BATCH")
+    monkeypatch.delenv("NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH")
+    assert Settings().max_files_per_batch == 20
 
 
 def test_workspace_path_rejects_traversal(tmp_path: Path) -> None:
@@ -101,7 +118,7 @@ def test_configuration_enforces_local_private_runtime_invariants(tmp_path: Path)
     with pytest.raises(ValueError):
         Settings(data_root=tmp_path, allowed_video_extensions=[".avi"])
     with pytest.raises(ValueError):
-        Settings(data_root=tmp_path, chatgpt_max_files_per_batch=1)
+        Settings(data_root=tmp_path, max_files_per_batch=1)
     with pytest.raises(ValueError):
         Settings(
             data_root=tmp_path,

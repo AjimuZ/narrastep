@@ -89,8 +89,8 @@ export class ExportComponent implements OnInit {
     '03-transcript/reviewed-transcript.md',
     '03-transcript/subtitles.srt',
     '03-transcript/raw-transcript.json',
-    $localize`:@@export.file.batch:04-chatgpt-batches/batch-NN-of-NN/batch-input.md + up to 19 images`,
-    $localize`:@@export.file.manifest:metadata/manifest.json (schema 0.3.0)`,
+    $localize`:@@export.file.batch:04-batches/batch-NN-of-NN/batch-input.md + up to 19 images`,
+    $localize`:@@export.file.manifest:metadata/manifest.json (schema 0.4.0)`,
     'metadata/source.json',
   ];
 

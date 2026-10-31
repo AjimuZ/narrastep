@@ -96,8 +96,8 @@ every project.
 4. You review the transcript and screenshots, then export an immutable ZIP.
 
 Every export is one folder with numbered subfolders and a `README.md` that says where to start.
-Long exports also contain `04-chatgpt-batches/` folders sized for the ChatGPT web upload limit
-(20 files by default, configurable). Narrastep never uploads them. Details:
+Long exports also contain `04-batches/` folders, each holding at most 20 files by default
+(configurable); you choose what to do with them. Narrastep never uploads them. Details:
 [Processing pipeline](docs/PROCESSING_PIPELINE.md).
 
 ## Configuration
@@ -122,7 +122,7 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Longest screenshot edge in pixels sent to the model (256 to 4096) |
 | `NARRASTEP_SCREENSHOT_SELECTION_STRATEGY` | `legacy` | `legacy` or experimental `adaptive_v1` |
 | `NARRASTEP_IMAGE_BUDGET_PROFILE` | `balanced` | `compact`, `balanced` or `detailed` |
-| `NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH` | `20` | Files per ChatGPT upload batch |
+| `NARRASTEP_MAX_FILES_PER_BATCH` | `20` | Files per batch folder; the earlier name `NARRASTEP_CHATGPT_MAX_FILES_PER_BATCH` still works |
 
 Invalid values stop startup with a readable error.
 

@@ -34,7 +34,7 @@ Other rules:
   of the verb, never "Clicca".
 - Address the user as "tu" (Scegli, Controlla, Riprova), never "Lei" and never in the plural.
 - Sentence case, no taglines, the same word for the same thing everywhere.
-- Product names and file names are not translated (Narrastep, ChatGPT, `manifest.json`).
+- Product names and file names are not translated (Narrastep, `manifest.json`). The interface names no AI service; the person chooses the tool.
 - Language names (English, Italiano) are shown in their own language, and spoken-language names
   come from `Intl.DisplayNames` in the active language.
 - Italian text is often longer: no layout may truncate or break words at 320 px.

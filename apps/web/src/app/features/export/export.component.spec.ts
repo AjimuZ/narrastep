@@ -98,7 +98,9 @@ describe('ExportComponent', () => {
     );
     expect(element.querySelector('.history-row .ns-pill')!.textContent).toBe('Ready');
     expect(element.textContent).toContain('one evidence file and up to 19 images by default.');
-    expect(element.textContent).toContain('metadata/manifest.json (schema 0.3.0)');
+    expect(element.textContent).toContain('metadata/manifest.json (schema 0.4.0)');
+    expect(element.textContent).toContain('04-batches/batch-NN-of-NN/batch-input.md');
+    expect(element.textContent).not.toMatch(/chatgpt|openai|gpt/i);
     expect(element.querySelector('.estimate__number')!.textContent!.trim()).toBe('512.0 KB');
     const createButton = element.querySelector('button.ns-button--primary') as HTMLButtonElement;
     expect(createButton.textContent!.trim()).toBe('Create package');
