@@ -229,6 +229,11 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
   desktop`: 233 passed, 0 failed (`package-script.test.cjs` covers the wiring). Not run: the built
   application itself, and a Windows or macOS build.
 
+- [ ] P07.6 Use the Narrastep logo instead of the default Electron icon. Added on 2026-10-31 at the
+  owner's request; the owner's files are in `desktop/assets/`.
+  Exit: the desktop window, the source picker and the Windows portable build use the logo; the web
+  favicon is the same logo; the logo is listed in [Licenses](LICENSES.md).
+
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy
 stack; manual Windows check records one window with system audio; `--headless` still works.
 
@@ -407,6 +412,12 @@ project: 214 accessibility, 30 Process dialog, 18 glossary, 12 Storage, 10 speak
 format, browser test types). Not run: a real removal or glossary through this browser suite, which
 uses the fake API, a browser with a 200% default font size (headless Chromium ignores the setting)
 and a screen reader.
+
+- [ ] P09.4 Name no specific AI service in the product. Added on 2026-10-31 at the owner's request:
+  the interface and the package must not say "ChatGPT", and the person chooses what to do with the
+  package.
+  Exit: the interface, the package, the settings and the current documents name no AI service; old
+  exports still download; export tests check the new layout.
 
 ## P10 — Autonomous development runner
 
