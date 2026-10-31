@@ -1,0 +1,210 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1 i18n="@@document.title">Document</h1>
+      <p>{{ project()?.name || loadingProjectLabel }}</p>
+    </div>
+    <a
+      class="ns-button"
+      [routerLink]="['/projects', projectId(), 'review']"
+      i18n="@@export.back_to_review"
+      >Back to review</a
+    >
+  </header>
+
+  @if (errorMessage(); as message) {
+    <div class="ns-notice ns-notice--error page-error" role="alert">{{ message }}</div>
+  }
+  <div class="ns-notice ns-notice--ok page-error" role="status" [hidden]="!notice()">
+    {{ notice() }}
+  </div>
+
+  @if (loading()) {
+    <div
+      class="loading"
+      aria-label="Loading the document"
+      i18n-aria-label="@@document.loading"
+      aria-busy="true"
+    >
+      <span class="visually-hidden" i18n="@@document.loading_text">Loading the document…</span>
+      <ns-activity-line label="Loading the document" i18n-label="@@document.loading" />
+      <div class="ns-placeholder"></div>
+    </div>
+  } @else if (project()) {
+    <div class="document-layout">
+      <ns-window
+        class="generation-window"
+        title="Generation"
+        i18n-title="@@document.generation_title"
+        [primary]="true"
+      >
+        <p class="muted generation-help" i18n="@@document.intro">
+          The local model writes the document on this computer, using only the reviewed transcript
+          and screenshots of this project. Nothing is sent anywhere. It can take several minutes.
+        </p>
+
+        <div class="status-head">
+          <h3 id="generation-status" class="status-title" tabindex="-1" i18n="@@document.status">
+            Status
+          </h3>
+          @if (active() ?? latest(); as shown) {
+            <ns-status-pill [label]="statusLabel(shown).label" [tone]="statusLabel(shown).tone" />
+          } @else {
+            <ns-status-pill label="Not generated" i18n-label="@@document.state.none" tone="info" />
+          }
+        </div>
+
+        @if (active(); as run) {
+          <div class="progress">
+            <p class="muted progress__stage">{{ stageLabel(run) }}</p>
+            @if (run.partsTotal > 0) {
+              <ns-segmented-gauge [percent]="run.progressPercent" [label]="gaugeLabel(run)" />
+              <p class="mono progress__parts" aria-live="polite">{{ partsText(run) }}</p>
+            } @else {
+              <ns-activity-line
+                label="Generating the document"
+                i18n-label="@@document.generating"
+              />
+            }
+          </div>
+        } @else if (latest(); as last) {
+          @if (last.status === 'failed') {
+            <div class="ns-notice ns-notice--error failure" role="alert">
+              <span class="mono">{{ last.errorCode || 'GENERATION_FAILED' }}</span>
+              <span>{{ failureText(last) }}</span>
+            </div>
+          } @else if (last.status === 'cancelled') {
+            <p class="muted" i18n="@@document.cancelled_text">
+              The last generation was cancelled. Nothing was kept from it.
+            </p>
+          }
+        }
+
+        <div class="actions">
+          @if (active(); as run) {
+            <button
+              class="ns-button"
+              type="button"
+              [disabled]="busy() || run.status === 'cancelling'"
+              (click)="cancel()"
+            >
+              <ns-pixel-icon name="close" />
+              @if (run.status === 'cancelling') {
+                <span i18n="@@document.cancelling">Cancelling…</span>
+              } @else {
+                <span i18n="@@document.cancel">Cancel generation</span>
+              }
+            </button>
+          } @else {
+            <button
+              class="ns-button ns-button--primary"
+              type="button"
+              [disabled]="busy()"
+              (click)="generate()"
+            >
+              <ns-pixel-icon [name]="finished() ? 'refresh' : 'play'" />
+              @if (finished()) {
+                <span i18n="@@document.regenerate">Regenerate</span>
+              } @else {
+                <span i18n="@@document.generate">Generate document</span>
+              }
+            </button>
+          }
+        </div>
+        @if (finished() && !active()) {
+          <p class="ns-help actions__help" i18n="@@document.regenerate_help">
+            Regenerating writes a new document. The current one stays until the new one is ready.
+          </p>
+        }
+      </ns-window>
+
+      @if (finished(); as done) {
+        <ns-window
+          class="document-window"
+          title="Generated document"
+          i18n-title="@@document.result_title"
+        >
+          <p class="ns-help result-date">
+            <ng-container i18n="@@document.generated_at">Generated</ng-container>
+            <time [attr.datetime]="done.completedAt">{{ done.completedAt | date: 'medium' }}</time>
+          </p>
+          @if (documentLoading()) {
+            <ns-activity-line label="Reading the document" i18n-label="@@document.reading" />
+          } @else if (documentError(); as message) {
+            <div class="ns-notice ns-notice--error failure" role="alert">
+              <span>{{ message }}</span>
+              <button class="ns-button ns-button--small" type="button" (click)="retryDocument()">
+                <ns-pixel-icon name="refresh" /><span i18n="@@common.try_again">Try again</span>
+              </button>
+            </div>
+          } @else {
+            <article class="document-text">
+              @for (block of blocks(); track $index) {
+                @if (block.kind === 'heading') {
+                  @if (block.level === 3) {
+                    <h3>
+                      <ng-container
+                        *ngTemplateOutlet="runs; context: { $implicit: block.inlines }"
+                      />
+                    </h3>
+                  } @else {
+                    <h4>
+                      <ng-container
+                        *ngTemplateOutlet="runs; context: { $implicit: block.inlines }"
+                      />
+                    </h4>
+                  }
+                } @else if (block.kind === 'paragraph') {
+                  <p>
+                    <ng-container *ngTemplateOutlet="runs; context: { $implicit: block.inlines }" />
+                  </p>
+                } @else if (block.ordered) {
+                  <ol>
+                    @for (item of block.items; track $index) {
+                      <li>
+                        <ng-container *ngTemplateOutlet="runs; context: { $implicit: item }" />
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <ul>
+                    @for (item of block.items; track $index) {
+                      <li>
+                        <ng-container *ngTemplateOutlet="runs; context: { $implicit: item }" />
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            </article>
+          }
+        </ns-window>
+
+        <ns-window class="video-window" title="Video" i18n-title="@@processing.video">
+          @if (sourceRemoved()) {
+            <p class="ns-notice" role="status" i18n="@@review.video_removed">
+              The original video was removed from this computer after the package was created. The
+              transcript and the saved screenshots are still here.
+            </p>
+          } @else {
+            <video controls preload="metadata" [src]="api.videoUrl(projectId())">
+              <ng-container i18n="@@review.no_video_support"
+                >This browser cannot play the video.</ng-container
+              >
+            </video>
+          }
+        </ns-window>
+      }
+    </div>
+  }
+</section>
+
+<ng-template #runs let-items>
+  @for (run of items; track $index) {
+    @if (run.bold) {
+      <strong>{{ run.text }}</strong>
+    } @else {
+      <ng-container>{{ run.text }}</ng-container>
+    }
+  }
+</ng-template>

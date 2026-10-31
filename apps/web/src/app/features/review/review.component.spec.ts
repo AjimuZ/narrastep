@@ -97,6 +97,8 @@ describe('ReviewComponent', () => {
     removePrimaryScreenshot?: ReturnType<typeof vi.fn>;
     recoverScreenshotFromVideo?: ReturnType<typeof vi.fn>;
     openDialog?: ReturnType<typeof vi.fn>;
+    /** Puts one enabled generation model in `GET /models`; none by default. */
+    generationEnabled?: boolean;
   }): Promise<{
     fixture: ReturnType<typeof TestBed.createComponent<ReviewComponent>>;
     updateSegment: ReturnType<typeof vi.fn>;
@@ -154,6 +156,11 @@ describe('ReviewComponent', () => {
             mergeSegments,
             removePrimaryScreenshot,
             selectPrimaryScreenshot,
+            listModels: () =>
+              of({
+                localGeneration: 'available',
+                items: options?.generationEnabled ? [{ id: 'gemma-4-e2b', state: 'enabled' }] : [],
+              }),
             videoUrl: () => '/api/v1/projects/project-1/video',
             screenshotUrl: (id: string) => `/api/v1/screenshots/${id}/content`,
             screenshotThumbnailUrl: (id: string) => `/api/v1/screenshots/${id}/thumbnail`,
@@ -211,6 +218,22 @@ describe('ReviewComponent', () => {
     );
     const recover = element.querySelector('button[title="Recover current frame (R)"]');
     expect((recover as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('offers the Document link only when a generation model is enabled', async () => {
+    const without = await setup();
+    const withoutLinks = Array.from(
+      (without.fixture.nativeElement as HTMLElement).querySelectorAll('.page-header__actions a'),
+    ).map((link) => link.textContent!.trim());
+    expect(withoutLinks).toEqual(['Export']);
+    TestBed.resetTestingModule();
+
+    const enabled = await setup({ generationEnabled: true });
+    const links = Array.from(
+      (enabled.fixture.nativeElement as HTMLElement).querySelectorAll('.page-header__actions a'),
+    );
+    expect(links.map((link) => link.textContent!.trim())).toEqual(['Document', 'Export']);
+    expect(links[0]!.getAttribute('href')).toBe('/projects/project-1/document');
   });
 
   it('renders an accessible native selector with transcript as the default compact view', async () => {

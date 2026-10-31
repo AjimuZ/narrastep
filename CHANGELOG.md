@@ -16,7 +16,16 @@ All notable changes to Narrastep are documented in this file.
   and no model control. Importing from `data/models-import` and storage use per project are not in
   the screen yet. Two API error codes that had no text, `MODEL_IN_USE` and `MODEL_DELETE_FAILED`,
   are now translated.
-- Local document generation in the API (no screen yet): `POST /api/v1/projects/{id}/generations`
+- Document screen (`/projects/{id}/document`, English and Italian) for local generation. **Generate
+  document** starts a generation and shows its real progress: the stage, a gauge fed by the
+  finished parts the API reports and "Parts written: 1 of 3", with **Cancel generation**. When it
+  is ready the document is shown next to the project's video, and **Regenerate** writes a new one
+  while the current text stays until the new one is ready. A failed generation shows its code and a
+  translated explanation (for example not enough free memory). The screen and the **Document** link
+  in Review exist only while local generation is on and a model is enabled; otherwise the address
+  returns to the review. Copying the result and including it in a package are not offered yet, and
+  the `[mm:ss]` citations are plain text for now.
+- Local document generation in the API: `POST /api/v1/projects/{id}/generations`
   queues a job on the same worker as processing and export, which sends the reviewed transcript and
   screenshots to the enabled local model in chronological parts and stores
   `projects/{id}/generations/{generationId}/document.md` with the prompt version and the model file

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GenerationModel, ProcessingJob } from '../api.models';
+import { DocumentGeneration, GenerationModel, ProcessingJob } from '../api.models';
 import { ApiService } from './api.service';
 
 const POLLED_JOB: ProcessingJob = {
@@ -144,6 +144,113 @@ describe('ApiService model calls', () => {
 
     await vi.advanceTimersByTimeAsync(10_000);
     expect(getModel).toHaveBeenCalledTimes(4);
+  });
+});
+
+const GENERATION: DocumentGeneration = {
+  id: 'generation-1',
+  projectId: 'project-1',
+  modelId: 'gemma-4-e2b',
+  status: 'queued',
+  currentStage: 'queued',
+  progressPercent: 0,
+  message: 'Waiting for the local worker.',
+  partsTotal: 0,
+  partsCompleted: 0,
+  language: null,
+  promptVersion: 'generation-prompts-v1',
+  documentAvailable: false,
+  sizeBytes: null,
+  errorCode: null,
+  errorMessage: null,
+  version: 1,
+  createdAt: '2026-07-15T10:00:00Z',
+  startedAt: null,
+  completedAt: null,
+};
+
+describe('ApiService generation calls', () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function setup() {
+    await TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    return { api: TestBed.inject(ApiService), http: TestBed.inject(HttpTestingController) };
+  }
+
+  it('sends each generation action to its documented endpoint', async () => {
+    const { api, http } = await setup();
+    const calls: [() => unknown, string, string][] = [
+      [() => api.createGeneration('project-1'), 'POST', '/api/v1/projects/project-1/generations'],
+      [() => api.getGeneration('generation-1'), 'GET', '/api/v1/generations/generation-1'],
+      [
+        () => api.cancelGeneration('generation-1'),
+        'POST',
+        '/api/v1/generations/generation-1/cancel',
+      ],
+    ];
+
+    for (const [call, method, url] of calls) {
+      (call() as { subscribe: () => void }).subscribe();
+      const request = http.expectOne(url);
+      expect(request.request.method).toBe(method);
+      request.flush(GENERATION);
+    }
+    http.verify();
+  });
+
+  it('unwraps the generation list and reads the document as text', async () => {
+    const { api, http } = await setup();
+    let listed: DocumentGeneration[] = [];
+    let text = '';
+
+    api.listGenerations('project-1').subscribe((items) => (listed = items));
+    http
+      .expectOne('/api/v1/projects/project-1/generations')
+      .flush({ items: [GENERATION], total: 1 });
+    api.getGenerationDocument('generation-1').subscribe((body) => (text = body));
+    const request = http.expectOne('/api/v1/generations/generation-1/document');
+    expect(request.request.responseType).toBe('text');
+    request.flush('# Meeting\n');
+
+    expect(listed).toEqual([GENERATION]);
+    expect(text).toBe('# Meeting\n');
+    http.verify();
+  });
+
+  it('polls every two seconds and ends with the first final status', async () => {
+    vi.useFakeTimers();
+    const { api } = await setup();
+    const getGeneration = vi
+      .spyOn(api, 'getGeneration')
+      .mockReturnValueOnce(of({ ...GENERATION, status: 'processing', partsTotal: 3 }))
+      .mockReturnValueOnce(throwError(() => new Error('API restarting')))
+      .mockReturnValueOnce(
+        of({ ...GENERATION, status: 'processing', partsTotal: 3, partsCompleted: 1 }),
+      )
+      .mockReturnValue(of({ ...GENERATION, status: 'completed', partsTotal: 3 }));
+    const seen: string[] = [];
+    let completed = false;
+
+    api.monitorGeneration('generation-1').subscribe({
+      next: (generation) => seen.push(`${generation.status}:${generation.partsCompleted}`),
+      complete: () => (completed = true),
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toEqual(['processing:0']);
+
+    // The failed poll is skipped and the next one still happens.
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(seen).toEqual(['processing:0', 'processing:1']);
+    expect(completed).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(seen).toEqual(['processing:0', 'processing:1', 'completed:0']);
+    expect(completed).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(getGeneration).toHaveBeenCalledTimes(4);
   });
 });
 

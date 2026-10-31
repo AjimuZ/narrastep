@@ -37,6 +37,7 @@ import {
 import { errorText } from '../../core/i18n/error-text';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ApiService } from '../../core/services/api.service';
+import { GenerationAvailability } from '../document/generation-availability';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -100,6 +101,8 @@ export class ReviewComponent implements OnInit {
     'all' | 'missing' | 'duplicate' | 'low_confidence' | 'manual' | 'problems'
   >('all');
   readonly editorPaneWidth = signal('1.35fr');
+  /** True only when local generation is on and a model is enabled; the Document link depends on it. */
+  readonly generationAvailable = signal(false);
 
   /** True once the original video was removed after export (P09.2): no player, no frame recovery. */
   readonly sourceRemoved = computed(() => !!this.project()?.videoAsset?.sourceRemovedAt);
@@ -155,6 +158,7 @@ export class ReviewComponent implements OnInit {
 
   private readonly api = inject(ApiService);
   private readonly language = inject(LanguageService);
+  private readonly availability = inject(GenerationAvailability);
   private readonly dialog = inject(Dialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly videoPlayer = viewChild<ElementRef<HTMLVideoElement>>('videoPlayer');
@@ -168,6 +172,10 @@ export class ReviewComponent implements OnInit {
   ngOnInit(): void {
     // A language switch reloads the page, so it asks about unsaved edits like any other exit.
     this.destroyRef.onDestroy(this.language.registerLeaveCheck(() => this.canDeactivate()));
+    this.availability
+      .check()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((available) => this.generationAvailable.set(available));
     const storedPaneWidth = globalThis.localStorage?.getItem('narrastep.review.editorPaneWidth');
     if (storedPaneWidth && /^\d(?:\.\d{1,2})?fr$/.test(storedPaneWidth)) {
       this.editorPaneWidth.set(storedPaneWidth);

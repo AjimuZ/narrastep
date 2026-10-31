@@ -26,6 +26,7 @@ import {
   CreateExportRequest,
   CreateProjectRequest,
   CreateRecordingRequest,
+  DocumentGeneration,
   ExportEstimate,
   GenerationModel,
   GenerationModelList,
@@ -470,6 +471,55 @@ export class ApiService {
     return timer(0, 2_000).pipe(
       switchMap(() => this.getModel(modelId).pipe(catchError(() => EMPTY))),
       takeWhile((model) => model.state === 'downloading' || model.state === 'verifying', true),
+    );
+  }
+
+  /** Queues the local generation of a document; answers the `queued` generation (202). */
+  createGeneration(projectId: string): Observable<DocumentGeneration> {
+    return this.http.post<DocumentGeneration>(`${API_ROOT}/projects/${projectId}/generations`, {});
+  }
+
+  /** Lists the generations of a project, newest first. */
+  listGenerations(projectId: string): Observable<DocumentGeneration[]> {
+    return this.http
+      .get<DocumentGeneration[] | { items: DocumentGeneration[] }>(
+        `${API_ROOT}/projects/${projectId}/generations`,
+      )
+      .pipe(map(unwrapItems));
+  }
+
+  /** Reads one generation: status, progress per part and failure code. */
+  getGeneration(generationId: string): Observable<DocumentGeneration> {
+    return this.http.get<DocumentGeneration>(`${API_ROOT}/generations/${generationId}`);
+  }
+
+  /** Cancels a queued generation at once, or asks a running one to stop; answers its new state. */
+  cancelGeneration(generationId: string): Observable<DocumentGeneration> {
+    return this.http.post<DocumentGeneration>(`${API_ROOT}/generations/${generationId}/cancel`, {});
+  }
+
+  /** Reads the Markdown text of a completed generation. */
+  getGenerationDocument(generationId: string): Observable<string> {
+    return this.http.get(`${API_ROOT}/generations/${generationId}/document`, {
+      responseType: 'text',
+    });
+  }
+
+  /**
+   * Polls a generation every two seconds and completes after the first answer that is final
+   * (`completed`, `failed` or `cancelled`), which it still emits. A failed poll is skipped, so an
+   * API restart does not end the watch; unsubscribing stops the timer.
+   */
+  monitorGeneration(generationId: string): Observable<DocumentGeneration> {
+    return timer(0, 2_000).pipe(
+      switchMap(() => this.getGeneration(generationId).pipe(catchError(() => EMPTY))),
+      takeWhile(
+        (generation) =>
+          generation.status === 'queued' ||
+          generation.status === 'processing' ||
+          generation.status === 'cancelling',
+        true,
+      ),
     );
   }
 }

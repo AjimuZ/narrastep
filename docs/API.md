@@ -354,9 +354,11 @@ copy is deleted. The import folder is never modified.
 
 ### Document generation (P06.3d)
 
-Specification: [Local generation](LOCAL_GENERATION.md#generation-job-p063d). No screen calls these
-endpoints yet (P06.4); they are tested with a stand-in model server. The job behind them also ran
-with the real model in an opt-in test (P06.3e), which calls the job directly, not these endpoints.
+Specification: [Local generation](LOCAL_GENERATION.md#generation-job-p063d). The Document screen
+(P06.4b) calls them (queue, list, poll, cancel and read the document), tested against a fake API in
+the browser; the endpoints themselves are tested with a stand-in model server. The job behind them
+also ran with the real model in an opt-in test (P06.3e), which calls the job directly, not these
+endpoints; no run has gone through the screen, the API, Celery and a real model together.
 
 `POST /projects/{projectId}/generations` takes an optional `{"language": "it"}` (a Whisper language
 code; `auto` or blank means the transcript language) and answers `202` with the queued generation:
@@ -429,8 +431,8 @@ code; `auto` or blank means the transcript language) and answers `202` with the 
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- Screens for the generation and model endpoints, and the optional inclusion of a generated
-  document in an export package (P06.4); the benchmark (P06.5).
+- The optional inclusion of a generated document in an export package and copying it as Markdown
+  (P06.4c, P06.4d); the benchmark (P06.5).
 
 ## Progress events
 

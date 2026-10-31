@@ -16,6 +16,11 @@
           <ns-status-pill [label]="unsavedCountLabel()" tone="wait" />
         </span>
       }
+      @if (generationAvailable()) {
+        <a class="ns-button" [routerLink]="['/projects', projectId(), 'document']">
+          <ns-pixel-icon name="edit" /><span i18n="@@review.document">Document</span>
+        </a>
+      }
       <a class="ns-button" [routerLink]="['/projects', projectId(), 'export']">
         <ns-pixel-icon name="export" /><span i18n="@@review.export">Export</span>
       </a>

@@ -384,6 +384,37 @@ export interface GenerationModel {
   updatedAt: string | null;
 }
 
+/** State of a document generation; the last three are final. */
+export type DocumentGenerationStatus =
+  'queued' | 'processing' | 'cancelling' | 'completed' | 'failed' | 'cancelled';
+
+/**
+ * `GET /generations/{id}`: one local document generation. `partsCompleted` of `partsTotal` is real
+ * work done (`partsTotal` is 0 until the parts are planned); `errorMessage` is English and free of
+ * transcript text.
+ */
+export interface DocumentGeneration {
+  id: string;
+  projectId: string;
+  modelId: string;
+  status: DocumentGenerationStatus;
+  currentStage: string;
+  progressPercent: number;
+  message: string;
+  partsTotal: number;
+  partsCompleted: number;
+  language: string | null;
+  promptVersion: string;
+  documentAvailable: boolean;
+  sizeBytes: number | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  version: number;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 /** `GET /models`: the catalog and whether the `NARRASTEP_LOCAL_GENERATION` kill switch is set. */
 export interface GenerationModelList {
   localGeneration: 'available' | 'disabled';

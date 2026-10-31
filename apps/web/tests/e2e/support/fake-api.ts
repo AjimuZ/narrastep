@@ -18,6 +18,74 @@ export interface FakeScenario {
    * checked in that state; `advancing` moves on at every poll until the model is installed.
    */
   modelDownload?: 'stalled' | 'advancing';
+  /** Starts Light as `enabled` instead of `installed`, which is what makes the Document screen exist. */
+  lightEnabled?: boolean;
+  /** Starts with one finished generation, so the Document screen opens on its result. */
+  generationExisting?: boolean;
+  /**
+   * How a started generation behaves: `advancing` (default) moves one step at every poll until it
+   * completes, `stalled` stays at part 1 of 3, `failing` stops there with an out-of-memory failure.
+   */
+  generationRun?: 'advancing' | 'stalled' | 'failing';
+}
+
+/** Markdown the fake API returns for a generated document; it leads with the stored comment. */
+export const FAKE_DOCUMENT = `<!--
+narrastep generated document
+promptVersion: generation-prompts-v1
+-->
+
+# Contract search workflow
+
+**1. Summary**
+
+The customer opens **Search** and reviews the results [00:02].
+
+## Steps
+
+1. Select Search and review the results. [00:02]
+2. Open the customer record from the list. [00:06-00:12]
+
+- Not stated in the recording: the owner of the follow-up.
+`;
+
+/** Steps a started generation goes through, one per poll: stage, finished parts of 3 and percent. */
+const GENERATION_STEPS = [
+  { status: 'queued', stage: 'queued', done: 0, total: 0, percent: 0 },
+  { status: 'processing', stage: 'generating', done: 0, total: 3, percent: 10 },
+  { status: 'processing', stage: 'generating', done: 1, total: 3, percent: 33 },
+  { status: 'processing', stage: 'generating', done: 2, total: 3, percent: 57 },
+  { status: 'processing', stage: 'merging', done: 3, total: 3, percent: 90 },
+  { status: 'completed', stage: 'completed', done: 3, total: 3, percent: 100 },
+] as const;
+
+/** Builds a generation payload at the given step of `GENERATION_STEPS`; `failed` replaces step 3. */
+function generationRow(id: string, step: number, outcome: 'ok' | 'failed' | 'cancelled' = 'ok') {
+  const current = GENERATION_STEPS[step]!;
+  const failed = outcome === 'failed';
+  const cancelled = outcome === 'cancelled';
+  const status = failed ? 'failed' : cancelled ? 'cancelled' : current.status;
+  return {
+    id,
+    projectId: 'project-1',
+    modelId: 'gemma-4-e2b',
+    status,
+    currentStage: failed || cancelled ? status : current.stage,
+    progressPercent: current.percent,
+    message: 'Fake generation.',
+    partsTotal: current.total,
+    partsCompleted: current.done,
+    language: null,
+    promptVersion: 'generation-prompts-v1',
+    documentAvailable: status === 'completed',
+    sizeBytes: status === 'completed' ? FAKE_DOCUMENT.length : null,
+    errorCode: failed ? 'GENERATION_OUT_OF_MEMORY' : null,
+    errorMessage: failed ? 'The worker has less free memory than the model needs.' : null,
+    version: step + 1,
+    createdAt: timestamp,
+    startedAt: step > 0 ? timestamp : null,
+    completedAt: status === 'completed' ? timestamp : null,
+  };
 }
 
 /** Install states of a generation model, as `GET /models` reports them. */
@@ -184,9 +252,26 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
   ];
   // Light is installed and Quality is not, so Settings shows both an Enable and an Install control.
   let models = [
-    modelRow('gemma-4-e2b', 'Light', 'installed', 3.2, 1),
+    modelRow('gemma-4-e2b', 'Light', scenario.lightEnabled ? 'enabled' : 'installed', 3.2, 1),
     modelRow('gemma-4-e4b', 'Quality', 'not_installed', 5.2),
   ];
+  // Generations, newest first, each with the step of `GENERATION_STEPS` it has reached.
+  let generations: { id: string; step: number; outcome: 'ok' | 'failed' | 'cancelled' }[] =
+    scenario.generationExisting
+      ? [{ id: 'generation-1', step: GENERATION_STEPS.length - 1, outcome: 'ok' }]
+      : [];
+  /** Moves a running generation one step on its poll, following the scenario's run mode. */
+  const advanceGeneration = (item: (typeof generations)[number]) => {
+    const run = scenario.generationRun ?? 'advancing';
+    if (item.outcome !== 'ok' || item.step >= GENERATION_STEPS.length - 1) {
+      return;
+    }
+    if (run === 'advancing' || item.step < 2) {
+      item.step += 1;
+    } else if (run === 'failing') {
+      item.outcome = 'failed';
+    }
+  };
   /** Returns the model with another state and the given share of the download received. */
   const withState = (model: (typeof models)[number], state: FakeModelState, done = 0) => ({
     ...model,
@@ -329,6 +414,51 @@ export async function useFakeApi(context: BrowserContext, scenario: FakeScenario
       };
       storageRows = storageRows.map((item) => (item === row ? updated : item));
       await route.fulfill({ json: updated });
+    } else if (path === '/api/v1/projects/project-1/generations') {
+      const refuse = (status: number, code: string, message: string) =>
+        route.fulfill({ status, json: { error: { code, message, details: {} } } });
+      if (method === 'GET') {
+        const items = generations.map((item) => generationRow(item.id, item.step, item.outcome));
+        await route.fulfill({ json: { items, total: items.length } });
+      } else if (scenario.localGeneration === 'disabled') {
+        await refuse(403, 'LOCAL_GENERATION_DISABLED', 'Local generation is turned off.');
+      } else if (!models.some((model) => model.state === 'enabled')) {
+        await refuse(409, 'GENERATION_MODEL_UNAVAILABLE', 'The model is not enabled.');
+      } else if (generations.some((item) => item.outcome === 'ok' && item.step < 5)) {
+        await refuse(409, 'PROJECT_BUSY', 'The project already has a generation.');
+      } else {
+        const created = {
+          id: `generation-${generations.length + 1}`,
+          step: 0,
+          outcome: 'ok' as const,
+        };
+        generations = [created, ...generations];
+        await route.fulfill({ status: 202, json: generationRow(created.id, 0) });
+      }
+    } else if (/^\/api\/v1\/generations\/[^/]+(\/[a-z]+)?$/.test(path)) {
+      const [, generationId, action] = /^\/api\/v1\/generations\/([^/]+)(?:\/([a-z]+))?$/.exec(
+        path,
+      )!;
+      const item = generations.find((candidate) => candidate.id === generationId);
+      if (!item) {
+        await route.fulfill({
+          status: 404,
+          json: {
+            error: { code: 'GENERATION_NOT_FOUND', message: 'Not found.', details: {} },
+          },
+        });
+      } else if (action === 'document') {
+        await route.fulfill({ contentType: 'text/markdown', body: FAKE_DOCUMENT });
+      } else if (action === 'cancel') {
+        // The fake stops a generation at once; the API reports `cancelling` for a running one first.
+        if (item.outcome === 'ok' && item.step < GENERATION_STEPS.length - 1) {
+          item.outcome = 'cancelled';
+        }
+        await route.fulfill({ status: 202, json: generationRow(item.id, item.step, item.outcome) });
+      } else {
+        advanceGeneration(item);
+        await route.fulfill({ json: generationRow(item.id, item.step, item.outcome) });
+      }
     } else if (path === '/api/v1/models' && method === 'GET') {
       await route.fulfill({
         json: { localGeneration: scenario.localGeneration ?? 'available', items: models },

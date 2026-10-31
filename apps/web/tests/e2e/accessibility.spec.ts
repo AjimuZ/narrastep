@@ -58,6 +58,25 @@ const SCREENS: Screen[] = [
     ready: { en: 'Create package', it: 'Crea pacchetto' },
   },
   {
+    name: 'review with the Document link',
+    path: '/projects/project-1/review',
+    scenario: { status: 'review', lightEnabled: true },
+    ready: { en: 'Save text', it: 'Salva testo' },
+  },
+  {
+    name: 'document before the first generation',
+    path: '/projects/project-1/document',
+    scenario: { status: 'review', lightEnabled: true },
+    ready: { en: 'Generate document', it: 'Genera documento' },
+  },
+  {
+    name: 'document with a result',
+    path: '/projects/project-1/document',
+    scenario: { status: 'review', lightEnabled: true, generationExisting: true },
+    // The text of the stored document is on the page only once it has been read.
+    ready: { en: 'The customer opens', it: 'The customer opens' },
+  },
+  {
     name: 'storage',
     path: '/storage',
     scenario: { status: 'review' },
@@ -140,6 +159,12 @@ const SETTINGS_NAMES = {
     delete: 'Elimina il modello Leggero',
     confirmDelete: 'Elimina modello',
   },
+} as const;
+
+/** Accessible names of the Document controls and states the tests use, per interface language. */
+const DOCUMENT_NAMES = {
+  en: { start: 'Generate document', cancel: 'Cancel generation', cancelled: 'Cancelled' },
+  it: { start: 'Genera documento', cancel: 'Annulla generazione', cancelled: 'Annullato' },
 } as const;
 
 /** Opens Settings and the license panel of the model that is not installed; returns the panel. */
@@ -286,6 +311,40 @@ for (const { code, locale } of LANGUAGES) {
       const confirming = await scanContrast(page);
       expect(confirming.textFailures).toEqual([]);
       expect(confirming.controlFailures).toEqual([]);
+    });
+
+    test('document progress, cancelled and failed generations keep their contrast', async ({
+      context,
+      page,
+    }) => {
+      const names = DOCUMENT_NAMES[code];
+      for (const run of ['stalled', 'failing'] as const) {
+        await useFakeApi(context, {
+          status: 'review',
+          lightEnabled: true,
+          generationRun: run,
+        });
+        await openScreen(page, screenNamed('document before the first generation'), code);
+        await page.getByRole('button', { name: names.start }).click();
+        if (run === 'stalled') {
+          const gauge = page.locator('.progress [role="img"]');
+          await expect(gauge).toHaveAttribute('aria-label', /33%/, { timeout: 15_000 });
+          const progress = await scanContrast(page);
+          expect(progress.textFailures).toEqual([]);
+          expect(progress.controlFailures).toEqual([]);
+
+          await page.getByRole('button', { name: names.cancel }).click();
+          await expect(page.locator('.status-head .ns-pill')).toHaveText(names.cancelled);
+          const cancelled = await scanContrast(page);
+          expect(cancelled.textFailures).toEqual([]);
+          expect(cancelled.controlFailures).toEqual([]);
+        } else {
+          await expect(page.locator('.failure')).toBeVisible({ timeout: 15_000 });
+          const failed = await scanContrast(page);
+          expect(failed.textFailures).toEqual([]);
+          expect(failed.controlFailures).toEqual([]);
+        }
+      }
     });
 
     test('hovered buttons, rows and menu entries keep their contrast', async ({
@@ -586,6 +645,26 @@ for (const { code, locale } of LANGUAGES) {
       await expect(page.getByRole('button', { name: names.delete })).toBeFocused();
     });
 
+    test('document generation starts with the keyboard and keeps focus on the status', async ({
+      context,
+      page,
+    }) => {
+      await useFakeApi(context, { status: 'review', lightEnabled: true, generationRun: 'stalled' });
+      const names = DOCUMENT_NAMES[code];
+      await openScreen(page, screenNamed('document before the first generation'), code);
+      const start = page.getByRole('button', { name: names.start });
+      await start.focus();
+      await page.keyboard.press('Enter');
+
+      // The button that had the focus is replaced by Cancel, so the status heading takes it.
+      await expect(page.locator('#generation-status')).toBeFocused();
+      const cancel = page.getByRole('button', { name: names.cancel });
+      await cancel.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('.status-head .ns-pill')).toHaveText(names.cancelled);
+      await expect(page.locator('#generation-status')).toBeFocused();
+    });
+
     test('split dialog and screenshot preview close with Escape', async ({ context, page }) => {
       await useFakeApi(context, { status: 'review' });
       await openScreen(page, screenNamed('review'), code);
@@ -804,6 +883,26 @@ for (const { code, locale } of LANGUAGES) {
           }
         });
       }
+
+      test('document progress fits and keeps Cancel reachable', async ({ context, page }) => {
+        await useFakeApi(context, {
+          status: 'review',
+          lightEnabled: true,
+          generationRun: 'stalled',
+        });
+        await openScreen(page, screenNamed('document before the first generation'), code);
+        await page.getByRole('button', { name: DOCUMENT_NAMES[code].start }).click();
+        await expect(page.locator('.progress [role="img"]')).toBeVisible({ timeout: 15_000 });
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        expect(await clippedControls(page)).toEqual([]);
+        expect(await clippedText(page)).toEqual([]);
+        if (viewport.width <= 390) {
+          expect(await smallTargets(page)).toEqual([]);
+        }
+        const cancel = page.getByRole('button', { name: DOCUMENT_NAMES[code].cancel });
+        await cancel.scrollIntoViewIfNeeded();
+        await expect(cancel).toBeInViewport();
+      });
 
       test('settings license panel fits and keeps its actions reachable', async ({
         context,

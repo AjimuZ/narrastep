@@ -7,7 +7,9 @@ which exists since P06.2b, the enable, disable and delete API (P06.2c) and the i
 (P06.2d), and the generation job, which starts the server, and its endpoints, which exist since
 P06.3d and which ran with the real server and E2B files in an opt-in test in P06.3e (see
 [Verification](#verification)). Since P06.4a the Settings screen installs, enables, disables and
-deletes the models ([UI](UI.md#settings-p064a)); no screen offers generation itself yet (P06.4b).
+deletes the models ([UI](UI.md#settings-p064a)), and since P06.4b the Document screen generates,
+follows, cancels and shows a document ([UI](UI.md#document-p064b)); it was tested only against a
+fake API.
 Version 0.2 exports evidence and prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
@@ -378,8 +380,9 @@ itself also ran with the real server and model in the [opt-in integration test](
   worker owns with `GENERATION_INTERRUPTED` and removes its folder. For the same project the API
   refuses processing, deletion and removal of the original video while a generation is active, and
   generating while the project is queued, processing or exporting.
-- **Not done.** The Document screen, the document in an export package and the import control in
-  Settings (P06.4b to P06.4d), the clickable citations (P06.6) and the benchmark (P06.5). The context size (8192) and
+- **Not done.** The document in an export package, copying the result and the import control in
+  Settings (P06.4c and P06.4d), the clickable citations (P06.6) and the benchmark (P06.5). The
+  Document screen (P06.4b) has not run against the real API, Celery or a real model. The context size (8192) and
   the part budget are estimates until the benchmark measures them. A worker killed outright can
   leave its `llama-server` child running until the container stops.
 

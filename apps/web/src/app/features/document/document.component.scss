@@ -1,0 +1,141 @@
+// Document screen layout: the generation controls above the result, with the video beside the text
+// when the content column is wide, following the container rather than viewport breakpoints.
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.page-error {
+  margin-bottom: var(--space-4);
+}
+
+.page-error[hidden] {
+  display: none;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.document-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.generation-window {
+  grid-column: 1 / -1;
+}
+
+@container (min-width: 48rem) {
+  .document-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  }
+
+  .video-window {
+    position: sticky;
+    top: 4rem;
+  }
+}
+
+.generation-help {
+  margin: 0 0 var(--space-3);
+}
+
+.status-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.status-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.progress {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.progress p {
+  margin: 0;
+}
+
+.progress__parts {
+  font-size: var(--text-xs);
+}
+
+.failure {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.actions__help {
+  margin: var(--space-2) 0 0;
+}
+
+.result-date {
+  margin: 0 0 var(--space-3);
+}
+
+.result-date time {
+  margin-left: var(--space-1);
+}
+
+.document-text {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.document-text h3,
+.document-text h4,
+.document-text p,
+.document-text ul,
+.document-text ol {
+  margin: 0;
+}
+
+.document-text h3 {
+  font-size: var(--text-md);
+}
+
+.document-text h4 {
+  font-size: var(--text-sm);
+}
+
+.document-text ul,
+.document-text ol {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-5);
+}
+
+video {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  border: 1px solid var(--frame);
+  border-radius: var(--radius);
+  background: var(--color-bg-deep);
+}
+
+p.ns-notice {
+  margin: 0;
+}

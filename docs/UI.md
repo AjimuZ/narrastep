@@ -243,7 +243,8 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
     **Record**, **New project**, **Storage** (Italian Spazio; it reuses the `copy` icon because
     a new icon would be an asset task) and **Settings** (Italian Impostazioni; the `settings` icon).
     A planned screen never appears as an enabled entry: the Document screen has none, because it
-    is reached from a project.
+    is reached from a project (the **Document** link in Review, [shown only while generation is
+    available](#document-p064b)).
   - The current entry has `aria-current="page"`; every project screen counts as Projects except the
     new-project form.
   - The health pill asks `GET /api/v1/health` (same origin, no other request) at start and every
@@ -263,7 +264,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Processing | `/projects/:id` | Stage list with segmented gauges and real percentages; cancel and retry. Action: Open review |
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every `[mm:ss]` is a button that moves the video to that time. Action: Save |
 | Export | `/projects/:id/export` | Package options, size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
-| Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled |
+| Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled. Implemented in P06.4b except the clickable citations (P06.6), copy and the package (P06.4c, P06.4d) ([Document](#document-p064b)) |
 | Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project. The language switch is here too. Implemented in P06.4a except the import and the storage use ([Settings](#settings-p064a)) |
 
 ### Implemented screens (P04.3)
@@ -278,7 +279,7 @@ The table above is the target. What the English interface does today:
 | New project | Three steps (Project, Video, Processing) each in one primary window; type cards are `.ns-row` radio cards; the **Glossary** field (a text area, one name or term per line, optional) sits under "More options" and is sent as a normalized list, with an error for more than 200 terms or a term over 80 characters, and help that says a long list is cut after about 500 characters (P09.1); **Create project**, then **Upload video** with a segmented upload gauge fed by the real upload percentage, then **Start processing** or Process later |
 | Processing | Title "Processing" with the project name; the stage list is the primary window. The API reports progress for the whole job only, so one overall gauge shows that value, finished stages show a full gauge, the running stage an activity line and pending stages only a word. **Open review**, Cancel processing, Retry processing; Project, Processing settings and Counters windows beside it |
 | Review (video removed) | After the original video is removed, the Video window shows "The original video was removed from this computer after the package was created. The transcript and the saved screenshots are still here." instead of the player, and **Recover current frame** is disabled; the Export screen disables **Include the original video** with the same explanation (P09.2) |
-| Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen. The Transcript window has a **Speaker** select (No label, You, Others; Italian Chi parla: Nessuna etichetta, Tu, Altri) beside the confidence, saved immediately without touching unsaved text; an automatic label adds "Set from the audio levels", a labelled segment shows its speaker in the Segments row, and the result is announced in the polite live region ("Speaker of segment 1: Others."). The select stays enabled while saving so focus never jumps; a choice made meanwhile is sent after the first, and a refused save puts the stored label back and shows the error (P05.5) |
+| Review | Title "Review" with the project name; Segments, Transcript (primary), Video and Screenshot windows with the existing breakpoints, shortcuts, pane width and view switcher; the selected segment row has `aria-current`. Primary action **Save text**; **Export** opens the export screen; **Document** (Italian Documento), before it, opens the Document screen and exists only while local generation is available (P06.4b). The Transcript window has a **Speaker** select (No label, You, Others; Italian Chi parla: Nessuna etichetta, Tu, Altri) beside the confidence, saved immediately without touching unsaved text; an automatic label adds "Set from the audio levels", a labelled segment shows its speaker in the Segments row, and the result is announced in the polite live region ("Speaker of segment 1: Others."). The select stays enabled while saving so focus never jumps; a choice made meanwhile is sent after the first, and a refused save puts the stored label back and shows the error (P05.5) |
 | Export | Title "Export" with the project name; New package (primary: contents, original-video option, **Create package**, the current package with an activity line, because the worker writes fixed stage values rather than a measured percentage), Size estimate, and Packages titled with each stored ZIP name and **Download package** |
 | Not found | "Page not found" with **Open projects** |
 
@@ -321,6 +322,56 @@ activity line, notice, pixel icons, confirmation dialog):
   license link opens a new tab in a browser; the desktop window cancels every popup, so there it
   does nothing, and only the license panel of **Install** prints the address for the user to read.
 
+### Document (P06.4b)
+
+`/projects/:id/document` (`apps/web/src/app/features/document/`, Italian **Documento**) uses only
+existing tokens and primitives (window, button, status pill, segmented gauge, activity line,
+notice, pixel icons):
+
+- **Availability.** The screen exists only while local generation is available: `GET /models`
+  answers `localGeneration: "available"` **and** at least one model has the state `enabled`
+  (`isGenerationAvailable`). `generationAvailableGuard` checks this when the route is entered; if
+  it is false, or the API cannot be reached, the address redirects to `/projects/:id/review`. The
+  **Document** link in the Review header (`GenerationAvailability.check()`, same rule) is rendered
+  only when the answer is true, so a disabled, not installed, only installed or failed model leaves
+  no link and no route. A model disabled while the screen is open is not noticed until the next
+  navigation; the API then refuses a new generation with `GENERATION_MODEL_UNAVAILABLE`, which the
+  screen shows in an alert.
+- **Generation window** (primary): one sentence on what happens (local, nothing is sent), a
+  **Status** heading with a pill (Not generated, Waiting to start, Generating, Cancelling,
+  Completed, Failed, Cancelled) and one button. **Generate document** (or **Regenerate** when a
+  finished document exists) calls `POST /projects/{id}/generations` and is disabled while the
+  request is in flight. While a generation is queued, running or being cancelled the button is
+  **Cancel generation** (`POST /generations/{id}/cancel`; **Cancelling…** and disabled once the
+  API reports `cancelling`).
+- **Progress** is real, from polling `GET /generations/{id}` every 2 seconds (the poll also resumes
+  a generation that was running when the screen opened, and stops when the screen is left): the
+  stage in words (Waiting for the local worker, Collecting the reviewed evidence, Starting the
+  local model, Writing the document, Merging the parts, Saving the document), and once the parts
+  are planned a segmented gauge from `progressPercent` named "Document generation, 33%" with
+  "Parts written: 1 of 3" (`partsCompleted` of `partsTotal`) in a polite live region. Before the
+  parts are planned an activity line stands in, because no percentage exists yet.
+- **Failure and cancellation.** A failed generation shows its `errorCode` and a sentence: the
+  API's English `errorMessage` in English, the translation of the code in other languages
+  (`GENERATION_OUT_OF_MEMORY`, `GENERATION_SERVER_FAILED`, `GENERATION_FAILED`,
+  `GENERATION_INTERRUPTED`, `GENERATION_MODEL_UNAVAILABLE`, `WORKER_BUSY`), and the button offers
+  to generate again. A cancelled one says nothing was kept.
+- **Result.** The newest completed generation appears in two windows: **Generated document** (the
+  text read from `GET /generations/{id}/document`) and **Video** (the project's native player,
+  beside the text from 48 rem of content width and below it on narrow windows). While a new
+  generation runs, the previous document stays visible. If the original video was removed after
+  export, the player is replaced by the same notice as in Review. The stored Markdown is shown as
+  text only: the leading comment with the prompt version and model hashes is dropped, `#`/`##`
+  headings and lines that are only `**bold**` (how the Light model writes its titles) become
+  headings, `-`, `1.` lists and paragraphs are kept, and `**bold**` inside text is bold. Nothing
+  is rendered as HTML.
+- **Not offered yet, and therefore not shown at all** (not as a disabled control): citations that
+  play the video from their time (P06.6; `[00:20-00:31]` stays plain text), copying the result as
+  Markdown (P06.4d), and including it in a package (P06.4c). No language choice is offered; the
+  document follows the transcript language.
+- **Focus.** After **Generate document** or **Cancel generation** removes the button that had focus,
+  focus moves to the **Status** heading (not a Tab stop). A polite status line says what happened.
+
 ### Desktop window (P07.1)
 
 The Electron window ([ADR 0014](decisions/0014-desktop-app-shell.md)) shows the same screens. Its
@@ -359,7 +410,12 @@ speaker select, and `tests/e2e/speaker-labels.spec.ts` changes and clears it wit
 reports a refused save and checks contrast, 320 px and 200% zoom in both languages (P05.5). The
 last full run (2026-10-30, P09.3) passed 592 tests: 214 accessibility checks, 30 Process dialog
 tests, 18 glossary tests, 12 Storage tests, 10 speaker-label tests, 5 recorder tests and 4
-permissions-policy tests per Chromium project, plus the 6 contract tests.
+permissions-policy tests per Chromium project, plus the 6 contract tests. Since P06.4b the Document
+screen (before the first generation, with a result, and Review with the **Document** link) is in
+every contrast, keyboard, reduced-motion and reflow check, plus its progress, cancelled and failed
+states, in both languages; `tests/e2e/document.spec.ts` covers the journeys against the fake API
+(generation with progress per part, result beside the video, regenerate, cancel, failure, and the
+screen and link absent when no model is enabled or generation is turned off).
 
 - `python .claude/skills/ajimu-pixel-ui/scripts/check_colors.py apps/web/src --tokens apps/web/src/styles/tokens.scss`
   reports no color literal outside the token file (clean since P04.1).

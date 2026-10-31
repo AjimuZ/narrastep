@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { generationAvailableGuard } from './features/document/generation-availability';
 import { recorderLeaveGuard } from './features/recorder/recorder-leave.guard';
 import { pendingReviewChangesGuard } from './features/review/pending-review-changes.guard';
 
@@ -46,6 +47,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/review/review.component').then((module) => module.ReviewComponent),
     title: 'Review · Narrastep',
+  },
+  {
+    path: 'projects/:projectId/document',
+    canActivate: [generationAvailableGuard],
+    loadComponent: () =>
+      import('./features/document/document.component').then((module) => module.DocumentComponent),
+    title: 'Document · Narrastep',
   },
   {
     path: 'projects/:projectId/export',
