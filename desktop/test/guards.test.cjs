@@ -64,11 +64,12 @@ describe('installSessionGuards', () => {
     assert.equal(cancels(session, 'https://example.com/'), true);
   });
 
-  it('grants full screen to the app origin and denies everything else', () => {
+  it('grants full screen and screen requests to the app origin and denies everything else', () => {
     const session = guardedSession();
     assert.equal(grants(session, 'fullscreen', 'http://127.0.0.1:4200/projects/1/review'), true);
     assert.equal(grants(session, 'fullscreen', 'http://127.0.0.1:4300/'), false);
-    assert.equal(grants(session, 'display-capture', 'http://127.0.0.1:4200/record'), false);
+    assert.equal(grants(session, 'display-capture', 'http://127.0.0.1:4200/record'), true);
+    assert.equal(grants(session, 'display-capture', 'http://127.0.0.1:4300/record'), false);
     assert.equal(grants(session, 'openExternal', 'http://127.0.0.1:4200/'), false);
     assert.equal(grants(session, 'notifications', 'http://127.0.0.1:4200/'), false);
   });

@@ -141,8 +141,22 @@ describe('isPermissionAllowed', () => {
     assert.equal(isPermissionAllowed('media', 'http://localhost:4200/', ORIGIN, ['audio']), false);
   });
 
-  it('allows only full screen and the microphone, only for the app origin', () => {
-    assert.deepEqual([...ALLOWED_PERMISSIONS], ['fullscreen', 'media']);
+  it('lets a screen request reach the display-media handler, only from the app origin', () => {
+    const record = 'http://127.0.0.1:4200/record';
+    assert.equal(isPermissionAllowed('display-capture', record, ORIGIN, ['audio', 'video']), true);
+    assert.equal(isPermissionAllowed('display-capture', ORIGIN, ORIGIN, ['video']), true);
+    assert.equal(
+      isPermissionAllowed('display-capture', 'http://127.0.0.1:9999/', ORIGIN, ['video']),
+      false,
+    );
+    assert.equal(
+      isPermissionAllowed('display-capture', 'http://localhost:4200/', ORIGIN, ['video']),
+      false,
+    );
+  });
+
+  it('allows only screen requests, full screen and the microphone, only for the app origin', () => {
+    assert.deepEqual([...ALLOWED_PERMISSIONS], ['display-capture', 'fullscreen', 'media']);
     assert.equal(
       isPermissionAllowed('fullscreen', 'http://127.0.0.1:4200/projects/1', ORIGIN),
       true,
@@ -154,7 +168,6 @@ describe('isPermissionAllowed', () => {
 
   it('denies every other permission to the app origin', () => {
     for (const permission of [
-      'display-capture',
       'notifications',
       'geolocation',
       'openExternal',

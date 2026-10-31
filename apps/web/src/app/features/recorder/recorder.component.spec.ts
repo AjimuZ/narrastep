@@ -58,6 +58,8 @@ interface SetupOptions {
   supported?: boolean;
   /** Pretends to be the desktop window on this system; omitted means an ordinary browser. */
   desktop?: 'windows' | 'macos' | 'linux';
+  /** Name of the `DOMException` the screen request rejects with, instead of sharing a screen. */
+  screenRejection?: string;
 }
 
 const DESKTOP_USER_AGENTS = {
@@ -96,7 +98,11 @@ async function setup(options: SetupOptions = {}) {
     options.systemAudio === false ? fakeStream(screenVideo) : fakeStream(screenVideo, screenAudio);
   if (options.supported !== false) {
     media = installFakeMedia({
-      getDisplayMedia: vi.fn(() => Promise.resolve(screen)),
+      getDisplayMedia: vi.fn(() =>
+        options.screenRejection
+          ? Promise.reject(new DOMException('rejected', options.screenRejection))
+          : Promise.resolve(screen),
+      ),
       getUserMedia: vi.fn(() =>
         options.microphone === 'blocked'
           ? Promise.reject(new DOMException('denied', 'NotAllowedError'))
@@ -205,6 +211,25 @@ describe('formatElapsed and defaultRecordingName', () => {
 });
 
 describe('RecorderComponent', () => {
+  it.each(['NotAllowedError', 'AbortError'])(
+    'treats %s from a screen request as a cancel, not a failure',
+    async (screenRejection) => {
+      const ctx = await setup({ screenRejection });
+      ctx.button('Choose screen')?.click();
+      await settle(ctx.fixture);
+      const message = ctx.host.querySelector('.source-check__detail')?.textContent;
+      expect(message).toContain('No screen was shared');
+    },
+  );
+
+  it('reports any other screen request error as a failure', async () => {
+    const ctx = await setup({ screenRejection: 'NotReadableError' });
+    ctx.button('Choose screen')?.click();
+    await settle(ctx.fixture);
+    const message = ctx.host.querySelector('.source-check__detail')?.textContent;
+    expect(message).toContain('could not be captured');
+  });
+
   it('says when the browser cannot record and disables the source buttons', async () => {
     const { host, button } = await setup({ supported: false });
     expect(host.textContent).toContain('This browser cannot record the screen');

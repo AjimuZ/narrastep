@@ -217,7 +217,8 @@ describe('desktop window in Electron', { skip }, () => {
       assert.equal(result.fetchLocalhost, 'TypeError', 'a request to localhost fails');
       assert.equal(result.microphone, 'granted');
       assert.equal(result.camera, 'NotAllowedError', 'the camera stays denied');
-      assert.equal(result.screen, 'NotAllowedError');
+      assert.equal(result.screen, 'AbortError', 'closing the picker is a cancel');
+      assert.equal(result.screenPicked, 'granted', 'choosing a source in the picker shares it');
       assert.equal(result.notifications, 'denied');
       assert.equal(result.fullscreen, 'granted');
       assert.equal(result.urlAfterOtherOrigin, `${appOrigin}/`);

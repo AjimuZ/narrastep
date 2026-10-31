@@ -72,6 +72,9 @@ The shell in `desktop/` applies this decision with these details:
   HID, serial and USB devices are refused, until P07.4 opens what it needs.
 - Screen capture (P07.3a) is answered by `setDisplayMediaRequestHandler`: a request whose security
   origin and frame are the app origin opens the Narrastep picker, every other request is denied.
+  Chromium asks for the `display-capture` permission before that handler and rejects the request
+  when it is denied, so the app origin holds that permission too; it shares nothing by itself, since
+  only the person's choice in the picker does (found by the owner check, 2026-10-31).
   The picker is a modal window with a script-free local page that follows the fallback page rules.
   Without IPC, its links point to a reserved `.invalid` host and the main process reads the cancelled
   navigation; the answer is an index into the list the main process holds, never an id from a URL.

@@ -58,7 +58,8 @@ export function pickMimeType(
 /**
  * Asks the browser for a screen, window or tab with its audio (system or tab audio where the
  * browser offers it). Rejects with the browser's `DOMException`: `NotAllowedError` when the user
- * cancels the picker or the browser refuses.
+ * cancels the browser's picker or the browser refuses, `AbortError` when the user cancels the
+ * desktop window's picker.
  */
 export function requestScreen(maxFrameRate: number): Promise<MediaStream> {
   // `systemAudio: 'include'` makes Chrome and Edge offer "Share system audio" for a whole screen;

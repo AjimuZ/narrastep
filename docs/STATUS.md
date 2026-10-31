@@ -77,6 +77,8 @@ environment check. **Planned** names its [roadmap](ROADMAP.md) package.
 
 ## Last documentation check
 
+2026-10-31 (desktop screen picker fix): the owner found **Choose screen** refused at once in the desktop window on Windows. Chromium asks for `display-capture` before the display-media handler and the policy denied it, so the picker never opened; the app origin now holds that permission and the picker still decides what is shared. Cancelling the picker rejects with `AbortError`, which the recorder now treats as a cancel. Run on this Windows computer: a script in the real Electron 45.2.0 chose a screen and a window with the recorder's options and got live video and audio tracks, and `NARRASTEP_RUN_DESKTOP_WINDOW_TESTS=1 npm --prefix desktop test` passed (154 passed, 1 skipped as POSIX-only), with a new real choice in the picker; `check.sh desktop`, `web` and `docs` passed. The owner then recorded about 3 minutes with a YouTube video as the system audio. That is not a Teams call: P05.6 stays open, and the result of P07-CHECK is not recorded yet.
+
 2026-10-30 (P08.9): `check.sh compose` and `check.sh stack` passed on Docker, with cached layers and the isolated stack's own local image tags; `podman-compose config` rendered the file in the sandbox, while `podman compose config` could not run there. See the [roadmap](ROADMAP.md) evidence.
 
 2026-10-30 (P06.1): the in-image `llama.cpp` check passed on an image built without cache and `docker history` gave the layer size; `scripts/ralph/verify.sh` ran the documentation and other checks. See the [roadmap](ROADMAP.md) evidence.

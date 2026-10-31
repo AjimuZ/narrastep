@@ -8,8 +8,8 @@ const { isAllowedRequestUrl, isAppUrl, isPermissionAllowed } = require('./policy
  * window loads. Afterwards:
  * - every network request outside the app origin is cancelled (only inline `data:` is exempt);
  * - permission requests and checks are denied, except the policy's allowed permissions for the
- *   app origin (the microphone, audio only), so external protocol links, notifications, location
- *   and the camera fail;
+ *   app origin (the microphone, audio only, and `display-capture`, which lets a screen request reach
+ *   the handler below), so external protocol links, notifications, location and the camera fail;
  * - HID, serial and USB devices are refused;
  * - screen capture requests from the app origin get the Narrastep picker (`pickSource`, from
  *   `createSourcePicker`); other origins, and every request when `pickSource` is omitted, are denied;

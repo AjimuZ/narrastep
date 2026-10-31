@@ -13,11 +13,12 @@ const DEFAULT_WEB_PORT = 4200;
 /**
  * Chromium permissions the app origin may use; every other permission is denied, for every origin.
  * `fullscreen` lets the native video controls in Review fill the screen and exposes no host data.
- * Screen capture is not a Chromium permission: the display-media handler (P07.3a) decides it, and
- * Windows loopback audio follows in P07.3b. `media` is the microphone: Chromium uses the same name
- * for the camera, so `isPermissionAllowed` also requires the request to ask for audio only.
+ * `display-capture` only lets a screen request reach the display-media handler: Chromium asks for it
+ * first and rejects the request when it is denied, and the handler (P07.3a) and its picker still
+ * decide what is shared. `media` is the microphone: Chromium uses the same name for the camera, so
+ * `isPermissionAllowed` also requires the request to ask for audio only.
  */
-const ALLOWED_PERMISSIONS = Object.freeze(['fullscreen', 'media']);
+const ALLOWED_PERMISSIONS = Object.freeze(['display-capture', 'fullscreen', 'media']);
 
 /**
  * Web preferences of every Narrastep window. The page runs as an ordinary sandboxed web page:

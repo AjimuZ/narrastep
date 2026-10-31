@@ -49,6 +49,8 @@ async function isolation(window, appOrigin) {
   const contents = window.webContents;
   const entryUrl = `${appOrigin}/`;
   await waitForPage(contents, entryUrl);
+  // The window appears once painted, which can come after the page finished loading.
+  await waitUntil(() => window.isVisible());
   const run = (code) => contents.executeJavaScript(code, true);
   const preferences = contents.getLastWebPreferences();
   const result = {
@@ -99,6 +101,17 @@ async function isolation(window, appOrigin) {
     .find((other) => other !== window)
     .close();
   result.screen = await screenRequest;
+  // Choosing a source the way a click does must grant it: Chromium asks for `display-capture` before
+  // the picker, so only this path proves that a person can really share a screen.
+  await waitUntil(() => BrowserWindow.getAllWindows().length === 1);
+  const pickedRequest = run(
+    "navigator.mediaDevices.getDisplayMedia({ video: true }).then((s) => { const live = s.getVideoTracks().length > 0; s.getTracks().forEach((t) => t.stop()); return live ? 'granted' : 'no video'; }, (e) => e.name)",
+  );
+  await waitUntil(() => BrowserWindow.getAllWindows().length === 2);
+  const picker = BrowserWindow.getAllWindows().find((other) => other !== window).webContents;
+  await waitUntil(() => !picker.isLoading());
+  picker.executeJavaScript("document.querySelector('li a').click()", true).catch(() => {});
+  result.screenPicked = await pickedRequest;
   result.notifications = await run('Notification.requestPermission()');
   result.fullscreen = await run(
     "document.documentElement.requestFullscreen().then(() => document.exitFullscreen()).then(() => 'granted', (e) => e.name)",

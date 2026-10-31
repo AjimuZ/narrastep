@@ -696,9 +696,15 @@ export class RecorderComponent implements OnInit {
   }
 }
 
-/** Translated reason a screen request failed; the user cancelling is not an error worth alarm. */
+/**
+ * Translated reason a screen request failed; the user cancelling is not an error worth alarm. A
+ * browser's own picker reports the cancel as `NotAllowedError`, the desktop window's as `AbortError`.
+ */
 function screenErrorText(error: unknown): string {
-  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+  if (
+    error instanceof DOMException &&
+    (error.name === 'NotAllowedError' || error.name === 'AbortError')
+  ) {
     return $localize`:@@recorder.screen_denied:No screen was shared. Choose screen to try again.`;
   }
   return $localize`:@@recorder.screen_failed:The screen could not be captured. Try again, or use the desktop window, Chrome or Edge.`;
