@@ -793,6 +793,30 @@ describe('launchDesktopWindow', () => {
     assert.doesNotMatch(logs.join('\n'), /sandbox|--headless/);
   });
 
+  // Seen in the real smoke test: Git Bash's kill ended the window with 143 and no signal reached the launcher.
+  it('treats exit code 143 on Windows as the stack stopping, and only there', async () => {
+    const stopped = { code: 143, stoppedBy: null };
+    const windows = await launch({ platform: 'win32', env: {}, shell: async () => stopped });
+    assert.equal(windows.code, EXIT.OK);
+    assert.match(
+      windows.logs.join('\n'),
+      /The stack is stopping, so the Narrastep window was closed\./,
+    );
+    assert.doesNotMatch(windows.logs.join('\n'), /sandbox|keeps running|--headless/);
+
+    const linux = await launch({ shell: async () => stopped });
+    assert.equal(linux.code, EXIT.FAILED);
+    assert.match(linux.logs.join('\n'), /exit code 143/);
+
+    const crashed = await launch({
+      platform: 'win32',
+      env: {},
+      shell: async () => ({ code: 1, stoppedBy: null }),
+    });
+    assert.equal(crashed.code, EXIT.FAILED);
+    assert.match(crashed.logs.join('\n'), /exit code 1/);
+  });
+
   it('opens the window with a note when the API stays degraded', async () => {
     const { code, logs } = await launch({ request: scriptedHealth('degraded').request });
     assert.equal(code, EXIT.OK);

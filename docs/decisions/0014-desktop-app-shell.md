@@ -135,3 +135,12 @@ The shell in `desktop/` applies this decision with these details:
   installing simply stops.
 - Not covered: Windows PowerShell (candidate I-01), a Docker-based smoke test on this build worker
   (no Docker), and the Windows and macOS behavior of the launcher.
+
+## Implementation notes (P07.2, 2026-10-31)
+
+`scripts/ralph/desktop-smoke.sh` ran the launcher on the Docker stack on Windows (Git Bash) and closes
+those two gaps for Windows; macOS stays uncovered. It showed that the watcher's `kill` ends the window
+from outside with exit code 143 and that no signal reaches the launcher. On Windows the launcher
+therefore reads exit code 143 as the stack stopping. Other platforms keep reporting it as a failure,
+because a stop signal reaches the launcher there (checked on Linux) and the code would mean something
+else. `Ctrl+C` from a real terminal on Windows is not checked.

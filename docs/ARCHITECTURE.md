@@ -213,7 +213,8 @@ flowchart LR
   `desktop/node_modules` on the first launch with isolated npm settings (the one moment the
   desktop part uses the Internet: the npm registry and GitHub releases), then runs the shell and
   exits when the window closes. A launcher problem never stops the stack, and the window never
-  outlives it: when Compose exits, the watcher stops the launcher, which first closes the window
+  outlives it: when Compose exits, the watcher stops the launcher, which first closes the window;
+  on Windows the watcher's `kill` ends the window itself and the launcher recognizes its exit code
   ([Development](DEVELOPMENT.md#launcher-p072)).
 
 ## Planned boundaries

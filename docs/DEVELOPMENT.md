@@ -142,9 +142,10 @@ Compose ends (`Ctrl+C` in the terminal, or `docker compose down` from another te
 watcher stops the launcher within about two seconds, and a launcher that receives `SIGTERM`,
 `SIGINT` or `SIGHUP` while the window is open asks the window to quit with `SIGTERM`, waits for it
 and prints `The stack is stopping, so the Narrastep window was closed.` A launcher that is still
-waiting for health or installing simply stops. This was checked on Linux; on Windows Node.js ends
-the window process at once, and whether Git Bash delivers a signal the launcher can handle is not
-checked yet.
+waiting for health or installing simply stops. This was checked on Linux. On Windows the smoke test
+showed on 2026-10-31 that the watcher's `kill` from Git Bash ends the window from outside with exit
+code 143 and no signal reaches the launcher, so there the launcher reads that code as the stack
+stopping and prints the same line. `Ctrl+C` from a real terminal is not checked on Windows.
 
 To run the shell alone against an already running stack:
 
@@ -198,8 +199,8 @@ npm test
 lifecycle against in-memory Electron stand-ins (`test/support/fake-electron.cjs`).
 `test/launcher.test.cjs` covers the launcher with injected stand-ins (`.env` port, health states,
 timeout, isolated install environment, install commands on Windows and elsewhere, install steps
-and failures, stop signals while the window is open, exit codes), a real local HTTP server for the
-health request (including an oversized and a truncated answer), and a real launcher process that
+and failures, stop signals while the window is open, exit code 143 on Windows, exit codes), a real
+local HTTP server for the health request (including an oversized and a truncated answer), and a real launcher process that
 receives `SIGTERM` and must close a stand-in window process. `test/start-script.test.cjs` runs
 the real `start.sh` with a fake `docker` and a fake `desktop/launch.cjs` on a POSIX shell: that it
 runs directly as `./start.sh` (Git keeps it executable), `--headless`, `-r`, `-h`, unknown options,
@@ -254,40 +255,44 @@ the generated `NARRASTEP_WEB_PORT` as for a hand-made file. `desktop/test/start-
 covers this with a stub generator and a stub `docker` in a temporary copy of the project, never
 the real `.env`. Not verified: a real Docker engine and macOS.
 
-### Manual smoke test on Docker (P07.2)
+### Smoke test on the real stack (P07.2)
 
-Not yet run. The build worker cannot run Docker (no root, no capabilities, no user namespaces) and
-has no display, so the owner runs this check on a computer with Docker Engine or Docker Desktop
-and the Compose plugin (`docker compose version` succeeds). Podman is not part of this check for
-now (owner decision, 2026-10-29). The computer also needs Node.js 22.12 or newer with npm, a
-desktop session (on Linux, `DISPLAY` or `WAYLAND_DISPLAY` is set) and Internet access for step 4.
-Record each step as passed or failed with the date and the output of `docker version`,
-`docker compose version` and `node --version`. The address below uses the default port 4200; use
-`NARRASTEP_WEB_PORT` from `.env` when it is set.
+`scripts/ralph/desktop-smoke.sh` replaces the earlier manual procedure (owner approval,
+2026-10-30). It runs the real `start.sh`, launcher and Electron on the real images, under the
+isolated Compose project of `stack.sh` on port 14200, so the owner's stack and `.env` stay out of it:
 
-1. From the repository root run `./start.sh` (or `./start.sh -r` when the images are already
-   built). Compose output stays in the terminal and the launcher prints `Narrastep: Waiting for
-   Narrastep to become healthy at http://127.0.0.1:4200 ...`. No window opens before the line
-   `Narrastep: Opening the Narrastep window on http://127.0.0.1:4200.`; then one window opens on
-   **Projects** with **Services ready** in the header. A line ending in `the worker is not ready
-   yet.` means the worker did not answer for 60 seconds; note it.
-2. Close the window: `docker compose ps` in another terminal still lists the running services and
-   a browser on `http://127.0.0.1:4200` still shows the app. Press `Ctrl+C` to stop the stack.
-3. Run `./start.sh -r` again and wait for the window. Press `Ctrl+C` in the terminal: the stack
-   stops, the terminal prints `Narrastep: The stack is stopping, so the Narrastep window was
-   closed.` and the window closes.
-4. Delete the `desktop/node_modules` folder and run `./start.sh -r`. After the waiting line the
-   terminal prints `Narrastep: First launch: installing Electron 45.2.0 into
-   desktop/node_modules. ...`, then npm's output and the binary download, and the window opens on
-   **Projects**. Stop with `Ctrl+C` and run `./start.sh -r` once more: the window opens without the
-   install message.
-5. Run `./start.sh -r --headless`: the stack starts, no `Narrastep: Waiting` line is printed and
-   no window opens, and a browser on `http://127.0.0.1:4200` shows **Projects**. Stop with
-   `Ctrl+C`.
-6. A window that does not open is a failed step, not a pass: copy the launcher's message. On Linux,
-   an Electron that stops on Chromium's sandbox is risk K13 in [Risks](RISKS.md).
-7. Record the result in [Status](STATUS.md) and as dated evidence under P07.2 in the
-   [roadmap](ROADMAP.md), and only then check P07.2.
+```bash
+./scripts/ralph/desktop-smoke.sh
+```
+
+It needs Windows with Git Bash and PowerShell, Docker with the Compose plugin, Node.js 22.12 or
+newer with npm, and Internet access for the first launch. It takes several minutes, and windows open
+and close on the screen. It reads only window titles, deletes `desktop/node_modules` to repeat a
+first launch, and removes the isolated stack and its volumes at the end. It prints one PASS or FAIL
+line per step and the versions, and returns the number of failed steps. The output of `start.sh`
+stays in `scripts/ralph/.state/desktop-smoke/`.
+
+| Step | What must hold |
+| --- | --- |
+| First launch | Electron is installed, a window titled `Narrastep` opens, the stack is healthy |
+| Close the window | The window goes away and the stack keeps answering health |
+| Second launch | A window opens and no install is announced |
+| Stop the stack (`docker compose down`) | The window closes within 60 seconds |
+| `--headless` | The stack becomes healthy, no window opens and no launcher starts |
+
+Read `second.log` as well, because no step checks it: stopping the stack must print
+`Narrastep: The stack is stopping, so the Narrastep window was closed.` A passing run once showed a
+false failure message there (dated evidence under P07.2 in the [roadmap](ROADMAP.md)).
+
+Not covered:
+
+- delivery of `Ctrl+C` from a real terminal: the script stops the stack with `docker compose down`;
+- macOS and Linux desktops: the script reads the titles through PowerShell, so it runs on Windows
+  only;
+- the content of the window beyond its title, and the number of windows: the script takes the first
+  title that names the app, so a single window rests on the single-instance lock of `src/shell.cjs`
+  and its tests;
+- Podman, which `podman-smoke.sh` covers without a window (P08.12).
 
 ## Database migrations
 

@@ -30,6 +30,13 @@ const HEALTH_REQUEST_TIMEOUT_MS = 3000;
 /** Signals that stop the launcher while the window is open; each also closes the window. */
 const STOP_SIGNALS = Object.freeze(['SIGTERM', 'SIGINT', 'SIGHUP']);
 
+/**
+ * Exit code of the shell (128 + SIGTERM) when the start.sh watcher stopped it on Windows. Git Bash's
+ * `kill` ends the window's processes from outside with this code, and the launcher's signal handlers
+ * never run, so this code is the only sign that the stack is stopping (P07.2 smoke test, 2026-10-31).
+ */
+const WINDOWS_WATCHER_STOP_CODE = 143;
+
 /** Largest health response body read; a longer answer is not Narrastep's health object. */
 const HEALTH_BODY_LIMIT = 65536;
 
@@ -455,10 +462,11 @@ function runShell({
  * Opens the Narrastep window for the stack that Compose runs in `projectDirectory`, in order:
  * checks Node.js and the display, validates the web port, waits for health, makes sure Electron
  * is installed, runs the shell and waits for the window to close. Returns the exit code of
- * `launch.cjs`: 0 after a normal close or after a stop signal closed the window, 2 for an invalid
- * `NARRASTEP_WEB_PORT`, 1 for every problem that leaves the stack usable in a browser; each
- * problem is explained on `log`. Closing the window never stops containers. Everything outside
- * `env`, `platform` and the directories is injectable for tests.
+ * `launch.cjs`: 0 after a normal close or after a stop signal (on Windows, the watcher's exit code
+ * `WINDOWS_WATCHER_STOP_CODE`) closed the window, 2 for an invalid `NARRASTEP_WEB_PORT`, 1 for every
+ * problem that leaves the stack usable in a browser; each problem is explained on `log`. Closing the
+ * window never stops containers. Everything outside `env`, `platform` and the directories is
+ * injectable for tests.
  */
 async function launchDesktopWindow({
   projectDirectory,
@@ -502,7 +510,7 @@ async function launchDesktopWindow({
         : `Opening the Narrastep window on ${origin}; the worker is not ready yet.`,
     );
     const { code, stoppedBy } = await shell({ executable, desktopDirectory, env: shellEnv });
-    if (stoppedBy) {
+    if (stoppedBy || (platform === 'win32' && code === WINDOWS_WATCHER_STOP_CODE)) {
       log('The stack is stopping, so the Narrastep window was closed.');
       return EXIT.OK;
     }

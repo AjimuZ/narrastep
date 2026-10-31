@@ -69,6 +69,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Treat a blob: URL's origin as the part after the prefix when applying an origin policy.
 - A guard that must never throw wraps its checks in try/catch and cancels on any failure.
 - Keep optional heavy tooling out of package.json and run it via npx with a pinned version.
+- After a smoke script passes, read the logs it keeps as well as its PASS lines: user-facing messages may not be asserted by any step.
 
 ---
 
@@ -539,4 +540,33 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - Every roadmap item needs a docs/STATUS.md row as well as ROADMAP evidence.
   - Leave the roadmap checkbox unticked; the orchestrator ticks it.
   - The packager runs through npx and is not a dependency, so the launcher's npm ci stays unchanged.
+---
+
+## 2026-10-31T13:49:02Z - P07.2
+- `./scripts/ralph/desktop-smoke.sh` passed all 11 steps on real Windows, with the real images and Electron 45.2.0 (Docker 29.9.2, Compose v5.6.1, Node.js v24.22.1).
+
+The first run also passed all 11 steps, but its `second.log` showed a defect no step checks. When the stack stopped, the launcher printed "The desktop window stopped with exit code 143 ... Narrastep keeps running", which was false. Git Bash's `kill` ends the window from outside, and no signal reached the launcher. On Windows the launcher now reads exit code 143 as the stack stopping, with a new test. The second run, on the fix, passed all 11 steps, and its log shows "The stack is stopping, so the Narrastep window was closed."
+
+Checks:
+- `check.sh desktop` passed 234 tests with 0 failed, including `start-script.test.cjs`, and its format check passed.
+- `check.sh docs` found valid links.
+- The isolated stack is stopped; `stack.sh ps -a` lists nothing.
+
+Docs: `docs/DEVELOPMENT.md` now describes the script instead of the manual procedure and names what it does not cover. Dated evidence with the versions is under P07.2 in `docs/ROADMAP.md`, and the checkbox is left for the orchestrator.
+
+Not done or not verified:
+- `./scripts/ralph/verify.sh P07.2` was denied by the permission mode, so it was not run.
+- `Ctrl+C` from a real terminal and macOS and Linux desktops are not covered.
+- The script does not count windows or check content beyond the title. "One window" in criterion 1 therefore rests on the title check plus the single-instance lock and its tests. I could not change this because `scripts/ralph/` is off limits.
+- The real-Electron opt-in window tests in `npm test` were not run.
+
+Deviations:
+- The script ran in the foreground, twice, because this shell tool has no background option; both runs finished within its 10-minute limit.
+- `scripts/ralph/CLAUDE.md` asks for a report in `scripts/ralph/.state/result.json`. I did not write it because the session rules forbid editing that folder, so this structured output is the report.
+- Files changed: CHANGELOG.md, desktop/src/launcher.cjs, desktop/test/launcher.test.cjs, docs/ARCHITECTURE.md, docs/DEVELOPMENT.md, docs/REQUIREMENTS.md, docs/ROADMAP.md, docs/STATUS.md, docs/decisions/0014-desktop-app-shell.md
+- **Learnings for future iterations:**
+  - On Windows, Git Bash's `kill` on the launcher does not run its Node.js signal handlers: the Electron window ends with exit code 143 and the launcher only sees that code. Ctrl+C from a real terminal is still unverified.
+  - A passing desktop-smoke.sh run can still hide a wrong message, because no step checks the stop message. Read scripts/ralph/.state/desktop-smoke/second.log as well; it is Git-ignored, so Grep must be given the file path rather than the folder.
+  - desktop-smoke.sh takes the first matching title and does not count windows or read their content, so a real window count would need a change to the script.
+  - scripts/ralph/verify.sh was denied in the implementation session, while check.sh areas and desktop-smoke.sh were allowed.
 ---
