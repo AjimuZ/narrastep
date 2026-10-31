@@ -69,7 +69,7 @@ function systemTool(name) {
 
 /** Runs the copied script with `args` on a PATH that holds only the fakes and a few system tools. */
 function runStart(args, { env = {}, withNode = true } = {}) {
-  for (const tool of ['cat', 'dirname', 'sleep', 'sh', 'mv', 'rm']) {
+  for (const tool of ['cat', 'dirname', 'sleep', 'sh', 'mv', 'rm', 'mkdir']) {
     const link = path.join(bin, tool);
     if (!fs.existsSync(link)) {
       fs.symlinkSync(systemTool(tool), link);
@@ -208,6 +208,24 @@ describe('start-podman.sh', { skip }, () => {
     assert.equal(result.status, 1);
     assert.match(result.stderr, /could not generate \.env/);
     assert.deepEqual(calls(), []);
+  });
+
+  it('creates data/models-import before Compose and keeps what it already holds', () => {
+    const answer = path.join(project, 'folder-at-compose.txt');
+    writeTool(
+      'podman',
+      [
+        'if [ "$1" = compose ] && [ "$2" = version ]; then exit 0; fi',
+        'if [ "$1" = info ]; then exit 0; fi',
+        `if [ -d '${path.join(project, 'data', 'models-import')}' ]; then echo present > '${answer}'; else echo missing > '${answer}'; fi`,
+      ].join('\n'),
+    );
+    assert.equal(runStart(['--headless']).status, 0);
+    assert.equal(fs.readFileSync(answer, 'utf8').trim(), 'present');
+
+    fs.writeFileSync(path.join(project, 'data', 'models-import', 'kept.gguf'), 'generated');
+    assert.equal(runStart(['--headless']).status, 0);
+    assert.deepEqual(fs.readdirSync(path.join(project, 'data', 'models-import')), ['kept.gguf']);
   });
 
   it('returns the exit code of Compose', () => {

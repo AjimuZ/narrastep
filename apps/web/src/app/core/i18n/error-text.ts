@@ -89,6 +89,12 @@ export function errorCodeMessage(code: string): string | null {
       return $localize`:@@error.LOCAL_GENERATION_DISABLED:Local generation is turned off on this computer, so models cannot be downloaded.`;
     case 'MODEL_STATE_CONFLICT':
       return $localize`:@@error.MODEL_STATE_CONFLICT:This action is not available in the model's current state. Reload the page and try again.`;
+    case 'LICENSE_NOT_ACCEPTED':
+      return $localize`:@@error.LICENSE_NOT_ACCEPTED:Read the license before importing the model files.`;
+    case 'MODEL_IMPORT_FILES_MISSING':
+      return $localize`:@@error.MODEL_IMPORT_FILES_MISSING:The import folder does not contain every file of this model. Copy the files into it, then try again.`;
+    case 'MODEL_IMPORT_NOT_PINNED':
+      return $localize`:@@error.MODEL_IMPORT_NOT_PINNED:A file in the import folder is not a pinned model file, so it was not imported. Copy the original file from the model's repository.`;
     case 'VALIDATION_ERROR':
       return $localize`:@@error.VALIDATION_ERROR:Some values are not valid. Check the fields and try again.`;
     default:

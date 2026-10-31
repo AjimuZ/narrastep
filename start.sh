@@ -37,6 +37,7 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 ensure_env_file
+ensure_model_import_folder
 
 if [ "$headless" = false ]; then
   open_desktop_window

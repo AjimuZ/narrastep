@@ -20,6 +20,13 @@ All notable changes to Narrastep are documented in this file.
   turn the feature off), `NARRASTEP_GENERATION_MODEL`, `NARRASTEP_GENERATION_THREADS` and
   `NARRASTEP_GENERATION_IMAGE_MAX_EDGE`. Nothing is installed or downloaded by default, and the
   model manager screens and downloads follow in later changes.
+- Import of the local generation model files from a folder, for computers where `huggingface.co`
+  is blocked: copy the original files into `data/models-import/` (setting
+  `NARRASTEP_MODEL_IMPORT_DIR`), read the license, then `POST /api/v1/models/{modelId}/import`;
+  `GET .../import` shows what the folder holds and the license text. Only a file with a pinned
+  name, size and SHA-256 is installed; anything else is reported as "not a pinned model file". The
+  folder is mounted read-only into the API container only and is never modified. Both start
+  scripts create it, so the stack starts when it was missing. The Settings screen for it follows.
 - API to enable, disable and delete an installed local generation model: `POST
   /api/v1/models/{modelId}/enable`, `POST .../disable` and `DELETE /api/v1/models/{modelId}`.
   Delete removes the files and is refused while a generation runs; disable and delete work even

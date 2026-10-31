@@ -77,8 +77,15 @@ services:
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     environment:
       <<: *backend-environment
+      # The container side of the import mount below. The host folder is the setting of the same
+      # name in .env, so the API always reads `/import`, whatever the host folder is called.
+      NARRASTEP_MODEL_IMPORT_DIR: /import
     volumes:
       - narrastep-data:/data
+      # The only bind mount of the stack (docs/LOCAL_GENERATION.md, "Import from disk"): read-only,
+      # on this service alone. `z` relabels the folder for SELinux, which rootless Podman needs.
+      # Both start scripts create the folder first, so the stack starts when it was missing.
+      - ${NARRASTEP_MODEL_IMPORT_DIR:-./data/models-import}:/import:ro,z
     ports:
       - "127.0.0.1:${NARRASTEP_API_PORT:-8002}:8000"
     networks:

@@ -62,6 +62,8 @@ The API uses `400` for malformed domain input, `403` for a feature turned off by
 | GET | `/api/v1/models/{modelId}` | Read one model's state and download progress | 200 |
 | POST | `/api/v1/models/{modelId}/download` | Start, or resume after a failure, the download of a model | 202 |
 | POST | `/api/v1/models/{modelId}/cancel` | Cancel a download or its verification and delete the files | 202 |
+| GET | `/api/v1/models/{modelId}/import` | Show what the read-only import folder holds for a model, with the license text to show before importing | 200 |
+| POST | `/api/v1/models/{modelId}/import` | Copy the model's pinned files from the import folder and verify them; the body only confirms the license | 202 |
 
 ## Important requests
 
@@ -305,8 +307,44 @@ from `installed` and is refused with `403 LOCAL_GENERATION_DISABLED` under the k
 works only from `enabled`. `DELETE /models/{modelId}` removes the model's files and answers `200`
 with the `not_installed` entry; it works only from `installed` or `enabled`. Disable and delete
 stay possible under the kill switch. A wrong state gives `409 MODEL_STATE_CONFLICT`, and delete
-gives `409 MODEL_IN_USE` while a generation runs (P06.3 feeds that check). Import is not in the
-API yet (P06.2d).
+gives `409 MODEL_IN_USE` while a generation runs (P06.3 feeds that check).
+
+#### Import from disk (P06.2d)
+
+For computers where `huggingface.co` is blocked
+([Local generation](LOCAL_GENERATION.md#import-from-disk)). `GET /models/{modelId}/import` reads
+the folder the API sees as `/import` (host `data/models-import`) and answers:
+
+```json
+{
+  "modelId": "gemma-4-e2b",
+  "folderAvailable": true,
+  "files": [
+    {"name": "gemma-4-E2B-it-Q4_0.gguf", "sizeBytes": 2841481184, "found": true},
+    {"name": "mmproj-gemma-4-E2B-it-Q8_0.gguf", "sizeBytes": 557368064, "found": false}
+  ],
+  "ignored": [{"name": "notes.txt", "reason": "not_a_pinned_model_file"}],
+  "ignoredCount": 1,
+  "licenseName": "Apache License 2.0",
+  "licenseUrl": "https://ai.google.dev/gemma/docs/gemma_4_license",
+  "licenseText": "…"
+}
+```
+
+`found` means a regular file of that exact name and size (the SHA-256 is checked by the import).
+`ignored` has at most 50 entries and `ignoredCount` counts them all; names are file names, never
+paths. A missing or unreadable folder answers `folderAvailable: false`. The interface shows
+`licenseText` before it offers the import. The call reads only and works under the kill switch.
+
+`POST /models/{modelId}/import` takes `{"licenseAccepted": true}` and answers `202` with the model
+entry in the `downloading` state; poll `GET /models/{modelId}`. It works from `not_installed` and
+`failed`. The body has no path and any extra field is `422 VALIDATION_ERROR`; a query parameter
+is ignored. Errors: `404 MODEL_NOT_FOUND`, `403 LOCAL_GENERATION_DISABLED`, `422
+LICENSE_NOT_ACCEPTED`, `409 MODEL_STATE_CONFLICT`, `404 MODEL_IMPORT_FILES_MISSING` (a pinned name
+is absent), `422 MODEL_IMPORT_NOT_PINNED` (the name exists but is not a regular file of the pinned
+size) and `507 INSUFFICIENT_DISK_SPACE`. A file with the pinned name and size but another SHA-256
+ends in `failed` with an `errorMessage` that says the file is not a pinned model file, and the
+copy is deleted. The import folder is never modified.
 
 ## Planned changes
 
@@ -366,4 +404,7 @@ persisted on their job or export record so a browser refresh does not lose the r
 | `MODEL_STATE_CONFLICT` | 409 | The model's state does not allow the action: a download of a model that is not `not_installed` or `failed`, or a cancel with nothing in progress (P06.2b); enable, disable or delete from a state the diagram does not allow (P06.2c). |
 | `MODEL_IN_USE` | 409 | A generation is running, so the model cannot be deleted (P06.2c). |
 | `MODEL_DELETE_FAILED` | 500 | The model files could not be removed, so the state is unchanged (P06.2c). |
+| `LICENSE_NOT_ACCEPTED` | 422 | An import was requested with `licenseAccepted` false (P06.2d). |
+| `MODEL_IMPORT_FILES_MISSING` | 404 | The import folder does not contain a pinned file name, or the folder is missing (P06.2d). |
+| `MODEL_IMPORT_NOT_PINNED` | 422 | A file of a pinned name in the import folder is a link, a directory or has another size: not a pinned model file (P06.2d). |
 | `VALIDATION_ERROR` | 422 | Request fields do not satisfy the public schema. |

@@ -3,7 +3,8 @@
 Status: **planned** (P06 in the [roadmap](ROADMAP.md)), except the server binaries, which the
 backend image contains since P06.1 and which nothing starts yet, and the pinned file catalog, the
 four settings and the stored model state, which exist since P06.2a, and the model download, resume,
-verification and cancel API, which exists since P06.2b. Version 0.2 exports evidence and
+verification and cancel API, which exists since P06.2b, the enable, disable and delete API (P06.2c)
+and the import from disk (P06.2d). Version 0.2 exports evidence and
 prompts only and never calls a model. Decision:
 [ADR 0011](decisions/0011-optional-local-generation.md).
 
@@ -137,6 +138,8 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
   first, then resets the row. It is refused with `MODEL_IN_USE` while `generation_is_running()` in
   `services/model_manager.py` is true; that function returns false until P06.3 answers it from its
   generation jobs.
+- Implemented in P06.2d: [import from disk](#import-from-disk) enters the same `downloading`,
+  `verifying` and `installed` states.
 - Download progress is persisted in SQLite and survives an API restart; a restart resumes with
   HTTP range requests. The download runs in a thread of the API process, which is the only
   service with an Internet route; the worker never downloads. It fetches the files one after the
@@ -168,12 +171,13 @@ not installed -> downloading -> verifying -> installed (disabled) <-> enabled
 
 ### Import from disk
 
-Decided on 2026-10-29 (risk register Q5); planned in P06.2, not implemented. It exists for
-computers where `huggingface.co` is blocked (assumption A3).
+Decided on 2026-10-29 (risk register Q5); implemented in P06.2d (`backend/app/services/model_import.py`).
+It exists for computers where `huggingface.co` is blocked (assumption A3).
 
 - The user copies the model files into a folder of the project, `data/models-import/` by default
-  (setting `NARRASTEP_MODEL_IMPORT_DIR`), which the API container sees read-only. The files come
-  from the same `ggml-org` repository as the download and are checked like a download.
+  (setting `NARRASTEP_MODEL_IMPORT_DIR`, the host folder), which the API container sees
+  read-only as `/import`. The files come from the same `ggml-org` repository as the download and
+  are checked like a download.
 - Narrastep accepts a file only when its name, size and SHA-256 equal the values pinned for the
   repository revision. Anything else is ignored and reported as "not a pinned model file"; the
   folder is never scanned for other types and no path is taken from the user, so every path stays
@@ -188,6 +192,38 @@ computers where `huggingface.co` is blocked (assumption A3).
   scripts create the folder before Compose runs, so a missing folder never stops the stack, and the
   Compose entry carries the relabel option that Podman needs on SELinux systems (P08.9 checks it).
   The mount is only on the `api` service.
+
+Implemented as follows (P06.2d):
+
+- **Mount.** `docker-compose.yml` mounts
+  `${NARRASTEP_MODEL_IMPORT_DIR:-./data/models-import}:/import:ro,z` on `api` only and sets
+  `NARRASTEP_MODEL_IMPORT_DIR=/import` for that container, so the backend setting is always the
+  container path. `start.sh` and `start-podman.sh` call `ensure_model_import_folder`
+  (`scripts/start-common.sh`), which runs `mkdir -p` on the folder named by the variable in the
+  environment or in `.env`, else `data/models-import`. A folder that cannot be created only prints
+  a warning. `data/` is Git-ignored, so the files are never committed.
+- **License before the import.** `GET /models/{id}/import` returns the license name, link and
+  full text next to the list of files, and `POST /models/{id}/import` needs `licenseAccepted:
+  true` (otherwise `422 LICENSE_NOT_ACCEPTED`). The Settings screen that shows it is P06.2e. The
+  license text is copied to `/data/models/<model>/LICENSE.txt` when the copy starts.
+- **What the folder may hold.** For each pinned file the service looks for `<import
+  folder>/<pinned name>`. The name always comes from the catalog; the request body holds no path
+  and extra fields are refused. A link, a directory or a file of another size is not a pinned
+  model file. The preview lists other entries (at most 50, plus a count) with the reason
+  `not_a_pinned_model_file`; it checks name and size only, because the SHA-256 of 3 to 5 GB is
+  computed once, by the import.
+- **Refusals.** Before anything is copied: `404 MODEL_IMPORT_FILES_MISSING` (a pinned name is
+  absent), `422 MODEL_IMPORT_NOT_PINNED` (the name exists but is a link, a directory or has another
+  size). A file that has the pinned name and size but another hash is found after the copy: the
+  copy is deleted and the model becomes `failed` with "The file <name> in the import folder is
+  not a pinned model file and was not imported." Retrying from `failed` copies again.
+- **States.** The copy is the `downloading` state (progress in bytes, stored in SQLite), then
+  `verifying` hashes the copies, then `installed`. Cancel works as for a download. If the API
+  restarts during the copy, the model resumes as a download, which needs `huggingface.co`; start
+  the import again after cancelling when the site is blocked.
+- **Read only.** The service opens the source files for reading and never writes, renames or
+  deletes in the import folder; the test compares names, sizes, modification times and hashes
+  before and after.
 
 ## Default model rule
 
@@ -247,7 +283,7 @@ When a generation exists, the user can include it in the next export as
 | --- | --- | --- |
 | `NARRASTEP_LOCAL_GENERATION` | `available` | `available` or `disabled` |
 | `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | `gemma-4-e2b` or `gemma-4-e4b`; the default changes only by the [default model rule](#default-model-rule) |
-| `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Folder for [import from disk](#import-from-disk); planned with P06.2 |
+| `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Host folder for [import from disk](#import-from-disk) |
 | `NARRASTEP_GENERATION_THREADS` | `0` | CPU threads; `0` lets `llama.cpp` decide |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Screenshots are downscaled before inference |
 
@@ -261,8 +297,9 @@ in `.env.example` and the README). Startup fails on a value outside these ranges
 | `NARRASTEP_GENERATION_THREADS` | whole number from 0 to 256 |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | whole number of pixels from 256 to 4096 |
 
-Nothing reads the model, thread and image settings until the generation job (P06.3);
-`NARRASTEP_MODEL_IMPORT_DIR` arrives with the import (P06.2b).
+Nothing reads the model, thread and image settings until the generation job (P06.3).
+`NARRASTEP_MODEL_IMPORT_DIR` is read by the import (P06.2d): Compose uses it as the host folder
+and passes `/import` to the API, and outside Compose it is the folder the backend reads.
 
 ## Verification
 

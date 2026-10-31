@@ -81,7 +81,7 @@ function systemTool(name) {
  * script uses, so the host's own docker, node and npm never take part.
  */
 function runStart(args, { env = {}, withNode = true } = {}) {
-  for (const tool of ['cat', 'dirname', 'sleep', 'sh', 'mv', 'rm']) {
+  for (const tool of ['cat', 'dirname', 'sleep', 'sh', 'mv', 'rm', 'mkdir']) {
     const link = path.join(bin, tool);
     if (!fs.existsSync(link)) {
       fs.symlinkSync(systemTool(tool), link);
@@ -181,6 +181,73 @@ describe('start.sh .env generation', { skip }, () => {
     const { resolveShellEnvironment } = require('../src/launcher.cjs');
     const environment = resolveShellEnvironment({ env: {}, projectDirectory: project });
     assert.equal(environment.NARRASTEP_WEB_PORT, '4207');
+  });
+});
+
+/**
+ * Replaces the fake docker with one that records, at the moment Compose would start, whether the
+ * folder `relative` exists. Returns the file the answer is written to.
+ */
+function recordFolderAtComposeStart(relative) {
+  const answer = path.join(project, 'folder-at-compose.txt');
+  writeTool(
+    'docker',
+    [
+      'if [ "$1" = compose ] && [ "$2" = version ]; then exit 0; fi',
+      `if [ -d '${path.join(project, relative)}' ]; then echo present > '${answer}'; else echo missing > '${answer}'; fi`,
+    ].join('\n'),
+  );
+  return answer;
+}
+
+describe('start.sh model import folder', { skip }, () => {
+  it('creates data/models-import before Compose when it is missing', () => {
+    const answer = recordFolderAtComposeStart('data/models-import');
+    assert.equal(fs.existsSync(path.join(project, 'data')), false);
+    const result = runStart(['--headless']);
+    assert.equal(result.status, 0);
+    assert.equal(fs.readFileSync(answer, 'utf8').trim(), 'present');
+    assert.equal(fs.statSync(path.join(project, 'data', 'models-import')).isDirectory(), true);
+  });
+
+  it('keeps the files of an existing folder and creates nothing else', () => {
+    const folder = path.join(project, 'data', 'models-import');
+    fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(path.join(folder, 'kept.gguf'), 'generated');
+    assert.equal(runStart(['--headless']).status, 0);
+    assert.deepEqual(fs.readdirSync(folder), ['kept.gguf']);
+    assert.equal(fs.readFileSync(path.join(folder, 'kept.gguf'), 'utf8'), 'generated');
+    assert.deepEqual(fs.readdirSync(path.join(project, 'data')), ['models-import']);
+  });
+
+  it('creates the folder named by NARRASTEP_MODEL_IMPORT_DIR in .env, quotes and CRLF included', () => {
+    fs.writeFileSync(
+      path.join(project, '.env'),
+      'NARRASTEP_MODEL_IMPORT_DIR=./ignored\r\nNARRASTEP_MODEL_IMPORT_DIR="./from-env"\r\n',
+    );
+    assert.equal(runStart(['--headless']).status, 0);
+    assert.equal(fs.statSync(path.join(project, 'from-env')).isDirectory(), true);
+    assert.equal(fs.existsSync(path.join(project, 'ignored')), false);
+    assert.equal(fs.existsSync(path.join(project, 'data')), false);
+  });
+
+  it('prefers the variable of the environment over .env', () => {
+    fs.writeFileSync(path.join(project, '.env'), 'NARRASTEP_MODEL_IMPORT_DIR=./from-env\n');
+    const result = runStart(['--headless'], {
+      env: { NARRASTEP_MODEL_IMPORT_DIR: './from-shell' },
+    });
+    assert.equal(result.status, 0);
+    assert.equal(fs.statSync(path.join(project, 'from-shell')).isDirectory(), true);
+    assert.equal(fs.existsSync(path.join(project, 'from-env')), false);
+  });
+
+  it('warns but still starts Compose when the folder cannot be created', () => {
+    // A file named `data` makes `mkdir -p data/models-import` fail.
+    fs.writeFileSync(path.join(project, 'data'), 'not a folder');
+    const result = runStart(['--headless']);
+    assert.equal(result.status, 0);
+    assert.match(result.stderr, /could not create the model import folder data\/models-import/);
+    assert.deepEqual(dockerCalls(), ['compose up --build']);
   });
 });
 

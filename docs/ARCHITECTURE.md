@@ -251,7 +251,17 @@ flowchart LR
   SQLite, hashes each file, deletes one that differs and keeps `LICENSE.txt` beside the files in
   `/data/models/<model>/`. The API start-up resumes models left `downloading` or `verifying`. The
   routes are `GET /models`, `GET /models/{id}`, `POST /models/{id}/download` and
-  `POST /models/{id}/cancel`. `POST /models/{id}/enable`, `POST /models/{id}/disable` and `DELETE /models/{id}` follow in P06.2c; importing is still to come (P06.2d).
+  `POST /models/{id}/cancel`. Since P06.2c `POST /models/{id}/enable`, `POST /models/{id}/disable`
+  and `DELETE /models/{id}` change the state of an installed model. Since P06.2d
+  `services/model_import.py` installs the pinned files from a folder when `huggingface.co` is
+  blocked: `docker-compose.yml` mounts `./data/models-import` (setting `NARRASTEP_MODEL_IMPORT_DIR`)
+  as `/import`, read-only and with the SELinux `z` option, on the `api` service alone; it is the
+  only bind mount of the stack and both start scripts create the folder first. The import looks
+  only for the pinned file names in that folder (never a path from a request, never a link),
+  copies each file into `/data/models/<model>/` through the same `downloading`, `verifying` and
+  `installed` states as a download, and hashes the copies; the folder is only read. The routes are
+  `GET /models/{id}/import` (what the folder holds and the license text) and
+  `POST /models/{id}/import`.
 - **Desktop window ([ADR 0014](decisions/0014-desktop-app-shell.md)).** A host Electron shell,
   started by `start.sh` after health, loads only the loopback web app. It supplies the screen and
   window picker, Windows loopback system audio, microphone permission and native downloads. It

@@ -1,4 +1,5 @@
-# Shared logic of the start scripts: option parsing, the .env step and the desktop window watcher.
+# Shared logic of the start scripts: option parsing, the .env step, the model import folder and the
+# desktop window watcher.
 #
 # Sourced with '.' by start.sh after it sets script_directory and defines print_usage and the
 # variables below; it is never run on its own and does not change shell options.
@@ -74,6 +75,38 @@ ensure_env_file() {
       exit 1
     fi
     printf 'Narrastep: created .env for this computer. Delete it to generate a new one.\n'
+  fi
+}
+
+# Create the folder the model import reads from, so the bind mount of docker-compose.yml never
+# points at a missing path: Docker would create it owned by root and Podman would refuse to start.
+# The folder is NARRASTEP_MODEL_IMPORT_DIR from the environment or from .env, else data/models-import.
+# Requires the current directory to be the project root. Never exits: a folder that cannot be
+# created only prints a warning, because the import is optional and the rest of the stack is not.
+ensure_model_import_folder() {
+  import_folder=${NARRASTEP_MODEL_IMPORT_DIR:-}
+  if [ -z "$import_folder" ] && [ -r .env ]; then
+    # Built-ins only, so a missing text tool never stops the start; the last assignment wins, as
+    # Compose reads it.
+    carriage_return=$(printf '\r')
+    while IFS= read -r env_line || [ -n "$env_line" ]; do
+      case "$env_line" in
+        NARRASTEP_MODEL_IMPORT_DIR=*)
+          import_folder=${env_line#NARRASTEP_MODEL_IMPORT_DIR=}
+          import_folder=${import_folder%"$carriage_return"}
+          case "$import_folder" in
+            \"*\") import_folder=${import_folder#\"}; import_folder=${import_folder%\"} ;;
+            \'*\') import_folder=${import_folder#\'}; import_folder=${import_folder%\'} ;;
+          esac
+          ;;
+      esac
+    done < .env
+  fi
+  if [ -z "$import_folder" ]; then
+    import_folder=data/models-import
+  fi
+  if ! mkdir -p -- "$import_folder" 2>/dev/null; then
+    printf 'Narrastep: could not create the model import folder %s; importing models from disk may not work.\n' "$import_folder" >&2
   fi
 }
 

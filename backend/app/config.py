@@ -119,6 +119,13 @@ class Settings(BaseSettings):
     local_generation: Literal["available", "disabled"] = "available"
     # Must name an entry of `services.model_catalog.MODEL_CATALOG`; a test keeps both in step.
     generation_model: Literal["gemma-4-e2b", "gemma-4-e4b"] = "gemma-4-e2b"
+    # Read-only folder the model files are imported from when huggingface.co is blocked (Q5).
+    # Compose sets `/import`, the mount of `./data/models-import`; nothing writes to it and no
+    # request names it.
+    model_import_dir: Path = Field(
+        default=Path("data") / "models-import",
+        validation_alias="NARRASTEP_MODEL_IMPORT_DIR",
+    )
     # 0 lets llama.cpp choose the thread count.
     generation_threads: int = Field(default=0, ge=0, le=256)
     # Longest screenshot edge in pixels sent to the model; larger images are downscaled first.
@@ -183,7 +190,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("NARRASTEP_CORS_ORIGINS", "NARRASTEP_ALLOWED_ORIGINS"),
     )
 
-    @field_validator("data_root", "whisper_model_path", mode="before")
+    @field_validator("data_root", "whisper_model_path", "model_import_dir", mode="before")
     @classmethod
     def expand_configured_path(cls, value: object) -> object:
         """Expand environment variables and home markers in configured paths."""
@@ -243,6 +250,7 @@ class Settings(BaseSettings):
         """Derive local database and Celery URLs when they were not supplied."""
         resolved_root = self.data_root.resolve()
         self.data_root = resolved_root
+        self.model_import_dir = self.model_import_dir.resolve()
         if "whisper_model_path" not in self.model_fields_set:
             self.whisper_model_path = self.whisper_model_path.parent / self.whisper_model
         if not self.database_url:

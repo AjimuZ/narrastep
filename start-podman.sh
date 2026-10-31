@@ -61,6 +61,7 @@ case "$(uname -s 2>/dev/null || true)" in
 esac
 
 ensure_env_file
+ensure_model_import_folder
 
 if [ "$headless" = false ]; then
   open_desktop_window

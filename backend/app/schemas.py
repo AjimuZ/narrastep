@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -738,3 +738,45 @@ class ModelListResponse(ApiModel):
 
     local_generation: str
     items: list[ModelResponse]
+
+
+class ModelImportFileResponse(ApiModel):
+    """Name one pinned file and say whether the import folder holds a file of that name and size."""
+
+    name: str
+    size_bytes: int
+    found: bool
+
+
+class ModelImportIgnoredResponse(ApiModel):
+    """Name an entry of the import folder that is not a pinned model file; never a path."""
+
+    name: str
+    reason: Literal["not_a_pinned_model_file"]
+
+
+class ModelImportPreviewResponse(ApiModel):
+    """Show what an import would use and the license text the user must see before it.
+
+    `folder_available` is false when the import folder is missing or unreadable. `ignored` holds at
+    most 50 entries and `ignored_count` counts all of them. The SHA-256 is checked by the import.
+    """
+
+    model_id: str
+    folder_available: bool
+    files: list[ModelImportFileResponse]
+    ignored: list[ModelImportIgnoredResponse]
+    ignored_count: int
+    license_name: str
+    license_url: str
+    license_text: str
+
+
+class ModelImportRequest(ApiModel):
+    """Confirm that the user saw the license; the body names no path, because none is accepted."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel, populate_by_name=True, extra="forbid", use_enum_values=True
+    )
+
+    license_accepted: bool

@@ -344,6 +344,100 @@
         "title": "ModelFileResponse",
         "type": "object"
       },
+      "ModelImportFileResponse": {
+        "description": "Name one pinned file and say whether the import folder holds a file of that name and size.",
+        "properties": {
+          "found": {
+            "title": "Found"
+          },
+          "name": {
+            "title": "Name"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes"
+          }
+        },
+        "required": [
+          "name",
+          "sizeBytes",
+          "found"
+        ],
+        "title": "ModelImportFileResponse",
+        "type": "object"
+      },
+      "ModelImportIgnoredResponse": {
+        "description": "Name an entry of the import folder that is not a pinned model file; never a path.",
+        "properties": {
+          "name": {
+            "title": "Name"
+          },
+          "reason": {
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "name",
+          "reason"
+        ],
+        "title": "ModelImportIgnoredResponse",
+        "type": "object"
+      },
+      "ModelImportPreviewResponse": {
+        "description": "Show what an import would use and the license text the user must see before it.\n\n`folder_available` is false when the import folder is missing or unreadable. `ignored` holds at\nmost 50 entries and `ignored_count` counts all of them. The SHA-256 is checked by the import.",
+        "properties": {
+          "files": {
+            "title": "Files"
+          },
+          "folderAvailable": {
+            "title": "Folderavailable"
+          },
+          "ignored": {
+            "title": "Ignored"
+          },
+          "ignoredCount": {
+            "title": "Ignoredcount"
+          },
+          "licenseName": {
+            "title": "Licensename"
+          },
+          "licenseText": {
+            "title": "Licensetext"
+          },
+          "licenseUrl": {
+            "title": "Licenseurl"
+          },
+          "modelId": {
+            "title": "Modelid"
+          }
+        },
+        "required": [
+          "modelId",
+          "folderAvailable",
+          "files",
+          "ignored",
+          "ignoredCount",
+          "licenseName",
+          "licenseUrl",
+          "licenseText"
+        ],
+        "title": "ModelImportPreviewResponse",
+        "type": "object"
+      },
+      "ModelImportRequest": {
+        "additionalProperties": false,
+        "description": "Confirm that the user saw the license; the body names no path, because none is accepted.",
+        "properties": {
+          "licenseAccepted": {
+            "title": "Licenseaccepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "licenseAccepted"
+        ],
+        "title": "ModelImportRequest",
+        "type": "object"
+      },
       "ModelInstallState": {
         "description": "Represent where a local generation model is in its install lifecycle (ADR 0011).\n\nA model with no stored row is `not_installed`. `installed` means the verified files are present\nbut generation is off; `enabled` means generation may use them. The transitions allowed between\nthese values are defined in `services/model_manager.py`.",
         "enum": [
@@ -1825,6 +1919,94 @@
           }
         },
         "summary": "Enable Installed Model"
+      }
+    },
+    "/api/v1/models/{model_id}/import": {
+      "get": {
+        "description": "Show what an import from the read-only folder would use, with the license text.\n\nThe interface shows the license before it offers the import. Answers `404 MODEL_NOT_FOUND`\nfor an unknown model; a missing folder answers `folderAvailable: false`. Reads only, and works\nunder the kill switch.",
+        "operationId": "read_model_import_api_v1_models__model_id__import_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelImportPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Read Model Import"
+      },
+      "post": {
+        "description": "Copy a model's pinned files from the import folder and answer its `downloading` state.\n\nThe body only confirms the license; no path is accepted. Refused with `404 MODEL_NOT_FOUND`,\n`403 LOCAL_GENERATION_DISABLED`, `422 LICENSE_NOT_ACCEPTED`, `409 MODEL_STATE_CONFLICT`,\n`404 MODEL_IMPORT_FILES_MISSING`, `422 MODEL_IMPORT_NOT_PINNED` and `507\nINSUFFICIENT_DISK_SPACE`. The copy and hash check run in the background; poll\n`GET /models/{id}`.",
+        "operationId": "import_model_files_api_v1_models__model_id__import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Stable validation error"
+          }
+        },
+        "summary": "Import Model Files"
       }
     },
     "/api/v1/projects": {

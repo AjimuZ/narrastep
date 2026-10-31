@@ -103,6 +103,24 @@ def test_every_service_others_wait_for_has_a_compose_health_check() -> None:
         assert not re.search(r"^HEALTHCHECK", dockerfile.read_text(encoding="utf-8"), re.M)
 
 
+def test_the_model_import_folder_is_the_only_bind_mount_read_only_on_api_with_relabel() -> None:
+    """Mount the import folder on `api` alone, read-only, with the SELinux relabel (P06.2d)."""
+
+    binds = {
+        name: [
+            volume
+            for volume in service.get("volumes", [])
+            if isinstance(volume, str) and volume.split(":")[0].startswith((".", "/", "$"))
+        ]
+        for name, service in _compose_services().items()
+    }
+    assert {name: mounts for name, mounts in binds.items() if mounts} == {
+        "api": ["${NARRASTEP_MODEL_IMPORT_DIR:-./data/models-import}:/import:ro,z"]
+    }
+    api = _compose_services()["api"]
+    assert api["environment"]["NARRASTEP_MODEL_IMPORT_DIR"] == "/import"
+
+
 def test_license_inventory_lists_exactly_the_pinned_images() -> None:
     """Keep the image table in `docs/LICENSES.md` equal to the files, digest included."""
 

@@ -53,6 +53,8 @@ from app.schemas import (
     HealthResponse,
     JobResponse,
     MediaAssetResponse,
+    ModelImportPreviewResponse,
+    ModelImportRequest,
     ModelListResponse,
     ModelResponse,
     ProcessStart,
@@ -80,6 +82,7 @@ from app.services.exporting import ExportRequest, estimate_export_package
 from app.services.media import MediaServiceError, validate_video
 from app.services.model_catalog import MODEL_CATALOG
 from app.services.model_download import begin_download, delete_model, request_cancel
+from app.services.model_import import begin_import, import_preview
 from app.services.model_manager import (
     disable_model,
     enable_model,
@@ -399,6 +402,44 @@ def cancel_model_download(
     `409 MODEL_STATE_CONFLICT` when nothing is in progress.
     """
     request_cancel(session, settings, model_id)
+    return model_payload(session, require_known_model(model_id))
+
+
+@router.get("/models/{model_id}/import", response_model=ModelImportPreviewResponse)
+def read_model_import(
+    model_id: str,
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Show what an import from the read-only folder would use, with the license text.
+
+    The interface shows the license before it offers the import. Answers `404 MODEL_NOT_FOUND`
+    for an unknown model; a missing folder answers `folderAvailable: false`. Reads only, and works
+    under the kill switch.
+    """
+    return import_preview(settings, model_id)
+
+
+@router.post(
+    "/models/{model_id}/import",
+    response_model=ModelResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def import_model_files(
+    model_id: str,
+    payload: ModelImportRequest,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, object]:
+    """Copy a model's pinned files from the import folder and answer its `downloading` state.
+
+    The body only confirms the license; no path is accepted. Refused with `404 MODEL_NOT_FOUND`,
+    `403 LOCAL_GENERATION_DISABLED`, `422 LICENSE_NOT_ACCEPTED`, `409 MODEL_STATE_CONFLICT`,
+    `404 MODEL_IMPORT_FILES_MISSING`, `422 MODEL_IMPORT_NOT_PINNED` and `507
+    INSUFFICIENT_DISK_SPACE`. The copy and hash check run in the background; poll
+    `GET /models/{id}`.
+    """
+    begin_import(session, settings, model_id, license_accepted=payload.license_accepted)
+    session.expire_all()
     return model_payload(session, require_known_model(model_id))
 
 

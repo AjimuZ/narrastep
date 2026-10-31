@@ -45,6 +45,11 @@ logger = logging.getLogger(__name__)
 
 State = ModelInstallState
 
+# Stores one pinned file into the model folder: (option, file, directory, control, report).
+FetchFile = Callable[[ModelOption, ModelFile, Path, "DownloadControl", Callable[[int], None]], None]
+# Carries one `downloading` or `verifying` model to its end: (settings, model id, control).
+WorkerRunner = Callable[[Settings, str, "DownloadControl"], None]
+
 MODELS_DIRECTORY_NAME = "models"
 LICENSE_FILE_NAME = "LICENSE.txt"
 PARTIAL_SUFFIX = ".part"
@@ -363,12 +368,20 @@ def _verify_file(file: ModelFile, directory: Path, control: DownloadControl) -> 
         )
 
 
-def _download_files(settings: Settings, option: ModelOption, control: DownloadControl) -> None:
+def _download_files(
+    settings: Settings,
+    option: ModelOption,
+    control: DownloadControl,
+    fetch: FetchFile | None = None,
+) -> None:
     """Fetch every pinned file, persisting the byte count about once a second and at each end.
 
     The count is stored in SQLite so a restart shows real progress; the files on disk decide where
-    the next start resumes. The last count is stored even when the transfer is interrupted.
+    the next start resumes. The last count is stored even when the transfer is interrupted. `fetch`
+    stores one file in the model folder (the network by default; the import from disk passes its
+    own copy), so both paths share the progress, the stop and the failure handling.
     """
+    fetch_file = fetch or _fetch_file
     directory = model_directory(settings, option.model_id)
     completed = 0
     last_saved_at = time.monotonic()
@@ -394,7 +407,7 @@ def _download_files(settings: Settings, option: ModelOption, control: DownloadCo
                     ):
                         save()
 
-                _fetch_file(option, file, directory, control, report)
+                fetch_file(option, file, directory, control, report)
                 completed += file.size_bytes
                 current = completed
                 save()
@@ -548,10 +561,12 @@ def run_download(settings: Settings, model_id: str, control: DownloadControl) ->
         _fail(model_id, settings, UNEXPECTED_MESSAGE)
 
 
-def _worker_main(settings: Settings, model_id: str, control: DownloadControl) -> None:
-    """Run one download and forget the worker when it ends."""
+def _worker_main(
+    settings: Settings, model_id: str, control: DownloadControl, runner: WorkerRunner
+) -> None:
+    """Run one download or import and forget the worker when it ends."""
     try:
-        run_download(settings, model_id, control)
+        runner(settings, model_id, control)
     finally:
         with _workers_lock:
             worker = _workers.get(model_id)
@@ -559,10 +574,14 @@ def _worker_main(settings: Settings, model_id: str, control: DownloadControl) ->
                 del _workers[model_id]
 
 
-def start_download_worker(settings: Settings, model_id: str) -> bool:
+def start_download_worker(
+    settings: Settings, model_id: str, runner: WorkerRunner | None = None
+) -> bool:
     """Start the background download of `model_id` unless one already runs; True when started.
 
-    The thread belongs to the API process, the only service with a route to the Internet; the
+    `runner` replaces `run_download` for the import from disk; a restart always resumes with the
+    download, because the stored state does not remember where the files came from. The thread
+    belongs to the API process, the only service with a route to the Internet; the
     worker container has none and never downloads. It is a daemon so shutting down never waits for
     a multi-gigabyte transfer: the stored state and partial files let the next start resume.
     """
@@ -573,7 +592,7 @@ def start_download_worker(settings: Settings, model_id: str) -> bool:
         control = DownloadControl()
         thread = threading.Thread(
             target=_worker_main,
-            args=(settings, model_id, control),
+            args=(settings, model_id, control, runner or run_download),
             name=f"model-download-{model_id}",
             daemon=True,
         )

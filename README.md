@@ -117,6 +117,7 @@ All settings use the `NARRASTEP_` prefix and are listed in [.env.example](.env.e
 | `NARRASTEP_WHISPER_MODEL` | `small` | Whisper model baked into the image at build |
 | `NARRASTEP_LOCAL_GENERATION` | `available` | `disabled` turns the optional local generation off; nothing is installed by default |
 | `NARRASTEP_GENERATION_MODEL` | `gemma-4-e2b` | Model the user installs from Settings: `gemma-4-e2b` or `gemma-4-e4b` |
+| `NARRASTEP_MODEL_IMPORT_DIR` | `./data/models-import` | Host folder the API reads read-only to import the model files when `huggingface.co` is blocked; both start scripts create it |
 | `NARRASTEP_GENERATION_THREADS` | `0` | CPU threads for generation; `0` lets `llama.cpp` decide |
 | `NARRASTEP_GENERATION_IMAGE_MAX_EDGE` | `1024` | Longest screenshot edge in pixels sent to the model (256 to 4096) |
 | `NARRASTEP_SCREENSHOT_SELECTION_STRATEGY` | `legacy` | `legacy` or experimental `adaptive_v1` |

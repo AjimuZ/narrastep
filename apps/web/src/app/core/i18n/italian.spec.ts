@@ -67,6 +67,12 @@ describe('Italian interface', () => {
     expect(localizedError('MODEL_STATE_CONFLICT', null, 'x')).toContain('Ricarica');
   });
 
+  it('translates the model import errors', () => {
+    expect(localizedError('LICENSE_NOT_ACCEPTED', null, 'x')).toContain('licenza');
+    expect(localizedError('MODEL_IMPORT_FILES_MISSING', null, 'x')).toContain('cartella');
+    expect(localizedError('MODEL_IMPORT_NOT_PINNED', null, 'x')).toContain('non è stato importato');
+  });
+
   it('renders the shell, the language switch and the health word in Italian', async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],

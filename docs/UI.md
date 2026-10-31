@@ -262,7 +262,7 @@ upload, warning. Add an icon by adding its grid and its name, then regenerating.
 | Review | `/projects/:id/review` | Video, transcript segments and screenshot inspector, restyled. Segments from in-app recordings show a You / Others label that can be changed. Every `[mm:ss]` is a button that moves the video to that time. Action: Save |
 | Export | `/projects/:id/export` | Package options, size estimate, history titled with each export's stored ZIP name (older exports show `narrastep-{id}.zip`). Action: Create package |
 | Document | `/projects/:id/document` | Local generation result per type with the video beside it; every `[mm:ss]` citation is a button that plays the video from that time; regenerate, copy, include in package. Shown only when local generation is installed and enabled |
-| Settings | `/settings` | Local generation: install, enable, delete, model size and license; storage use per project |
+| Settings | `/settings` | Local generation: install, import from the `data/models-import` folder (the license text is shown first, from `GET /models/{id}/import`), enable, delete, model size and license; storage use per project |
 
 ### Implemented screens (P04.3)
 

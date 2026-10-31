@@ -36,6 +36,9 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Check order in model state actions: known model (404), then kill switch where it applies (403), then state (409), then side effects. Do the destructive file removal before the state change.
 - Run ruff format after editing and export_openapi.py after changing routes, then check.sh backend.
 - Stub-test start scripts with a restricted PATH (fake binaries plus symlinks to a few system tools) and a fake uname to exercise platform branches.
+- Reuse the existing background-worker, progress and cancel machinery by passing a strategy callable, rather than copying the download loop for a second source.
+- A file selected by catalog name under a fixed root, refusing links and non-regular files, is how to read user-supplied files without taking any path from a request.
+- Read .env values in start scripts with shell built-ins (read, case, parameter expansion) so they work on the restricted PATH used by script tests.
 
 ---
 
@@ -276,4 +279,45 @@ Sonnet was enough for this task.
 - **Learnings for future iterations:**
   - The orchestrator must tick P08.11 in docs/ROADMAP.md and set mode 100755 on start-podman.sh.
   - P08.12 must update R16 to R18 and the STATUS rows after the real Podman run.
+---
+
+## 2026-10-31T02:29:17Z - P06.2d
+- Import from disk now works through the API. `GET /models/{id}/import` shows what the folder holds and the license text. `POST /models/{id}/import` needs `licenseAccepted: true` and takes no path. The service copies each pinned file through downloading, verifying and installed, and reads the folder without ever writing to it. A pinned name with the wrong size, a link or a directory is refused up front with `MODEL_IMPORT_NOT_PINNED` (422); a missing pinned name gives `MODEL_IMPORT_FILES_MISSING` (404). A file with the pinned name and size but another hash fails the model with "not a pinned model file", and the copy is deleted. A file with another name is listed as `not_a_pinned_model_file` and never installed.
+
+Compose mounts `${NARRASTEP_MODEL_IMPORT_DIR:-./data/models-import}:/import:ro,z` on `api` only. `start.sh` and `start-podman.sh` create the folder through `ensure_model_import_folder` in `scripts/start-common.sh`, and a failed `mkdir` only warns. The license is copied to `LICENSE.txt` beside the model files when the copy starts.
+
+Checks I ran, all passed:
+- `check.sh backend`: format, lint, types, full tests and OpenAPI. I added `test_model_import.py` (17 tests with generated files) and a Compose test, and ran them once more on their own afterwards.
+- `check.sh web`: 191 tests and the message check (533 messages in English and Italian).
+- `check.sh desktop`: 225 tests, 6 of them new for the start scripts.
+- `check.sh docs` and `check.sh compose`.
+- The isolated stack, brought up by hand with `stack.sh`:
+  - It started with `data/models-import` missing on the host.
+  - `api` saw `/import` read-only: a write failed with errno 30.
+  - `worker` has no `/import`.
+  - The preview endpoint answered.
+  - `stack.sh config` shows `read_only: true` and `bind.selinux: z` on `api` only.
+  - The stack is stopped.
+
+Gaps:
+- No real model was imported, because the pinned files are 3 to 5 GB.
+- The `z` option has not run on a real SELinux system or Podman (P08.12).
+- `e2e` was not run.
+- There is no web component test for the import control, because the Settings screen does not exist yet (P06.2e / P06.4). I only added English and Italian texts for the three new error codes: `LICENSE_NOT_ACCEPTED`, `MODEL_IMPORT_FILES_MISSING` and `MODEL_IMPORT_NOT_PINNED`.
+- An API restart during the copy resumes it as a download, which needs `huggingface.co`. This is documented.
+
+Notes for the orchestrator:
+- The stack run made Docker create an empty, Git-ignored `data/models-import` on the host.
+- No `.env.example` key beyond the five the owner listed is needed. I never read or edited that file.
+- `scripts/ralph/CLAUDE.md` asked for a `result.json` and a `verify.sh` run. I did neither, because this session returns structured output and may not touch `scripts/ralph/`.
+- I wrote dated evidence under P06.2 in `docs/ROADMAP.md` and left the checkbox for you.
+- Sonnet was enough for this task.
+- Files changed: backend/app/config.py, backend/app/routes/api.py, backend/app/schemas.py, backend/app/services/model_download.py, backend/app/services/model_import.py, backend/tests/test_model_import.py, backend/tests/test_container_images.py, docker-compose.yml, scripts/start-common.sh, start.sh, start-podman.sh, desktop/test/start-script.test.cjs, desktop/test/start-podman-script.test.cjs, apps/web/src/app/core/i18n/error-text.ts, apps/web/src/app/core/i18n/catalogs.spec.ts, apps/web/src/app/core/i18n/italian.spec.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, docs/API.md, docs/openapi.json, docs/LOCAL_GENERATION.md, docs/ARCHITECTURE.md, docs/UI.md, docs/STATUS.md, docs/ROADMAP.md, README.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - The import reuses the download machinery: model_download._download_files takes a `fetch` callable, and start_download_worker takes a `runner`. A later task that adds another source can plug in the same way.
+  - The copy runs in the `downloading` state because the diagram has no edge from not_installed to verifying. An API restart during an import resumes it as a download (resume_interrupted_downloads always uses run_download), which needs huggingface.co.
+  - P06.2e or P06.4 builds the Settings screen. It must call GET /models/{id}/import, show licenseText before the import, send licenseAccepted: true, and show the failed model's errorMessage. English and Italian texts for LICENSE_NOT_ACCEPTED, MODEL_IMPORT_FILES_MISSING and MODEL_IMPORT_NOT_PINNED are already in the web catalogs. MODEL_IN_USE and MODEL_DELETE_FAILED still have no web entries.
+  - Settings.model_import_dir is the container path `/import` under Compose, while the same variable name in .env is the host folder; Compose substitutes the host side and fixes the container side on api.
+  - The start-script tests link only a few system tools into a restricted PATH; ensure_model_import_folder reads .env with shell built-ins, and `mkdir` was added to both fixtures' tool lists. Any new external tool used by start-common.sh must be added there too.
+  - Compose is now allowed one bind mount only (prd.cjs refuses any other host folder than one ending in /data/models-import, and it must be read-only). Running the isolated stack makes Docker create an empty data/models-import on the host when it is missing.
 ---
