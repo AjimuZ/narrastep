@@ -379,6 +379,25 @@ export class ReviewComponent implements OnInit {
     video.currentTime = Math.min(Math.max(video.currentTime + offsetSeconds, 0), duration);
   }
 
+  /**
+   * Moves the video to an absolute time from a clickable time reference.
+   * A non-finite time is ignored, a negative one becomes 0 and one past the end stops at the
+   * duration. Does nothing without a player, which is the case once the source was removed.
+   */
+  seekToTime(seconds: number): void {
+    const video = this.videoPlayer()?.nativeElement;
+    if (!video || !Number.isFinite(seconds)) {
+      return;
+    }
+    const duration = Number.isFinite(video.duration) ? video.duration : Number.MAX_SAFE_INTEGER;
+    video.currentTime = Math.min(Math.max(seconds, 0), duration);
+  }
+
+  /** Accessible name of a time reference button. */
+  seekLabel(seconds: number): string {
+    return $localize`:@@review.seek_to:Go to ${this.timeLabel(seconds)}:TIME: in the video`;
+  }
+
   /** Stores local reviewed text separately until the user explicitly saves it. */
   updateEditedText(segmentId: string, event: Event): void {
     if (this.structuralPending()) {

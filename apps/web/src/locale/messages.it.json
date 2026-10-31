@@ -462,6 +462,7 @@
     "review.candidate_alt": "Screenshot candidato a {$TIME}",
     "review.preview_candidate": "Anteprima del candidato a {$TIME}",
     "review.use_primary_aria": "Usa come principale: screenshot a {$TIME}",
+    "review.seek_to": "Vai a {$TIME} nel video",
     "review.reason.legacy": "Precedente",
     "review.reason.alternative": "Alternativa",
     "review.reason.coverage": "Copertura",

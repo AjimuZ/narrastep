@@ -606,6 +606,98 @@ describe('ReviewComponent', () => {
     );
   });
 
+  it('moves the video from the time buttons, which are native keyboard-operable buttons', async () => {
+    const { fixture } = await setup();
+    const element = fixture.nativeElement as HTMLElement;
+    const video = element.querySelector('video') as HTMLVideoElement;
+    const [start, end, ...rest] = Array.from(
+      element.querySelectorAll<HTMLButtonElement>('#review-video-panel button.time-ref'),
+    );
+
+    expect(start).toBeDefined();
+    expect(end).toBeDefined();
+    expect(rest.length).toBe(0);
+    expect(start!.tagName).toBe('BUTTON');
+    expect(start!.type).toBe('button');
+    expect(start!.tabIndex).toBe(0);
+    expect(start!.getAttribute('aria-label')).toBe(
+      `Go to ${fixture.componentInstance.timeLabel(SEGMENT.startSeconds)} in the video`,
+    );
+    end!.click();
+    expect(video.currentTime).toBe(SEGMENT.endSeconds);
+    start!.click();
+    expect(video.currentTime).toBe(SEGMENT.startSeconds);
+    element
+      .querySelectorAll<HTMLButtonElement>('button.time-ref')
+      .forEach((button) => expect(button.disabled).toBe(false));
+  });
+
+  it('makes the transcript header times buttons that seek the video', async () => {
+    const { fixture } = await setup();
+    const element = fixture.nativeElement as HTMLElement;
+    const video = element.querySelector('video') as HTMLVideoElement;
+    const [start, end, ...rest] = Array.from(
+      element.querySelectorAll<HTMLButtonElement>(
+        '#review-transcript-panel .segment__header button.time-ref',
+      ),
+    );
+
+    expect(start).toBeDefined();
+    expect(end).toBeDefined();
+    expect(rest.length).toBe(0);
+    expect(end!.getAttribute('aria-label')).toBe(
+      `Go to ${fixture.componentInstance.timeLabel(SEGMENT.endSeconds)} in the video`,
+    );
+    end!.click();
+    expect(video.currentTime).toBe(SEGMENT.endSeconds);
+    start!.click();
+    expect(video.currentTime).toBe(SEGMENT.startSeconds);
+  });
+
+  it('clamps an out-of-range time and ignores one that is not a number', async () => {
+    const { fixture } = await setup();
+    const component = fixture.componentInstance;
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    Object.defineProperty(video, 'duration', { configurable: true, value: 10 });
+    video.currentTime = 3;
+
+    component.seekToTime(999);
+    expect(video.currentTime).toBe(10);
+    component.seekToTime(-5);
+    expect(video.currentTime).toBe(0);
+    video.currentTime = 4;
+    component.seekToTime(Number.NaN);
+    component.seekToTime(Number.POSITIVE_INFINITY);
+    expect(video.currentTime).toBe(4);
+  });
+
+  it('disables the time buttons and seeks nothing once the source video was removed', async () => {
+    const { fixture } = await setup();
+    const element = fixture.nativeElement as HTMLElement;
+    fixture.componentInstance.project.set({
+      ...PROJECT,
+      videoAsset: {
+        id: 'asset-1',
+        projectId: PROJECT.id,
+        assetType: 'video',
+        originalFilename: 'demo.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 1000,
+        durationSeconds: 4,
+        width: 640,
+        height: 360,
+        createdAt: '2026-07-15T10:00:00Z',
+        sourceRemovedAt: '2026-07-16T10:00:00Z',
+      },
+    });
+    fixture.detectChanges();
+
+    const buttons = element.querySelectorAll<HTMLButtonElement>('button.time-ref');
+    expect(buttons.length).toBeGreaterThan(0);
+    buttons.forEach((button) => expect(button.disabled).toBe(true));
+    expect(() => fixture.componentInstance.seekToTime(2)).not.toThrow();
+  });
+
   it('navigates segments with J while leaving typing shortcuts untouched', async () => {
     const { fixture } = await setup({ segments: [SEGMENT, SECOND_SEGMENT] });
     const component = fixture.componentInstance;

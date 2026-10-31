@@ -389,6 +389,27 @@ details p {
   flex: 0 1 8rem;
 }
 
+// The 1.5rem box keeps the target at the 24 × 24 CSS px minimum of WCAG 2.5.8.
+.time-ref {
+  display: inline-flex;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    text-decoration: none;
+  }
+}
+
 .selected-time {
   display: flex;
   flex-wrap: wrap;

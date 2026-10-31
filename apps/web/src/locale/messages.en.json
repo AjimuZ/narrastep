@@ -510,6 +510,7 @@
     "review.candidate_alt": "Screenshot candidate at {$TIME}",
     "review.preview_candidate": "Preview candidate at {$TIME}",
     "review.use_primary_aria": "Use as primary: screenshot at {$TIME}",
+    "review.seek_to": "Go to {$TIME} in the video",
     "review.reason.legacy": "Legacy",
     "review.reason.alternative": "Alternative",
     "review.reason.coverage": "Coverage",

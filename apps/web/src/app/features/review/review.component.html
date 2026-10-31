@@ -139,9 +139,25 @@
         @if (selectedSegment(); as segment) {
           <p class="selected-time">
             <span class="muted" i18n="@@review.segment_time">Segment time</span>
-            <span class="mono"
-              >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
+            <button
+              class="time-ref mono"
+              type="button"
+              [disabled]="sourceRemoved()"
+              [attr.aria-label]="seekLabel(segment.startSeconds)"
+              (click)="seekToTime(segment.startSeconds)"
             >
+              {{ timeLabel(segment.startSeconds) }}
+            </button>
+            –
+            <button
+              class="time-ref mono"
+              type="button"
+              [disabled]="sourceRemoved()"
+              [attr.aria-label]="seekLabel(segment.endSeconds)"
+              (click)="seekToTime(segment.endSeconds)"
+            >
+              {{ timeLabel(segment.endSeconds) }}
+            </button>
           </p>
         }
       </ns-window>
@@ -289,9 +305,27 @@
           <article class="segment" [class.dirty]="isDirty(segment)">
             <header class="segment__header">
               <strong i18n="@@review.segment_n">Segment {{ segment.segmentIndex + 1 }}</strong>
-              <span class="mono"
-                >{{ timeLabel(segment.startSeconds) }} – {{ timeLabel(segment.endSeconds) }}</span
-              >
+              <span class="segment__times">
+                <button
+                  class="time-ref mono"
+                  type="button"
+                  [disabled]="sourceRemoved()"
+                  [attr.aria-label]="seekLabel(segment.startSeconds)"
+                  (click)="seekToTime(segment.startSeconds)"
+                >
+                  {{ timeLabel(segment.startSeconds) }}
+                </button>
+                –
+                <button
+                  class="time-ref mono"
+                  type="button"
+                  [disabled]="sourceRemoved()"
+                  [attr.aria-label]="seekLabel(segment.endSeconds)"
+                  (click)="seekToTime(segment.endSeconds)"
+                >
+                  {{ timeLabel(segment.endSeconds) }}
+                </button>
+              </span>
             </header>
 
             <div class="segment-meta">
@@ -424,7 +458,15 @@
                     />
                   }
                 </span>
-                <span class="mono">{{ timeLabel(primary.timestampSeconds) }}</span>
+                <button
+                  class="time-ref mono"
+                  type="button"
+                  [disabled]="sourceRemoved()"
+                  [attr.aria-label]="seekLabel(primary.timestampSeconds)"
+                  (click)="seekToTime(primary.timestampSeconds)"
+                >
+                  {{ timeLabel(primary.timestampSeconds) }}
+                </button>
               </figcaption>
             </figure>
             <dl class="evidence-metadata">
@@ -498,7 +540,16 @@
                     </button>
                     <div class="candidate__footer">
                       <span>
-                        <span class="mono">{{ timeLabel(screenshot.timestampSeconds) }}</span> ·
+                        <button
+                          class="time-ref mono"
+                          type="button"
+                          [disabled]="sourceRemoved()"
+                          [attr.aria-label]="seekLabel(screenshot.timestampSeconds)"
+                          (click)="seekToTime(screenshot.timestampSeconds)"
+                        >
+                          {{ timeLabel(screenshot.timestampSeconds) }}
+                        </button>
+                        ·
                         {{ selectionReasonLabel(screenshot.selectionReason ?? 'alternative') }}
                       </span>
                       <button

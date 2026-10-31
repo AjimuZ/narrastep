@@ -1251,8 +1251,8 @@
         "CHANGELOG.md describes the change"
       ],
       "priority": 63,
-      "passes": false,
-      "notes": "In a review, copy each text of `acceptanceCriteria` into `criteria` letter by letter: a shortened or reworded criterion counts as not met, even when the work is right. Unless this task really needs Opus, recommend Sonnet in the preflight and set `sonnet_sufficient`: Opus sessions have been returning `conventions_ack` with its label, which rejects whole attempts. In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is. Host Python and Node.js are the wrong versions: run project commands as `./scripts/ralph/sandbox.sh 'cd backend && python -m pytest tests/test_x.py'`, and checks as `./scripts/ralph/check.sh backend` (areas: docs backend web e2e desktop ralph compose stack fullstack). Use `./scripts/ralph/stack.sh` for Compose on the isolated stack, whose ports the sandbox cannot reach, so talk to it through `./scripts/ralph/stack.sh exec -T api ...`. Use only generated media, never a real recording. Call these scripts exactly as written, starting with ./scripts/ralph/; if a call is denied because of its form, use this form before reporting a block.",
+      "passes": true,
+      "notes": "Every time label in Review (segment start/end, the selected segment, the primary screenshot and each candidate screenshot) is now a real button with an accessible name. Clicking it seeks the video. The buttons are disabled when the source video is removed. The attempt-2 e2e failure was the 24×24 px target-size check at 390 px and narrower. I fixed it by giving `.time-ref` a 1.5rem minimum box. The earlier work stays in place: the component, template, specs, English and Italian messages, docs/UI.md and CHANGELOG.md. check.sh e2e passed (956 tests). check.sh web passed (format, lint, 255 unit tests, build, i18n check, message extraction, browser test types). I did not re-run check.sh docs in this attempt.",
       "dependsOn": [
         "P06.4d"
       ],

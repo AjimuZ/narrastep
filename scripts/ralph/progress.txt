@@ -64,6 +64,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - When a roadmap or status note says checks were not run, replace it with dated evidence only after the checks pass, and keep the remaining unverified items listed.
 - Make time, sleep, memory sampling and FFmpeg execution injectable parameters of benchmark and poll loops, so tests use a virtual clock and stand-ins instead of waiting or needing media tools.
 - A report meant to hold numbers only can be tested by matching every output line against a strict character pattern and asserting that secret transcript text never appears.
+- Inline text buttons need `display: inline-flex` with `min-width` and `min-height` of 1.5rem to pass the WCAG 2.5.8 target-size check in the e2e accessibility spec.
 
 ---
 
@@ -496,4 +497,13 @@ The P06.3 checkbox in docs/ROADMAP.md was already `[x]` in the working tree when
   - The 60-minute video is a 10-second flite clip repeated with ffmpeg -stream_loop and -c copy. Processing it on a CPU may take hours before the timed step starts, so --processing-timeout defaults to 4 h. Real Whisper behaviour on a transcript of identical sentences is untested.
   - The ROADMAP P06.5 box stays unchecked until the owner runs the benchmark and records the figures in STATUS.md. API.md and openapi.json needed no endpoint change.
   - In this autopilot session a shell command that writes files (a python heredoc) was denied. ./scripts/ralph/sandbox.sh 'cd backend && ruff format ...' worked, as did the Edit and Write tools.
+---
+
+## 2026-10-31T12:29:24Z - P06.6a
+- Every time label in Review (segment start/end, the selected segment, the primary screenshot and each candidate screenshot) is now a real button with an accessible name. Clicking it seeks the video. The buttons are disabled when the source video is removed. The attempt-2 e2e failure was the 24×24 px target-size check at 390 px and narrower. I fixed it by giving `.time-ref` a 1.5rem minimum box. The earlier work stays in place: the component, template, specs, English and Italian messages, docs/UI.md and CHANGELOG.md. check.sh e2e passed (956 tests). check.sh web passed (format, lint, 255 unit tests, build, i18n check, message extraction, browser test types). I did not re-run check.sh docs in this attempt.
+- Files changed: CHANGELOG.md, apps/web/src/app/features/review/review.component.html, apps/web/src/app/features/review/review.component.scss, apps/web/src/app/features/review/review.component.spec.ts, apps/web/src/app/features/review/review.component.ts, apps/web/src/locale/messages.en.json, apps/web/src/locale/messages.it.json, docs/UI.md
+- **Learnings for future iterations:**
+  - The e2e accessibility spec's smallTargets check applies at 390 px and narrower. It requires every visible button to be at least 24×24 CSS px, and inline buttons in text are not exempt (only inline links are). Give any new inline text button a min-width and min-height of 1.5rem.
+  - Document citations are out of scope here. They belong to P06.6b.
+  - In this autopilot session, Bash was denied for plain grep and sed, but ./scripts/ralph/check.sh worked.
 ---
