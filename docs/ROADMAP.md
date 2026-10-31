@@ -128,6 +128,16 @@ Decision: [ADR 0010](decisions/0010-in-browser-recording.md). Specification: [Re
   Exit: `apps/web/nginx.conf` sends `microphone=(self)`; the header is checked through the real web
   container; a browser test fails with the old header and passes with the new one.
   Evidence (2026-10-30): both `add_header Permissions-Policy` lines of `apps/web/nginx.conf` send `camera=(), microphone=(self), geolocation=()`. After `./scripts/ralph/stack.sh up --build --detach --wait`, `./scripts/ralph/stack.sh exec -T web wget -S -O /dev/null http://127.0.0.1/` printed `Permissions-Policy: camera=(), microphone=(self), geolocation=()`; `/record` and `/api/v1/health` showed the same header. New `apps/web/tests/e2e/permissions-policy.spec.ts` (4 tests per Chromium project, 8 in all, passed): it reads the values from `nginx.conf`, serves them from a test server on 127.0.0.1 in headless Chromium with fake devices and both permissions granted, and finds the microphone granted, the camera refused with `NotAllowedError`, and the old header refused with `NotAllowedError`. Negative control: with `microphone=()` put back in `nginx.conf`, the two tests that read the microphone rule failed (`Received: "NotAllowedError"`). Not run: a browser against the nginx container itself (the sandbox cannot reach the published ports, so the browser test uses the same headers, as the task allows), and a real microphone (P05.6). The desktop window has its own permission handler, which grants the microphone to the app origin since P07.4a (2026-10-31).
+- [ ] P05.8 Read the right frame, quickly, from a recording. Added on 2026-10-31 after the owner's
+  first real recording: a 203-second VP9 WebM at 2560×1440 spent 868 of its 892 processing seconds
+  on frame extraction. A recording has a variable frame rate and FFprobe reports `r_frame_rate`
+  1000/1, so OpenCV's `CAP_PROP_POS_MSEC` seek counts about 1000 frames per second: on that file a
+  seek to 1 s landed at 81 s, a seek to 20 s at 182 s, and seeks past about 120 s failed, so only 95
+  of 429 samples were decoded and screenshots can come from the wrong moment.
+  Exit: every time-based read (legacy extraction, adaptive scan, adaptive fine candidates and
+  `decode_exact_frame`) returns the frame at the requested time on a generated variable-rate WebM,
+  proved by the frame's own content; a constant-rate MP4 still works; figures before and after are
+  recorded in [Status](STATUS.md).
 
 Exit: API tests, speaker-label tests and fake-device Playwright test pass; a saved recording has
 no queued job; manual test recorded in [Status](STATUS.md).
