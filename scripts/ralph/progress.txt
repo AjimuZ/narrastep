@@ -2,6 +2,7 @@
 Each session sees the patterns below and the last entries. Older entries move to archive/.
 
 ## Codebase Patterns
+- Git on Windows does not record the executable bit, and sessions cannot set it. A new script that must run as ./name needs it: name that file in the summary so the owner's session can set it, because a test checking the mode fails once the file is tracked.
 - In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is.
 - The owner's computer has Docker and the runner runs there. Older notes saying a check could not run because a worker had no Docker are history; run those checks now.
 - Host Python (3.15) and Node.js (24) differ from the project's (3.14.10 and 22.23.1): run project commands through scripts/ralph/sandbox.sh.
@@ -266,4 +267,12 @@ Sonnet was enough for this task.
   - start-podman.sh needs scripts/start-common.sh next to it; any test fixture that copies it must also copy that file.
   - podman-compose with --no-build is assumed to be accepted by `up`; this is unverified until P08.12.
   - P08.11 should document ./start-podman.sh in README and docs/DEVELOPMENT.md; I did not touch those.
+---
+
+## 2026-10-31T00:42:44Z - P08.11
+- The docs for Podman, the generated .env and the "Docker or Podman" constraint are in place, and `check.sh docs` passed (links valid). I reviewed the earlier uncommitted edits instead of starting over. R18 in docs/REQUIREMENTS.md already reads "Delivered for Docker (P08.1–P08.5); not yet run on Podman (P08.12)", and the P08.11 roadmap evidence says the same. The only change this session was to untick the P08.11 checkbox in docs/ROADMAP.md, which the orchestrator ticks. I did not re-read the README, DEVELOPMENT, CONTRIBUTING, CLAUDE.md or CHANGELOG edits. Nothing ran on real Podman (that is P08.12).
+- Files changed: README.md, docs/DEVELOPMENT.md, docs/REQUIREMENTS.md, docs/STATUS.md, docs/ROADMAP.md, CLAUDE.md, CONTRIBUTING.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - The orchestrator must tick P08.11 in docs/ROADMAP.md and set mode 100755 on start-podman.sh.
+  - P08.12 must update R16 to R18 and the STATUS rows after the real Podman run.
 ---

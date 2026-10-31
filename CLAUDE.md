@@ -43,7 +43,7 @@ Claude Code and every contributor working in this repository must follow these r
 11. Never add telemetry, analytics, cloud storage, remote transcription or inference, required CDN
     assets or hidden network requests.
 12. Never weaken local-first storage or privacy guarantees without an accepted ADR.
-13. Never require the user to install software on the computer. Docker is required; the desktop
+13. Never require the user to install software on the computer. Docker or Podman is required; the desktop
     window uses the host Node.js and npm already present and keeps Electron inside `desktop/`.
     Every other runtime dependency runs in a container.
 14. Keep optional heavy features (such as the local generation model) out of the default

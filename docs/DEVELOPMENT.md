@@ -18,6 +18,30 @@ dependencies and the configured Whisper model. Subsequent runtime processing is 
 application is available at `127.0.0.1:4200`, the API at `127.0.0.1:8002`, and Redis is not
 published.
 
+### Podman
+
+`./start-podman.sh` is the Podman counterpart ([ADR 0016](decisions/0016-podman-generated-environment-and-dependency-refresh.md)).
+It sources `scripts/start-common.sh` like `start.sh`, so `-r`, `--headless`, `-h`, the `.env` step
+and the desktop window behave the same. It runs `podman compose up --build` (`--no-build` with
+`-r`), falls back to `podman-compose` when `podman compose version` fails, and exits 1 with advice
+when Podman or both providers are missing. It never uses `sudo` or `--privileged`. Replace
+`docker compose` with `podman compose` in the commands below.
+
+Delivered: the script, its stub tests (`desktop/test/start-podman-script.test.cjs`) and
+engine-neutral Compose files and Dockerfiles. Not delivered: any run on real Podman (P08.12), so
+`depends_on` health conditions, rootless volume ownership and `podman machine` on Windows are
+unverified.
+
+### Generated `.env`
+
+When `.env` does not exist, both start scripts run `scripts/generate-env.sh --engine docker|podman`
+and write the result only if it succeeds; an existing `.env`, even an empty one, is never changed
+(delete it to regenerate). The values come from the CPU count, memory, free disk and free ports,
+read from `docker info` or `podman info`. On macOS and Windows that memory is the limit of the
+engine's virtual machine, not of the computer: raise it in the Docker Desktop settings (Resources)
+or with `podman machine set --memory 6144`. The scripts only report a low limit; they do not change
+the machine. If `podman info` fails, `start-podman.sh` tells you to run `podman machine start`.
+
 Inspect local services with:
 
 ```bash

@@ -6,6 +6,8 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Documentation for running with Docker or Podman, the generated `.env` and the `podman machine`
+  memory limit, in the README and the development guide.
 - `./start-podman.sh` starts the stack with rootless Podman and the same options (`-r`,
   `--headless`, `-h`) and desktop window as `./start.sh`. It uses `podman compose` or
   `podman-compose` and explains what to install when neither exists. It has not run on real

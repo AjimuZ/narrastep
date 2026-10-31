@@ -39,9 +39,9 @@ Status: **Implemented** in Version 0.2, **Partial** when only the named package 
 | R12a | Open the video at the time of any `[mm:ss]` reference in review and in the generated document | Planned (P06.6) |
 | R14 | Switch the interface between English and Italian at any time | Planned (P04) |
 | R15 | `start.sh` opens Narrastep in its own desktop window; `--headless` keeps browser-only use | In progress: the window exists in `desktop/` (P07.1); `start.sh` opens it after health and `--headless` skips it (P07.2, verified with a fake Docker and a stand-in API, not yet on the Docker stack) ([ADR 0014](decisions/0014-desktop-app-shell.md)) |
-| R16 | `start-podman.sh` runs the same stack, with the same options and desktop window, on Podman instead of Docker | Planned (P08.9–P08.10) |
-| R17 | When `.env` does not exist, the start scripts generate one from the computer's CPU, memory, free disk and free ports; an existing `.env` is never changed | Planned (P08.6–P08.8) |
-| R18 | Libraries, base images and tools are pinned and updated to the latest versions that pass the checks; transcription of any accepted video does not fail on library incompatibility | Planned (P08.1–P08.5) |
+| R16 | `start-podman.sh` runs the same stack, with the same options and desktop window, on Podman instead of Docker | Partly delivered: script and stub tests (P08.9–P08.10); not yet run on real Podman (P08.12) |
+| R17 | When `.env` does not exist, the start scripts generate one from the computer's CPU, memory, free disk and free ports; an existing `.env` is never changed | Delivered in `start.sh` and `start-podman.sh` (P08.6–P08.8, P08.10); not yet run on real Podman |
+| R18 | Libraries, base images and tools are pinned and updated to the latest versions that pass the checks; transcription of any accepted video does not fail on library incompatibility | Delivered for Docker (P08.1–P08.5); not yet run on Podman (P08.12) |
 
 ## Constraints
 

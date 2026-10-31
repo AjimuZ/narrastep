@@ -30,6 +30,12 @@ roadmap item, `docs/STATUS.md` and `CHANGELOG.md` in the same change.
 - A body only when it explains the reason, the checks or the limits.
 - No mention of AI or automated authorship and no `Co-Authored-By` trailers.
 
+## Container engine
+
+The only software a user must have is Docker or Podman; the desktop window also uses the Node.js
+and npm already on the computer. Keep the Compose file and Dockerfiles working on both engines and
+do not add a host install. See [Development](docs/DEVELOPMENT.md#podman).
+
 ## Licenses
 
 Narrastep is public and non-commercial. Add only dependencies, models, fonts and tools with a free

@@ -34,7 +34,9 @@ The exact state of each capability is in [Status](docs/STATUS.md); the plan is i
 
 ## Requirements
 
-- Docker with the `docker compose` command. Nothing else is installed on the computer.
+- Docker with the `docker compose` command, or Podman with `podman compose` or `podman-compose`.
+  Nothing else is installed on the computer. Podman support (`./start-podman.sh`) is delivered but
+  has not yet run on real Podman (planned smoke test P08.12).
 - For the planned desktop window: host Node.js 22.12 or newer with npm (Electron is then
   downloaded into the project's `desktop/` folder on first launch).
 - At least 8 GB of free memory and about 5 GB of disk for images, the Whisper model and a small
@@ -55,6 +57,14 @@ The exact state of each capability is in [Status](docs/STATUS.md); the plan is i
    memory, CPUs, free disk and busy ports (see [ADR 0016](docs/decisions/0016-podman-generated-environment-and-dependency-refresh.md)).
    It never changes an existing `.env`, even an empty one; delete the file to generate a new one.
    If generation fails, nothing starts and the script says so.
+
+   With Podman, use `./start-podman.sh` instead of `./start.sh`: it takes the same options
+   (`-r`, `--headless`, `-h`), opens the same desktop window and generates `.env` from `podman info`.
+   On macOS and Windows, Podman runs in a virtual machine that has its own memory limit: if
+   `podman info` fails, run `podman machine start` (and `podman machine init` first if none exists),
+   and raise the limit with `podman machine set --memory 6144` when the generated `.env` warns
+   about it. The script never starts or resizes the machine. With Docker Desktop, raise the limit in
+   its Resources settings. Stop a Podman stack with `podman compose down`.
 
 2. Build and start the stack from Git Bash or WSL:
 
