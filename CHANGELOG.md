@@ -6,6 +6,10 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- `./start-podman.sh` starts the stack with rootless Podman and the same options (`-r`,
+  `--headless`, `-h`) and desktop window as `./start.sh`. It uses `podman compose` or
+  `podman-compose` and explains what to install when neither exists. It has not run on real
+  Podman yet.
 - `./start.sh` creates `.env` from the computer's memory, CPUs, free disk and busy ports when the
   file is missing. An existing `.env`, even an empty one, is never changed, and a failed
   generation stops the start with a message.

@@ -33,6 +33,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Redirects are checked in a custom `HTTPRedirectHandler`, so the host allowlist applies to every hop and the `Range` header survives.
 - Check order in model state actions: known model (404), then kill switch where it applies (403), then state (409), then side effects. Do the destructive file removal before the state change.
 - Run ruff format after editing and export_openapi.py after changing routes, then check.sh backend.
+- Stub-test start scripts with a restricted PATH (fake binaries plus symlinks to a few system tools) and a fake uname to exercise platform branches.
 
 ---
 
@@ -242,4 +243,27 @@ Choices and limits:
 
 ## [2026-10-30T23:51:28.905Z] - P08.10a - published by hand
 scripts/start-common.sh holds option parsing, the .env step and the window watcher; start.sh sources it. A test fixture that copies start.sh must also copy this file.
+---
+
+## 2026-10-31T00:05:43Z - P08.10b
+- I added `start-podman.sh`. It sources `scripts/start-common.sh` with `compose_engine=podman`, so the options, the `.env` step and the window watcher match `start.sh`. `check.sh desktop` passed with 219 tests, `check.sh docs` passed, and the new stub tests are among them. I did not run `ralph` or `compose`, and nothing ran on real Podman (that is P08.12). The Git executable bit is not set yet: the sandbox denied `git update-index`, so the orchestrator must run `git update-index --add --chmod=+x start-podman.sh`.
+
+Behavior:
+- **Compose provider:** it runs `podman compose up --build`, or `--no-build` with `-r`. If `podman compose version` fails it falls back to `podman-compose`. With no provider it exits 1 and says what to install, and it exits 1 with a message when Podman itself is missing.
+- **macOS and Windows:** it only prints "run `podman machine start`" when `podman info` fails and never starts the machine. This check is not in the acceptance criteria; I added it from ADR 0016.
+- **`.env` step:** the generator is called with `--engine podman` and reads `podman info`.
+- **Window failure:** a failed or missing window leaves the stack running, as in P07.2.
+- **No `sudo` or `--privileged`:** none appears in the script, and a test scans for them.
+
+Tests are in `desktop/test/start-podman-script.test.cjs`. They cover `-h`, unknown options (exit 2), `--headless`, `-r`, provider preference and fallback, a missing provider or Podman, the machine hint, `.env` generation and failure, Compose's exit code, and Node.js missing. They are skipped on Windows. The Git-mode test compares only once the file is tracked, so it checks nothing until the executable bit is set and the file is added.
+
+I added dated evidence under P08.10 in `docs/ROADMAP.md`, left its checkbox alone, and updated `CHANGELOG.md` and `docs/STATUS.md`.
+
+Sonnet was enough for this task.
+- Files changed: start-podman.sh, desktop/test/start-podman-script.test.cjs, docs/ROADMAP.md, docs/STATUS.md, CHANGELOG.md
+- **Learnings for future iterations:**
+  - The orchestrator must set mode 100755 on start-podman.sh in Git; the Git-mode test only checks once the file is tracked.
+  - start-podman.sh needs scripts/start-common.sh next to it; any test fixture that copies it must also copy that file.
+  - podman-compose with --no-build is assumed to be accepted by `up`; this is unverified until P08.12.
+  - P08.11 should document ./start-podman.sh in README and docs/DEVELOPMENT.md; I did not touch those.
 ---
