@@ -43,7 +43,7 @@
 
         <h3 i18n="@@export.contents">Contents</h3>
         <ul class="file-list mono">
-          @for (file of standardFiles; track file) {
+          @for (file of listedFiles(); track file) {
             <li>{{ file }}</li>
           }
         </ul>
@@ -78,6 +78,36 @@
             </span>
           </span>
         </label>
+
+        @if (generation(); as generated) {
+          <label class="video-option document-option">
+            <input
+              id="include-generated-document"
+              type="checkbox"
+              aria-describedby="include-generated-document-help"
+              [checked]="includeGeneration()"
+              (change)="setIncludeGeneration($event)"
+            />
+            <span class="video-option__text">
+              <span class="ns-label" i18n="@@export.include_document"
+                >Include the generated document</span
+              >
+              <span
+                class="ns-help"
+                id="include-generated-document-help"
+                i18n="@@export.include_document_help"
+                >Off by default. Adds the latest finished document of this project. Packages made
+                earlier do not change.</span
+              >
+              <span class="ns-help">
+                <span i18n="@@export.include_document_made">Generated</span>:
+                <time [attr.datetime]="generated.completedAt ?? generated.createdAt">{{
+                  generated.completedAt ?? generated.createdAt | date: 'medium'
+                }}</time>
+              </span>
+            </span>
+          </label>
+        }
 
         <button
           class="ns-button ns-button--primary create-action"
@@ -205,6 +235,11 @@
                   </dl>
                   @if (item.includeOriginalVideo) {
                     <p class="ns-help" i18n="@@export.video_included">Original video included</p>
+                  }
+                  @if (item.includeGenerationId) {
+                    <p class="ns-help" i18n="@@export.document_included">
+                      Generated document included
+                    </p>
                   }
                 </div>
                 @if (item.status === 'completed') {

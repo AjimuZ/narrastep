@@ -48,6 +48,8 @@ AI_INPUT_DIR = "01-ai-input"
 SCREENSHOTS_DIR = "02-screenshots"
 TRANSCRIPT_DIR = "03-transcript"
 BATCHES_DIR = "04-chatgpt-batches"
+GENERATED_DOCUMENT_DIR = "05-generated-document"
+GENERATED_DOCUMENT_FILE = f"{GENERATED_DOCUMENT_DIR}/document.md"
 METADATA_DIR = "metadata"
 SOURCE_DIR = "source"
 
@@ -88,6 +90,10 @@ class ExportRequest:
 
     `archive_name` is the ZIP base name and the archive root folder (ADR 0013). When omitted it is
     derived from `created_at`, the project type and name with export number 1.
+
+    `generated_document_path` is the Markdown of a completed local generation to pack as
+    `05-generated-document/document.md` (P06.4c); `generated_document` describes it in the
+    manifest. Both are set or both are None.
     """
 
     export_id: str
@@ -99,6 +105,8 @@ class ExportRequest:
     output_mode: str
     original_video_path: Path | None = None
     include_original_video: bool = False
+    generated_document_path: Path | None = None
+    generated_document: dict[str, Any] | None = None
     created_at: datetime | None = None
     archive_name: str | None = None
     extra_manifest: dict[str, Any] = field(default_factory=dict)
@@ -195,7 +203,8 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
     The ZIP holds one root folder named after the archive (ADR 0013) with the numbered folders,
     `README.md` and `metadata/manifest.json` (schema 0.3.0). Raises ValueError for an unsafe
     `archive_name`, FileExistsError when the destination exists and FileNotFoundError when a
-    selected evidence asset is missing; a failed build leaves no partial ZIP behind.
+    selected evidence asset or the chosen generated document is missing; a failed build leaves no
+    partial ZIP behind. `05-generated-document/` exists only when a document was chosen.
     """
     archive_name = _resolve_archive_name(request)
     request.destination_path.parent.mkdir(parents=True, exist_ok=True)
@@ -241,6 +250,13 @@ def build_export_package(request: ExportRequest, metrics: MetricsCollector | Non
             (transcript_root / "subtitles.srt").write_text(
                 _build_srt(rendered_segments), encoding="utf-8"
             )
+            if request.generated_document_path is not None:
+                if not request.generated_document_path.is_file():
+                    raise FileNotFoundError("The generated document is unavailable.")
+                generated_root = package_root / GENERATED_DOCUMENT_DIR
+                generated_root.mkdir()
+                # Copied byte for byte: the file names it cites are those of `02-screenshots/`.
+                shutil.copyfile(request.generated_document_path, generated_root / "document.md")
             if request.include_original_video and request.original_video_path is not None:
                 source_root = package_root / SOURCE_DIR
                 source_root.mkdir()
@@ -751,7 +767,9 @@ def _build_manifest(
     """Describe project, source, active segments, and honest evidence associations.
 
     Schema 0.3.0 adds `archiveName` and lists every `paths` entry relative to the archive root
-    folder (the manifest itself sits in `metadata/`).
+    folder (the manifest itself sits in `metadata/`). `paths.generatedDocument` and
+    `includedGeneration` (P06.4c) are null unless a generated document is packed; they are
+    additive keys, so the schema version stays 0.3.0.
     """
     manifest_segments = []
     screenshots = []
@@ -818,13 +836,24 @@ def _build_manifest(
             "chatgptBatches": BATCHES_DIR,
             "sourceMetadata": f"{METADATA_DIR}/source.json",
             "originalVideo": _original_video_export_path(request),
+            "generatedDocument": (
+                GENERATED_DOCUMENT_FILE if request.generated_document_path is not None else None
+            ),
         },
         "includedOriginalVideo": bool(
             request.include_original_video and request.original_video_path is not None
         ),
+        "includedGeneration": _included_generation(request),
     }
     manifest.update(request.extra_manifest)
     return manifest
+
+
+def _included_generation(request: ExportRequest) -> dict[str, Any] | None:
+    """Return the manifest description of the packed generated document, or None without one."""
+    if request.generated_document_path is None:
+        return None
+    return {**(request.generated_document or {}), "path": GENERATED_DOCUMENT_FILE}
 
 
 def _build_archive_readme(request: ExportRequest, archive_name: str, batch_count: int) -> str:
@@ -854,6 +883,12 @@ def _build_archive_readme(request: ExportRequest, archive_name: str, batch_count
         f"- `{METADATA_DIR}/`: `manifest.json` (schema {MANIFEST_SCHEMA_VERSION}) and "
         "`source.json`.",
     ]
+    if request.generated_document_path is not None:
+        lines.append(
+            f"- `{GENERATED_DOCUMENT_DIR}/`: `document.md`, the document written by the local "
+            "model, included at your request. Check it against the transcript before you rely "
+            "on it."
+        )
     if request.include_original_video and request.original_video_path is not None:
         lines.append(f"- `{SOURCE_DIR}/`: the original video, included at your request.")
     lines.extend(

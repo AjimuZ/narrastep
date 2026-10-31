@@ -227,6 +227,17 @@ treated as `task_briefing`; an unknown value falls back to `general` without fai
 The scan rate and the image budgets above are the type-specific screenshot profile; a unit test
 checks that the analysis profile and the export budget use the same rates for every type.
 
+When the user includes a generation (P06.4c), the worker adds one step after the transcript files:
+it resolves the chosen generation of the same project, checks that it is `completed` and that its
+`document.md` is a file inside the data root, and copies that file unchanged to
+`05-generated-document/document.md`. The manifest then lists `paths.generatedDocument` and
+`includedGeneration` (id, model, prompt version, language and completion time); without a choice
+both are `null` and the folder is absent. A missing or unfinished generation fails the export with
+`PROJECT_ASSET_MISSING` and leaves no ZIP, the same as a missing screenshot. The document is not
+rewritten: the screenshot file names it cites come from the same selector (`select_package_screenshots`)
+as `02-screenshots/`, so they match while the review is unchanged. The step does not touch earlier
+archives.
+
 The estimate endpoint and immutable generator call the same selector. An unmaterialized PNG is
 estimated conservatively as `max(thumbnailBytes, width * height * 0.75)` and the response marks the
 byte total approximate. Export materializes thumbnail-only representatives inside its temporary

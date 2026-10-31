@@ -6,6 +6,15 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- Include a generated document in the next package. The Export screen has **Include the generated
+  document** (Italian **Includi il documento generato**), off by default and shown only when the
+  project has a finished generation; the package then holds it as
+  `05-generated-document/document.md`, named in the archive README and listed in
+  `metadata/manifest.json` (`paths.generatedDocument` and `includedGeneration`, both `null` without
+  it). The document is copied as written; the history says "Generated document included". Packages
+  made earlier are not changed. In the API, `POST /api/v1/projects/{id}/exports` takes
+  `includeGenerationId` and refuses a generation that does not exist, belongs to another project,
+  is not finished or lost its file. The size estimate does not count the document.
 - Settings screen (`/settings`, menu entry **Settings** / **Impostazioni**, English and Italian). It
   has the interface language switch (also kept in the header) and the model manager for the
   optional local generation: each model shows its state, download size and license name and link;
@@ -23,8 +32,8 @@ All notable changes to Narrastep are documented in this file.
   while the current text stays until the new one is ready. A failed generation shows its code and a
   translated explanation (for example not enough free memory). The screen and the **Document** link
   in Review exist only while local generation is on and a model is enabled; otherwise the address
-  returns to the review. Copying the result and including it in a package are not offered yet, and
-  the `[mm:ss]` citations are plain text for now.
+  returns to the review. Copying the result is not offered yet (including it in a package is on the
+  Export screen), and the `[mm:ss]` citations are plain text for now.
 - Local document generation in the API: `POST /api/v1/projects/{id}/generations`
   queues a job on the same worker as processing and export, which sends the reviewed transcript and
   screenshots to the enabled local model in chronological parts and stores

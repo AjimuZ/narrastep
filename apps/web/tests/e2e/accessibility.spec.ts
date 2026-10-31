@@ -58,6 +58,12 @@ const SCREENS: Screen[] = [
     ready: { en: 'Create package', it: 'Crea pacchetto' },
   },
   {
+    name: 'export with a generated document to include',
+    path: '/projects/project-1/export',
+    scenario: { status: 'review', lightEnabled: true, generationExisting: true },
+    ready: { en: 'Include the generated document', it: 'Includi il documento generato' },
+  },
+  {
     name: 'review with the Document link',
     path: '/projects/project-1/review',
     scenario: { status: 'review', lightEnabled: true },

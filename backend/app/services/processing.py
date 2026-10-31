@@ -13,6 +13,7 @@ from app.config import Settings, get_settings
 from app.database import SessionLocal
 from app.models import (
     ExportStatus,
+    Generation,
     JobStatus,
     ProcessingJob,
     Project,
@@ -409,6 +410,9 @@ def perform_export(
                 # Queued before the name was stored (see `assign_export_name`).
                 assign_export_name(session, export, project)
                 session.commit()
+            generated_document_path, generated_document = _generation_for_export(
+                session, export, project, active_settings
+            )
             request = ExportRequest(
                 export_id=export.id,
                 archive_name=(export.download_name or "").removesuffix(".zip"),
@@ -442,6 +446,8 @@ def perform_export(
                 output_mode=project.mode_value,
                 original_video_path=source_path,
                 include_original_video=export.include_original_video,
+                generated_document_path=generated_document_path,
+                generated_document=generated_document,
                 created_at=export.created_at,
                 chatgpt_max_files_per_batch=active_settings.chatgpt_max_files_per_batch,
                 duplicate_similarity_threshold=(active_settings.duplicate_similarity_threshold),
@@ -505,6 +511,37 @@ def perform_export(
             _record_export_metrics(session, export, workspace, metrics, "failed")
             project.state = ProjectState.REVIEW
             session.commit()
+
+
+def _generation_for_export(
+    session: Session, export: ProjectExport, project: Project, settings: Settings
+) -> tuple[Path | None, dict[str, object] | None]:
+    """Return the document file and manifest description of the generation an export includes.
+
+    Returns `(None, None)` when the export did not choose one. Raises `FileNotFoundError` when the
+    chosen generation is gone, belongs to another project, is not completed or lost its file, so
+    the export fails with `PROJECT_ASSET_MISSING` instead of silently leaving the document out.
+    """
+    if export.generation_id is None:
+        return None, None
+    generation = session.get(Generation, export.generation_id)
+    if (
+        generation is None
+        or generation.project_id != project.id
+        or generation.status != JobStatus.COMPLETED
+        or not generation.relative_path
+    ):
+        raise FileNotFoundError("The generated document is unavailable.")
+    path = ensure_within_root(settings.data_root, generation.relative_path)
+    if not path.is_file():
+        raise FileNotFoundError("The generated document is unavailable.")
+    return path, {
+        "generationId": generation.id,
+        "modelId": generation.model_id,
+        "promptVersion": generation.prompt_version,
+        "language": generation.language,
+        "generatedAt": serialize_utc(generation.completed_at or generation.created_at),
+    }
 
 
 def next_export_sequence(session: Session, project_id: str) -> int:

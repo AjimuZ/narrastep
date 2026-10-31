@@ -121,6 +121,19 @@ Export creation accepts `includeOriginalVideo`, which defaults to `false`. Expor
 download endpoint returns that name in `Content-Disposition`; exports made before names were
 stored report and download as `narrastep-{exportId}.zip`.
 
+Export creation also accepts `includeGenerationId` (P06.4c), the id of a completed generation of
+the same project. The worker then packs its `document.md` as `05-generated-document/document.md` and
+the manifest lists it (`paths.generatedDocument` and `includedGeneration`; both `null` otherwise).
+The request is refused with nothing stored, and the project state unchanged, as `404
+GENERATION_NOT_FOUND` (no such generation, or one of another project: the same answer for both),
+`409 GENERATION_NOT_READY` (not `completed`) or `404 PROJECT_ASSET_MISSING` (its document file is
+gone). Export responses report the choice as `includeGenerationId` (`null` when none, also for every
+export made before the field existed); a package already built is never rewritten. If the file
+disappears after queueing, the export fails with `PROJECT_ASSET_MISSING` instead of leaving the
+document out. The document is copied unchanged; its screenshot file names are those the export
+selector gives, so they match `02-screenshots/` as long as the review has not changed since the
+generation.
+
 Exact-frame recovery accepts a source-relative timestamp:
 
 ```json
@@ -431,8 +444,7 @@ code; `auto` or blank means the transcript language) and answers `202` with the 
 
 Not implemented and not in [openapi.json](openapi.json):
 
-- The optional inclusion of a generated document in an export package and copying it as Markdown
-  (P06.4c, P06.4d); the benchmark (P06.5).
+- Copying the generated document as Markdown (P06.4d); the benchmark (P06.5).
 
 ## Progress events
 

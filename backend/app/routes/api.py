@@ -1494,6 +1494,8 @@ def _queue_export(
     if active_export is not None:
         raise ApiError("PROJECT_BUSY", "This project already has an active export.", 409)
     _reject_export_needing_removed_source(session, project, request, settings)
+    if request.include_generation_id is not None:
+        _require_includable_generation(session, project, request.include_generation_id, settings)
     _ensure_worker_available(settings)
     transition = session.execute(
         update(Project)
@@ -1515,6 +1517,7 @@ def _queue_export(
     export = ProjectExport(
         project_id=project.id,
         include_original_video=request.include_original_video,
+        generation_id=request.include_generation_id,
         celery_task_id=task_id,
         created_at=utc_now(),
         sequence=next_export_sequence(session, project.id),
@@ -1549,6 +1552,25 @@ def _queue_export(
         ) from error
     session.expire_all()
     return _export_payload(_require_export(session, export.id))
+
+
+def _require_includable_generation(
+    session: Session, project: Project, generation_id: str, settings: Settings
+) -> Generation:
+    """Return the generation an export asks to include, or refuse before anything is stored.
+
+    Refused with `404 GENERATION_NOT_FOUND` when it does not exist or belongs to another project
+    (the same answer, so ids of other projects are not revealed), `409 GENERATION_NOT_READY` until
+    it completed, and `404 PROJECT_ASSET_MISSING` when its document file is gone.
+    """
+    generation = session.get(Generation, generation_id)
+    if generation is None or generation.project_id != project.id:
+        raise ApiError("GENERATION_NOT_FOUND", "The generation was not found.", 404)
+    if generation.status != JobStatus.COMPLETED or not generation.relative_path:
+        raise ApiError("GENERATION_NOT_READY", "The document is not ready yet.", 409)
+    if not ensure_within_root(settings.data_root, generation.relative_path).is_file():
+        raise ApiError("PROJECT_ASSET_MISSING", "The document file is unavailable.", 404)
+    return generation
 
 
 def _reject_export_needing_removed_source(
@@ -2098,6 +2120,7 @@ def _export_payload(export: ProjectExport) -> dict[str, object]:
         "projectId": export.project_id,
         "status": export.status.value,
         "includeOriginalVideo": export.include_original_video,
+        "includeGenerationId": export.generation_id,
         "progressPercent": export.progress_percent,
         "currentStage": export.current_stage,
         "errorCode": export.error_code,

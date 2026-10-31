@@ -199,6 +199,55 @@ def test_export_includes_original_only_when_explicitly_requested(tmp_path: Path)
         assert manifest["includedOriginalVideo"] is True
 
 
+def test_generated_document_is_packed_only_when_chosen(tmp_path: Path) -> None:
+    """Pack `05-generated-document/document.md` with its manifest entries, or leave all out."""
+    raw = tmp_path / "raw-transcript.json"
+    raw.write_text('{"segments":[]}\n', encoding="utf-8")
+    document = tmp_path / "document.md"
+    document.write_text("# Notes\n\nSee step-001_00m00s.png [00:00].\n", encoding="utf-8")
+
+    def build(name: str, **options: object) -> Path:
+        """Build one package of an empty project with the given generated-document options."""
+        return build_export_package(
+            ExportRequest(
+                export_id=name,
+                project={"id": "project", "name": "Demo"},
+                source={"assetId": "asset"},
+                segments=[],
+                raw_transcript_path=raw,
+                destination_path=tmp_path / f"{name}.zip",
+                output_mode="general",
+                **options,  # type: ignore[arg-type]
+            )
+        )
+
+    with open_package(
+        build(
+            "with",
+            generated_document_path=document,
+            generated_document={"generationId": "generation-1"},
+        )
+    ) as archive:
+        assert archive.read("05-generated-document/document.md") == document.read_bytes()
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        assert manifest["paths"]["generatedDocument"] == "05-generated-document/document.md"
+        assert manifest["includedGeneration"] == {
+            "generationId": "generation-1",
+            "path": "05-generated-document/document.md",
+        }
+    with open_package(build("without")) as archive:
+        assert not any(name.startswith("05-generated-document") for name in archive.namelist())
+        manifest = json.loads(archive.read("metadata/manifest.json"))
+        assert manifest["paths"]["generatedDocument"] is None
+        assert manifest["includedGeneration"] is None
+
+    document.unlink()
+    with pytest.raises(FileNotFoundError):
+        build("gone", generated_document_path=document, generated_document={})
+    assert not (tmp_path / "gone.zip").exists()
+    assert not (tmp_path / "gone.zip.partial").exists()
+
+
 @pytest.mark.parametrize("missing_asset", ["raw", "screenshot"])
 def test_export_fails_when_persisted_evidence_is_missing(
     tmp_path: Path, missing_asset: str

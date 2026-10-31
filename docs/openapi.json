@@ -33,8 +33,21 @@
         "type": "object"
       },
       "ExportCreate": {
-        "description": "Configure one immutable export without including source video by default.",
+        "description": "Configure one immutable export without source video or a generated document by default.\n\n`include_generation_id` names a completed generation of the same project whose document is\npacked as `05-generated-document/document.md`; it is validated when the export is queued.",
         "properties": {
+          "includeGenerationId": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includegenerationid"
+          },
           "includeOriginalVideo": {
             "default": false,
             "title": "Includeoriginalvideo",
@@ -116,6 +129,9 @@
           },
           "id": {
             "title": "Id"
+          },
+          "includeGenerationId": {
+            "title": "Includegenerationid"
           },
           "includeOriginalVideo": {
             "title": "Includeoriginalvideo"

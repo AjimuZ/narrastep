@@ -545,9 +545,14 @@ class JobResponse(ApiModel):
 
 
 class ExportCreate(ApiModel):
-    """Configure one immutable export without including source video by default."""
+    """Configure one immutable export without source video or a generated document by default.
+
+    `include_generation_id` names a completed generation of the same project whose document is
+    packed as `05-generated-document/document.md`; it is validated when the export is queued.
+    """
 
     include_original_video: bool = False
+    include_generation_id: str | None = Field(default=None, min_length=1, max_length=36)
 
 
 class ExportResponse(ApiModel):
@@ -563,6 +568,7 @@ class ExportResponse(ApiModel):
     progress_percent: int
     current_stage: str | None
     include_original_video: bool
+    include_generation_id: str | None = None
     error_code: str | None
     error_message: str | None
     created_at: datetime

@@ -380,8 +380,8 @@ itself also ran with the real server and model in the [opt-in integration test](
   worker owns with `GENERATION_INTERRUPTED` and removes its folder. For the same project the API
   refuses processing, deletion and removal of the original video while a generation is active, and
   generating while the project is queued, processing or exporting.
-- **Not done.** The document in an export package, copying the result and the import control in
-  Settings (P06.4c and P06.4d), the clickable citations (P06.6) and the benchmark (P06.5). The
+- **Not done.** Copying the result and the import control in Settings (P06.4d), the clickable
+  citations (P06.6) and the benchmark (P06.5). The
   Document screen (P06.4b) has not run against the real API, Celery or a real model. The context size (8192) and
   the part budget are estimates until the benchmark measures them. A worker killed outright can
   leave its `llama-server` child running until the container stops.
@@ -390,6 +390,14 @@ itself also ran with the real server and model in the [opt-in integration test](
 
 When a generation exists, the user can include it in the next export as
 `05-generated-document/document.md`. Older exports are not changed.
+
+Implemented in P06.4c. The Export screen shows **Include the generated document** (off by default)
+when the project has a finished generation, and offers the newest one. `POST /projects/{id}/exports`
+takes `includeGenerationId`; the choice is stored in `project_exports.generation_id` and the worker
+copies the file unchanged ([how](PROCESSING_PIPELINE.md#9-export-screenshot-selection), [API](API.md),
+[manifest](DATA_MODEL.md#export-layout)). The archive README names the folder and says to check the
+text against the transcript. Tested with generated files only (`test_export_generation.py`,
+`test_exporting.py`); not run with a document written by a real model.
 
 ## Settings
 

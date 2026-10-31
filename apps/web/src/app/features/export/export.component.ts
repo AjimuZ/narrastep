@@ -14,7 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, catchError, finalize, forkJoin, of, switchMap, tap } from 'rxjs';
 
-import { ExportEstimate, Project, ProjectExport } from '../../core/api.models';
+import { DocumentGeneration, ExportEstimate, Project, ProjectExport } from '../../core/api.models';
 import { errorText, localizedError } from '../../core/i18n/error-text';
 import { formatFileSize } from '../../core/i18n/format';
 import { ApiService } from '../../core/services/api.service';
@@ -61,6 +61,9 @@ export class ExportComponent implements OnInit {
   readonly exports = signal<ProjectExport[]>([]);
   readonly estimate = signal<ExportEstimate | null>(null);
   readonly includeOriginalVideo = signal(false);
+  /** The newest finished generation with a document, offered for the package (P06.4c). */
+  readonly generation = signal<DocumentGeneration | null>(null);
+  readonly includeGeneration = signal(false);
   readonly loading = signal(true);
   readonly creating = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -91,6 +94,16 @@ export class ExportComponent implements OnInit {
     'metadata/source.json',
   ];
 
+  /** The contents list, with the generated document in reading order once it is chosen. */
+  readonly listedFiles = computed(() => {
+    if (!this.includeGeneration()) {
+      return this.standardFiles;
+    }
+    const files = [...this.standardFiles];
+    files.splice(files.length - 2, 0, '05-generated-document/document.md');
+    return files;
+  });
+
   private readonly api = inject(ApiService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -102,12 +115,18 @@ export class ExportComponent implements OnInit {
       estimate: this.api
         .estimateExport(this.projectId(), this.includeOriginalVideo())
         .pipe(catchError(() => of(null))),
+      // Without the list the package is still possible, just without the document option.
+      generations: this.api.listGenerations(this.projectId()).pipe(catchError(() => of([]))),
     })
       .pipe(
-        tap(({ project, exports, estimate }) => {
+        tap(({ project, exports, estimate, generations }) => {
           this.project.set(project);
           this.exports.set(sortExports(exports));
           this.estimate.set(estimate);
+          this.generation.set(
+            generations.find((item) => item.status === 'completed' && item.documentAvailable) ??
+              null,
+          );
           // The initial persisted snapshot is renderable even when background polling remains active.
           this.loading.set(false);
         }),
@@ -137,6 +156,11 @@ export class ExportComponent implements OnInit {
     this.refreshEstimate();
   }
 
+  /** Reads the generated-document checkbox; off by default so a package never includes it unasked. */
+  setIncludeGeneration(event: Event): void {
+    this.includeGeneration.set((event.target as HTMLInputElement).checked);
+  }
+
   /** Refreshes the conservative estimate using the same backend selection policy as generation. */
   refreshEstimate(): void {
     this.api
@@ -155,9 +179,11 @@ export class ExportComponent implements OnInit {
     }
     this.creating.set(true);
     this.errorMessage.set(null);
+    const generation = this.includeGeneration() ? this.generation() : null;
     this.api
       .createExport(this.projectId(), {
         includeOriginalVideo: this.includeOriginalVideo(),
+        ...(generation ? { includeGenerationId: generation.id } : {}),
       })
       .pipe(
         tap((created) => this.exports.update((exports) => sortExports([created, ...exports]))),

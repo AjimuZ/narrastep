@@ -679,6 +679,70 @@ def test_generations_revision_upgrades_the_previous_head_and_keeps_project_data(
         get_settings.cache_clear()
 
 
+def test_export_generation_revision_keeps_existing_exports_without_a_generation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Add a nullable `generation_id` to `project_exports` and leave older exports null (P06.4c).
+
+    `alembic check` finds no drift and the downgrade drops only the new column.
+    """
+    data_root = tmp_path / "migration-export-generation"
+    database_url = f"sqlite:///{(data_root / 'narrastep.db').as_posix()}"
+    monkeypatch.setenv("NARRASTEP_DATA_DIR", str(data_root))
+    monkeypatch.setenv("NARRASTEP_DATABASE_URL", database_url)
+    get_settings.cache_clear()
+    alembic_config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
+
+    try:
+        command.upgrade(alembic_config, "20261031_0011")
+        engine = create_engine(database_url)
+        assert "generation_id" not in {
+            item["name"] for item in inspect(engine).get_columns("project_exports")
+        }
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO projects (id, name, source_language, output_mode, state,"
+                    " created_at, updated_at) VALUES ('project', 'P', 'auto', 'meeting',"
+                    " 'review', '2026-10-31', '2026-10-31')"
+                )
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO project_exports (id, project_id, status, progress_percent,"
+                    " include_original_video, metrics_summary, created_at, updated_at)"
+                    " VALUES ('old', 'project', 'completed', 100, 0, '{}', '2026-10-31',"
+                    " '2026-10-31')"
+                )
+            )
+        engine.dispose()
+
+        command.upgrade(alembic_config, "head")
+        command.check(alembic_config)
+        engine = create_engine(database_url)
+        columns = {item["name"]: item for item in inspect(engine).get_columns("project_exports")}
+        assert columns["generation_id"]["nullable"]
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    text("SELECT generation_id FROM project_exports WHERE id = 'old'")
+                ).scalar()
+                is None
+            )
+        engine.dispose()
+
+        command.downgrade(alembic_config, "20261031_0011")
+        engine = create_engine(database_url)
+        columns = {item["name"] for item in inspect(engine).get_columns("project_exports")}
+        assert "generation_id" not in columns and "download_name" in columns
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT count(*) FROM project_exports")).scalar() == 1
+        engine.dispose()
+    finally:
+        get_settings.cache_clear()
+
+
 def test_legacy_mode_values_map_to_project_types() -> None:
     """Normalize the retired value found in old snapshots and keep every other value."""
     assert canonical_output_mode("technical_walkthrough") == OutputMode.TASK_BRIEFING.value

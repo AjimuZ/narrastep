@@ -255,6 +255,8 @@ export interface ProjectExport {
   projectId: string;
   status: ProjectExportStatus;
   includeOriginalVideo: boolean;
+  /** Generation whose document this package holds (P06.4c); null or absent when none. */
+  includeGenerationId?: string | null;
   progressPercent: number;
   currentStage: string | null;
   errorCode: string | null;
@@ -280,6 +282,8 @@ export interface ExportEstimate {
 
 export interface CreateExportRequest {
   includeOriginalVideo: boolean;
+  /** A completed generation of the project to pack as `05-generated-document/document.md`. */
+  includeGenerationId?: string;
 }
 
 export interface ApiErrorEnvelope {

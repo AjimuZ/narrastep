@@ -68,6 +68,11 @@ export is queued, so renaming the project later does not rename existing exports
 `20261029_0004` numbered existing exports by creation time and left their `download_name` empty;
 an empty name means a Version 0.2 export, served as `narrastep-{export UUID}.zip`.
 
+`generation_id` (P06.4c, migration `20261031_0012`) is the generation whose `document.md` the export
+packs as `05-generated-document/document.md`; null when none was chosen, which includes every export
+made before the column. It has no foreign key: the ZIP is the record and a generation is never
+deleted on its own, and the downgrade only drops the column.
+
 ### Generation
 
 One per local document generation ([Local generation](LOCAL_GENERATION.md), P06.3d, migration
@@ -164,9 +169,9 @@ SQLite is the only mutable project-state authority in Version 0.2. A separate mu
 
 ## Planned changes
 
-Nothing is planned in the schema at this point. The model install state (`GenerationModel`, P06.2a)
-and the generations (`Generation`, P06.3d) are implemented; the generated document will join the
-export package in P06.4 without a schema change.
+Nothing is planned in the schema at this point. The model install state (`GenerationModel`, P06.2a),
+the generations (`Generation`, P06.3d) and the generation an export includes
+(`ProjectExport.generation_id`, P06.4c) are implemented.
 
 ### Export layout
 
@@ -181,7 +186,7 @@ name; the folder numbers give the reading order:
   02-screenshots/step-003_00m42s.png
   03-transcript/                    reviewed-transcript.md, subtitles.srt, raw-transcript.json
   04-chatgpt-batches/               README.md and batch-01-of-03/ (batch-input.md plus its images)
-  05-generated-document/document.md (only when included; added with local generation, P06)
+  05-generated-document/document.md (only when the user includes a generation, P06.4c)
   metadata/                         manifest.json (schema 0.3.0), source.json
   source/original-video.mp4         (only when requested)
 ```
@@ -193,6 +198,10 @@ Rules:
   names. Batch folders are `batch-{nn}-of-{total}` (three digits once there are more than 99).
 - `manifest.json` schema `0.3.0` adds `archiveName` and `paths.readme` and `paths.chatgptBatches`.
   Every `paths` value is relative to the archive root folder, not to the `metadata/` folder.
+- P06.4c adds two keys without a schema bump, because a reader that ignores unknown keys is not
+  affected and no existing archive changes: `paths.generatedDocument` (`05-generated-document/document.md`
+  or `null`) and `includedGeneration` (`null`, or `generationId`, `modelId`, `promptVersion`,
+  `language`, `generatedAt` and `path`). Archives made before have neither key.
 - Version 0.2 archives (schema `0.2.0`, no root folder, folders `transcript/`, `screenshots/`,
   `llm/`, `chatgpt-batches/` and `metadata/`, manifest at the top level) are never rewritten and
   are still downloaded as stored. Nothing in Narrastep reads a manifest after export, so both

@@ -470,6 +470,10 @@ class ProjectExport(Base):
     progress_percent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     current_stage: Mapped[str | None] = mapped_column(String(80), default="queued")
     include_original_video: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Generation whose `document.md` this export packs as `05-generated-document/` (P06.4c); null
+    # when none was chosen, which includes every export made before the column existed. No foreign
+    # key: the ZIP is the record, and a generation is never deleted on its own.
+    generation_id: Mapped[str | None] = mapped_column(String(36))
     relative_path: Mapped[str | None] = mapped_column(String(500))
     size_bytes: Mapped[int | None] = mapped_column(Integer)
     # 1-based export number within the project; failed exports keep theirs. Null only for rows
