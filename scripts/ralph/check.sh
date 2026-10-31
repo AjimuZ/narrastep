@@ -74,8 +74,21 @@ check_fullstack() {
   [ "$status" -eq 0 ] && { "$STACK" exec -T api python -c "$STACK_HEALTH_PROBE" || status=$?; }
   if [ "$status" -eq 0 ]; then
     echo "check: fullstack: browser journey ..."
-    RALPH_SANDBOX_NETWORK=narrastep-ralph_local "$SANDBOX" \
-      "cd apps/web && npx playwright install chromium && NARRASTEP_E2E_BASE_URL=http://web NARRASTEP_E2E_MOCK_CONFIRMED=true npm run --silent e2e:fullstack" || status=$?
+    # The health answer asks the worker with a short timeout, so on a busy computer it can say the
+    # worker is missing although it runs. Only that message repeats the journey; a real failure counts.
+    local output tries=0
+    output="$(mktemp)"
+    while :; do
+      status=0
+      RALPH_SANDBOX_NETWORK=narrastep-ralph_local "$SANDBOX" \
+        "cd apps/web && npx playwright install chromium && NARRASTEP_E2E_BASE_URL=http://web NARRASTEP_E2E_MOCK_CONFIRMED=true npm run --silent e2e:fullstack" 2>&1 | tee "$output"
+      status="${PIPESTATUS[0]}"
+      [ "$status" -ne 0 ] && [ "$tries" -lt 2 ] && grep -q 'The Celery worker must be available' "$output" || break
+      tries=$((tries + 1))
+      echo "check: fullstack: the worker's health answer was late; trying again ($tries of 2)"
+      sleep "${RALPH_RESOURCE_WAIT_SECONDS:-30}"
+    done
+    rm -f "$output"
   fi
   "$STACK" down --volumes --remove-orphans >/dev/null 2>&1 || true
   echo "check: fullstack -> $([ "$status" -eq 0 ] && echo passed || echo "FAILED ($status)")"

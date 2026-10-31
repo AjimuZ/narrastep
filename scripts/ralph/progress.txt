@@ -2,6 +2,7 @@
 Each session sees the patterns below and the last entries. Older entries move to archive/.
 
 ## Codebase Patterns
+- A commit message may not name authoring tools, even as a file: write "the contributor guide", not the file name of the root guide, or the commit is rejected and the attempt is lost.
 - Git on Windows does not record the executable bit, and sessions cannot set it. A new script that must run as ./name needs it: name that file in the summary so the owner's session can set it, because a test checking the mode fails once the file is tracked.
 - In your structured output, `conventions_ack` must hold only the 16 hexadecimal characters after `ACK-TOKEN: `, without that label. With the label the whole attempt is rejected, however good the work is.
 - The owner's computer has Docker and the runner runs there. Older notes saying a check could not run because a worker had no Docker are history; run those checks now.
