@@ -71,6 +71,7 @@ Each session sees the patterns below and the last entries. Older entries move to
 - Keep optional heavy tooling out of package.json and run it via npx with a pinned version.
 - After a smoke script passes, read the logs it keeps as well as its PASS lines: user-facing messages may not be asserted by any step.
 - Identify generated test video frames by their pixels, for example a Gray-code barcode, so that a test never trusts the position a decoder reports.
+- Resolve bundled asset paths from __dirname, never from the current directory, and keep the asset folder out of the packager ignore patterns.
 
 ---
 
@@ -616,4 +617,29 @@ The `scripts/ralph/prd.json` diff in the tree (the task notes) was not made in t
 - **Learnings for future iterations:**
   - The P07 Exit line in docs/ROADMAP.md is near line 238; the P07-CHECK evidence line sits right below it.
   - The task text had a stale 'BLOCKED' paragraph about a Teams call; the repo shows the owner check was already done and P05.6 is separate.
+---
+
+## 2026-10-31T16:55:27Z - P07.6
+- The main window and the source picker now set the Narrastep logo as their icon. The package command passes the .ico, and the web favicon is the logo. `check.sh desktop` (242 tests, 0 failed), `check.sh web` and `check.sh docs` pass. I did not run e2e or a real packaged build, and I did not see the icon on a real Windows taskbar. The macOS build keeps the default icon because there is no .icns file.
+
+What I did in this attempt:
+- Reviewed the earlier uncommitted edits. They were sound.
+- Fixed one Prettier formatting error in `desktop/test/icon.test.cjs`.
+- Replaced the stale progress note under P07.6 in `docs/ROADMAP.md`. It said the favicon was missing.
+
+What is in the tree:
+- `desktop/src/icon.cjs` returns `narrastep.ico` on Windows and `narrastep-512.png` elsewhere, resolved from the shell's own folder.
+- `window.cjs` and `source-picker.cjs` set that path as the `icon` option.
+- The `package` script has `--icon=assets/narrastep.ico`. The ignore rules cover only `^/out` and `^/test`, so `assets/` is kept in the packaged app.
+- `package-script.test.cjs` covers the flag and the ignore rules, and `icon.test.cjs` covers the window options.
+- `apps/web/public/favicon.png` is the 32 px logo, linked with a relative href in `index.html`. `favicon.svg` is removed and no external request was added.
+- `docs/LICENSES.md`, `docs/UI.md` and `CHANGELOG.md` describe the change.
+
+Left alone: the P07.6 checkbox and the `scripts/ralph/prd.json` diff.
+- Files changed: CHANGELOG.md, apps/web/public/favicon.png, apps/web/public/favicon.svg, apps/web/src/index.html, desktop/package.json, desktop/src/icon.cjs, desktop/src/source-picker.cjs, desktop/src/window.cjs, desktop/test/icon.test.cjs, desktop/test/package-script.test.cjs, docs/LICENSES.md, docs/UI.md, docs/ROADMAP.md
+- **Learnings for future iterations:**
+  - `windowIconPath(platform)` in desktop/src/icon.cjs is the single place that chooses the window icon file.
+  - `check.sh desktop` runs a Prettier check that fails on test files with lines over the print width. Wrap long assertions.
+  - The packaged-app icon and the real taskbar icon were not verified visually. The macOS build keeps the default icon.
+  - The scripts/ralph/prd.json diff in the tree belongs to the orchestrator and was left alone.
 ---

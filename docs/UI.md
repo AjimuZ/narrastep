@@ -390,6 +390,10 @@ before the app has loaded:
 
 - **Window:** titled by the page; 1280 × 800, reduced to fit a smaller screen, never below
   320 × 480; background `--color-bg` while loading; no menu bar on Windows and Linux.
+- **Icon:** the main window and the source picker show the Narrastep logo from `desktop/assets/`
+  (P07.6): `narrastep.ico` on Windows and `narrastep-512.png` elsewhere, resolved from the shell's
+  own folder. The Windows portable build gives its executable the same `.ico`. There is no `.icns`
+  file, so the macOS build keeps Electron's default icon.
 - **Zoom:** Ctrl (Cmd on macOS) with `+` or `=`, `-` and `0` step through 25% to 500% and reset,
   as in a browser, because there is no View menu.
 - **Leave dialog:** when a screen asks before unloading (recording, uploading, unsaved edits) and

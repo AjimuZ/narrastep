@@ -2,6 +2,7 @@
 'use strict';
 
 const { buildFallbackPageUrl } = require('./fallback-page.cjs');
+const { windowIconPath } = require('./icon.cjs');
 const { messagesFor } = require('./messages.cjs');
 const { WINDOW_WEB_PREFERENCES, appEntryUrl, isAppUrl, pickLanguage } = require('./policy.cjs');
 
@@ -21,13 +22,15 @@ const WINDOW_SIZE = Object.freeze({ width: 1280, height: 800, minWidth: 320, min
  * (`{ width, height }` in pixels). The window is 1280 × 800, reduced to fit the work area of a
  * smaller screen but never below 320 × 480. It starts hidden and appears once painted; its
  * background is `--color-bg` from `apps/web/src/styles/tokens.scss`, so it never flashes white.
- * Windows and Linux show no menu bar.
+ * Windows and Linux show no menu bar. The icon is the Narrastep logo for `platform` (defaults to
+ * the running one), see `windowIconPath`.
  */
-function windowOptions(workArea) {
+function windowOptions(workArea, platform = process.platform) {
   const fit = (preferred, available, minimum) =>
     Math.max(minimum, Math.min(preferred, Number.isFinite(available) ? available : preferred));
   return {
     title: 'Narrastep',
+    icon: windowIconPath(platform),
     width: fit(WINDOW_SIZE.width, workArea?.width, WINDOW_SIZE.minWidth),
     height: fit(WINDOW_SIZE.height, workArea?.height, WINDOW_SIZE.minHeight),
     minWidth: WINDOW_SIZE.minWidth,

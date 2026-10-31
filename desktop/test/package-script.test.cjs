@@ -17,6 +17,16 @@ describe('portable build wiring', () => {
     assert.match(script, /--ignore=\^\/out/);
   });
 
+  it('gives the Windows executable the logo and keeps the assets in the packaged application', () => {
+    const script = manifest.scripts.package;
+    assert.match(script, /--icon=assets\/narrastep\.ico(\s|$)/);
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'assets', 'narrastep.ico')));
+    const ignores = [...script.matchAll(/--ignore=(\S+)/g)].map((match) => match[1]);
+    assert.deepEqual(ignores, ['^/out', '^/test']);
+    assert.ok(!ignores.some((pattern) => new RegExp(pattern).test('/assets/narrastep.ico')));
+    assert.ok(!ignores.some((pattern) => new RegExp(pattern).test('/src/icon.cjs')));
+  });
+
   it('does not list the packager as a dependency, so npm ci never installs it', () => {
     for (const field of ['dependencies', 'devDependencies', 'optionalDependencies']) {
       assert.ok(!Object.keys(manifest[field] ?? {}).some((name) => name.includes('packager')));

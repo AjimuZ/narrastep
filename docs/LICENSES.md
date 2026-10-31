@@ -49,6 +49,14 @@ them: Debian removes superseded versions from its archive, so an exact pin would
 A security update can therefore change them between builds; the image build's transcription and
 `llama.cpp` checks fail when an update breaks either.
 
+## Project artwork
+
+The Narrastep logo in `desktop/assets/` (`narrastep.ico`, `narrastep-1024.png`, `-512.png`,
+`-256.png` and `-32.png`) is the project's own generated image, made by the owner. It is not
+third-party artwork and has no separate license: it is under the project license (MIT) like the
+rest of the repository. The desktop window, the source picker and the Windows portable build use it
+(P07.6).
+
 ## Container images
 
 Every image the stack builds from or pulls has a fully qualified name (P08.9), an exact version tag

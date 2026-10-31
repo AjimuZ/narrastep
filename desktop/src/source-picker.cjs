@@ -2,6 +2,7 @@
 'use strict';
 
 const { escapeHtml } = require('./fallback-page.cjs');
+const { windowIconPath } = require('./icon.cjs');
 const { messagesFor } = require('./messages.cjs');
 const { WINDOW_WEB_PREFERENCES } = require('./policy.cjs');
 
@@ -158,6 +159,7 @@ function createSourcePicker({ BrowserWindow, desktopCapturer, getParent, getLang
       const parent = getParent();
       const window = new BrowserWindow({
         title: 'Narrastep',
+        icon: windowIconPath(),
         width: PICKER_SIZE.width,
         height: PICKER_SIZE.height,
         minWidth: 320,

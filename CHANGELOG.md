@@ -6,6 +6,9 @@ All notable changes to Narrastep are documented in this file.
 
 ### Added
 
+- The desktop window and its source picker show the Narrastep logo instead of Electron's default
+  icon, and the Windows portable build gives its executable the same icon. The macOS build keeps
+  the default icon, because there is no `.icns` file.
 - Optional portable desktop build: `npm --prefix desktop run package` makes an unsigned build of the
   desktop window for this system in `desktop/out/`. It downloads the packager only when you run
   it; the default install does not need it, and the build is not published as an installer.

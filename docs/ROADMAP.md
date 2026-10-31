@@ -230,10 +230,14 @@ Decision: [ADR 0014](decisions/0014-desktop-app-shell.md).
   desktop`: 233 passed, 0 failed (`package-script.test.cjs` covers the wiring). Not run: the built
   application itself, and a Windows or macOS build.
 
-- [ ] P07.6 Use the Narrastep logo instead of the default Electron icon. Added on 2026-10-31 at the
+- [x] P07.6 Use the Narrastep logo instead of the default Electron icon. Added on 2026-10-31 at the
   owner's request; the owner's files are in `desktop/assets/`.
   Exit: the desktop window, the source picker and the Windows portable build use the logo; the web
   favicon is the same logo; the logo is listed in [Licenses](LICENSES.md).
+  Progress 2026-10-31: the window options (`desktop/src/icon.cjs`), the package `--icon` flag, the
+  tests, the Licenses entry and the web favicon (`apps/web/public/favicon.png`, linked in
+  `index.html`; `favicon.svg` removed) are in place. The icon was not seen on a real Windows
+  taskbar or in a packaged build, and the macOS build keeps the default icon.
 
 Exit: launcher, isolation and permission tests pass; smoke test opens the window on a healthy
 stack; manual Windows check records one window with system audio; `--headless` still works.
